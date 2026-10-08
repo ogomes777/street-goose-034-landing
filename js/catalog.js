@@ -63,15 +63,15 @@ function stem(key) { return key.replace(/^.*\//, "").replace(/\.[^.]+$/, ""); }
 // nos sites que o cliente indicou ficam null → "Consultar disponibilidade".
 // Manter em sincronia com public.product_prices (migration 0003), que é a
 // fonte usada pelo servidor ao registrar pedido.
-// trajes = blusas de frio/moletons, R$220,00 informado pelo cliente.
-var CATEGORY_PRICE_CENTS = { lupa: 19700, acessorios: null, relogios: null, perfumes: null, trajes: 22000 };
+// trajes = blusas de frio/moletons e relógios (Minute Machine e os
+// redondos) = R$220,00, informados pelo cliente.
+var CATEGORY_PRICE_CENTS = { lupa: 19700, acessorios: null, relogios: 22000, perfumes: null, trajes: 22000 };
 var FILE_PRICE_CENTS = {
   "WhatsApp Image 2026-08-28 at 15.22.09 (1)": 40000, // mochila (3 fotos, ver PRODUCT_GROUPS) — preço do cliente, 08/10/2026
   "WhatsApp Image 2026-08-28 at 15.22.11 (2)": 19400, // chapéu bege
   "WhatsApp Image 2026-08-28 at 15.22.12 (1)": 40000, // colete (detalhe) — preço do cliente, 08/10/2026
   "WhatsApp Image 2026-08-28 at 15.22.14 (1)": 40000, // colete
-  "WhatsApp Image 2026-08-28 at 15.22.15 (2)": 19400, // chapéu preto
-  "ChatGPT Image 28 de ago. de 2026, 16_10_26 (10)": 22000 // relógio Minute Machine (preço do cliente, 08/10/2026)
+  "WhatsApp Image 2026-08-28 at 15.22.15 (2)": 19400 // chapéu preto
 };
 
 // Fotos diferentes do MESMO produto: a primeira (chave) vira o produto e as
