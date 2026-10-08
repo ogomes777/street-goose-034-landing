@@ -34,6 +34,12 @@ function loadTurnstile(): Promise<TurnstileApi> {
   return scriptPromise;
 }
 
+function siteTheme(): "light" | "dark" {
+  const forced = document.documentElement.getAttribute("data-theme");
+  if (forced === "light" || forced === "dark") return forced;
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
 export interface CaptchaHandle {
   getToken(): string | null;
   reset(): void;
@@ -48,7 +54,8 @@ export async function mountCaptcha(container: HTMLElement): Promise<CaptchaHandl
   const api = await loadTurnstile();
   const id = api.render(container, {
     sitekey: siteKey,
-    theme: "dark",
+    // acompanha o tema efetivo do site (data-theme ou preferência do sistema)
+    theme: siteTheme(),
     language: document.documentElement.lang || "pt-BR",
     callback: (t: string) => { token = t; },
     "expired-callback": () => { token = null; },
