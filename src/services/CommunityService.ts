@@ -44,13 +44,15 @@ export const CommunityService = {
     const { error: uploadError } = await supabase.storage.from("community").upload(path, file, { upsert: false });
     if (uploadError) return { ok: false, message: "Falha no upload: " + uploadError.message };
 
+    // sem "status": o banco grava 'pending' por padrão e a 0010 só concede
+    // insert nas colunas do usuário — mandar status dava 42501 e ninguém
+    // conseguia publicar
     const { error: insertError } = await supabase.from("community_posts").insert({
       user_id: auth.user.id,
       image_path: path,
       caption: caption || null,
       product_id: productId,
       rating,
-      status: "pending",
     });
     if (insertError) return { ok: false, message: "Falha ao registrar publicação: " + insertError.message };
     return { ok: true };
