@@ -69,7 +69,7 @@ Marcado como feito só depois de: editar → rodar localmente → abrir no naveg
 - [ ] Newsletter com estados reais
 
 ## Painel do lojista — /admin
-- [x] Migration `supabase/migrations/0010_admin_panel.sql`: tabela `admins`, `is_admin()`, RPCs `admin_*` (pedidos, clientes, comunidade) e RLS só-admin em cupons, recompensas e newsletter
+- [x] Migration `supabase/migrations/0100_admin_panel.sql`: tabela `admins`, `is_admin()`, RPCs `admin_*` (pedidos, clientes, comunidade) e RLS só-admin em cupons, recompensas e newsletter
 - [x] Abas: Pedidos (preço por item, total, status, nota interna; "marcar pago" dispara o XP), Clientes, Comunidade (aprovar/rejeitar com motivo), Cupons & Recompensas, Newsletter (exportar CSV)
 - [x] Não-admin vê só "Acesso restrito"; o banco recusa as chamadas admin (`forbidden`) mesmo se forçadas
 - [x] Link "Painel da loja" no menu da conta aparece só para admin

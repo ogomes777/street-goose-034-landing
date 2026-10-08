@@ -22,7 +22,7 @@
   }
 
   // "Painel da loja" só aparece para quem o banco diz que é admin (is_admin(),
-  // migration 0010). Esconder o link é conveniência — quem protege é o RLS.
+  // migration 0100). Esconder o link é conveniência — quem protege é o RLS.
   // Checado a cada abertura: a conta logada pode ter mudado desde a última.
   function renderAdminLink() {
     import("../src/services/AdminService.ts")

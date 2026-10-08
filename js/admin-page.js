@@ -1,7 +1,7 @@
 /* Street Goose 034 — /admin, painel do lojista: pedidos, clientes,
    moderação da comunidade, cupons/recompensas e newsletter.
    A UI só pergunta is_admin() para decidir o que mostrar — quem protege os
-   dados é o banco (migration 0010): não-admin que forçasse as chamadas
+   dados é o banco (migration 0100): não-admin que forçasse as chamadas
    recebe 'forbidden' / zero linhas. Todo texto vindo de cliente (nome,
    legenda, endereço) passa por esc() — o painel roda com a sessão do dono. */
 export function mountAdminPage(root, _params, onClose) {

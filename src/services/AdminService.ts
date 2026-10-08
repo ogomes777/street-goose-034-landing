@@ -1,5 +1,5 @@
 /* Street Goose 034 — AdminService: dados do painel do lojista (/admin).
-   Toda autorização é do banco (migration 0010: is_admin(), RPCs admin_* e
+   Toda autorização é do banco (migration 0100: is_admin(), RPCs admin_* e
    policies de RLS). Este serviço só chama — um não-admin que chegasse aqui
    receberia 'forbidden' / zero linhas, não dados. Nunca usa service_role. */
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
