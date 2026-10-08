@@ -35,12 +35,14 @@
 
   function addItem(id, qty) {
     qty = qty || 1;
-    if (!findProduct(id)) return;
+    var product = findProduct(id);
+    if (!product || product.soldOut) return false;
     var row = items.find(function (r) { return r.id === id; });
     if (row) row.qty = Math.min(99, row.qty + qty);
     else items.push({ id: id, qty: Math.min(99, qty) });
     persist();
     render();
+    return true;
   }
 
   function removeItem(id) {
@@ -82,9 +84,9 @@
           if (!p) return "";
           return (
             '<div class="cart-item" data-cart-item="' + p.id + '">' +
-            '<img src="' + p.images[0] + '" alt="' + p.name + '" width="72" height="72">' +
+            '<img src="' + window.SG.esc(p.images[0]) + '" alt="' + window.SG.esc(p.name) + '" width="72" height="72">' +
             '<div class="cart-item-info">' +
-            "<h4>" + p.name + "</h4>" +
+            "<h4>" + window.SG.esc(p.name) + "</h4>" +
             '<p class="cart-item-meta">' + p.frameColor + "</p>" +
             '<p class="cart-item-price" data-price-for="' + p.id + '">' + p.priceLabel + "</p>" +
             "</div>" +
@@ -94,7 +96,7 @@
             '<span>' + row.qty + "</span>" +
             '<button data-qty-plus aria-label="Aumentar quantidade">+</button>' +
             "</div>" +
-            '<button class="cart-item-remove" data-remove aria-label="Remover ' + p.name + '">Remover</button>' +
+            '<button class="cart-item-remove" data-remove aria-label="Remover ' + window.SG.esc(p.name) + '">Remover</button>' +
             "</div></div>"
           );
         }).join("");
@@ -126,7 +128,10 @@
 
   function addWithFeedback(id) {
     var p = findProduct(id);
-    addItem(id, 1);
+    if (!addItem(id, 1)) {
+      if (window.SG.toast && p) window.SG.toast("ESGOTADO — " + p.name.toUpperCase());
+      return;
+    }
     if (window.SG.toast && p) window.SG.toast("ADICIONADO À SACOLA — " + p.name.toUpperCase());
     var pulseTarget = document.querySelector("[data-cart-count]");
     if (pulseTarget) {
@@ -157,6 +162,9 @@
       else addWithFeedback(id);
     }
   });
+
+  // produto renomeado/ocultado no painel: a gaveta reflete na hora
+  window.addEventListener("sg:catalog", render);
 
   render();
 })();

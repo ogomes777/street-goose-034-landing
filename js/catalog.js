@@ -96,8 +96,9 @@ window.SG.priceLabelFor = function (category, cents) {
 window.SG.setProductPrice = function (product, cents) {
   var priced = typeof cents === "number" && cents > 0;
   product.price = priced ? cents : null;
-  product.priceLabel = window.SG.priceLabelFor(product.category, cents);
-  product.consultWhatsApp = !priced && !!CONSULT_WHATSAPP[product.category];
+  // esgotada (marcada no painel) vence o preço: sem sacola e sem WhatsApp
+  product.priceLabel = product.soldOut ? "Esgotado" : window.SG.priceLabelFor(product.category, cents);
+  product.consultWhatsApp = !product.soldOut && !priced && !!CONSULT_WHATSAPP[product.category];
 };
 
 var GROUPED_EXTRA = {};
@@ -166,5 +167,100 @@ window.SG_PRODUCTS.forEach(function (p) {
 
 window.SG_CATALOG_BY_SLUG = {};
 window.SG_CATALOG.forEach(function (cat) { window.SG_CATALOG_BY_SLUG[cat.slug] = cat; });
+
+// ============================================================
+// Camada do banco (public.products, editada em /admin → Produtos), aplicada
+// por js/catalog-sync.js. Guarda o estado de fábrica de cada peça para poder
+// reaplicar quantas vezes for preciso (cache local, depois o banco) e para
+// "restaurar original". Arrays são alterados NO LUGAR: sacola, favoritos e
+// busca guardaram a referência de SG_PRODUCTS / cat.items no boot.
+// ============================================================
+var FACTORY = {}; // id -> { name, desc, alt, images, order }
+var ALL_BY_ID = {}; // id -> produto (inclusive ocultos e criados no painel)
+var NON_CATALOG = window.SG_PRODUCTS.filter(function (p) { return !CATEGORY_META[p.category]; });
+window.SG_CATALOG.forEach(function (cat) {
+  cat.items.forEach(function (item, i) {
+    FACTORY[item.id] = { name: item.name, desc: item.desc, alt: item.alt, images: item.images.slice(), order: (i + 1) * 10 };
+    item.hidden = false;
+    item.soldOut = false;
+    item.isCustom = false;
+    item.order = (i + 1) * 10;
+    ALL_BY_ID[item.id] = item;
+  });
+});
+
+function makeCustomProduct(id, category) {
+  return {
+    id: id, category: category, categoryLabel: CATEGORY_META[category].label, name: "", images: [],
+    frameColor: CATEGORY_META[category].label, lensColor: "—", material: "—", tag: "NOVO", desc: "", alt: "",
+    price: null, priceLabel: "", consultWhatsApp: false, available: true, curated: false,
+    sku: "SG034-" + id.toUpperCase(), inventoryStatus: "inStock", isCustom: true, hidden: false, soldOut: false, order: 0
+  };
+}
+
+// rows: linhas de public.products; storageUrl(path): URL pública no bucket
+window.SG.applyCatalogOverlay = function (rows, storageUrl) {
+  var rowById = {};
+  (rows || []).forEach(function (r) { if (r && r.id) rowById[r.id] = r; });
+  Object.keys(rowById).forEach(function (id) {
+    var r = rowById[id];
+    if (!ALL_BY_ID[id] && r.is_custom && CATEGORY_META[r.category]) ALL_BY_ID[id] = makeCustomProduct(id, r.category);
+  });
+
+  var customSeq = 0;
+  Object.keys(ALL_BY_ID).forEach(function (id) {
+    var p = ALL_BY_ID[id];
+    var factory = FACTORY[id];
+    var r = rowById[id];
+    p.gone = !factory && !r; // produto criado no painel e depois excluído
+    if (p.gone) return;
+    if (!factory && r && CATEGORY_META[r.category]) {
+      p.category = r.category;
+      p.categoryLabel = CATEGORY_META[r.category].label;
+      p.frameColor = p.categoryLabel;
+    }
+    p.name = (r && r.name) || (factory ? factory.name : p.categoryLabel);
+    p.desc = (r && r.description) || (factory ? factory.desc : "");
+    p.alt = r && r.name ? r.name + " — Street Goose 034" : (factory ? factory.alt : p.name);
+    var refs = r && r.images && r.images.length ? r.images : null;
+    p.images = refs
+      ? refs.map(function (ref) {
+          var m = /^base:(\d+)$/.exec(ref);
+          if (m) return factory ? factory.images[Number(m[1])] : null;
+          return storageUrl ? storageUrl(ref) : null;
+        }).filter(Boolean)
+      : (factory ? factory.images.slice() : []);
+    p.imageRefs = refs ? refs.slice() : (factory ? factory.images.map(function (_u, i) { return "base:" + i; }) : []);
+    p.hidden = !!(r && r.hidden);
+    p.soldOut = !!(r && r.sold_out);
+    p.available = !p.soldOut;
+    p.inventoryStatus = p.soldOut ? "outOfStock" : "inStock";
+    p.order = r && typeof r.sort_order === "number" ? r.sort_order : (factory ? factory.order : 100000 + (customSeq++));
+    // só posição (reordenar) não conta como "editado" no painel
+    p.hasOverride = !!(r && (r.name || r.description || (r.images && r.images.length) || r.hidden || r.sold_out));
+    window.SG.setProductPrice(p, p.price);
+  });
+
+  var visible = [];
+  window.SG_CATALOG.forEach(function (cat) {
+    var list = Object.keys(ALL_BY_ID).map(function (id) { return ALL_BY_ID[id]; })
+      .filter(function (p) { return p.category === cat.id && !p.gone && !p.hidden && p.images.length; })
+      .sort(function (a, b) { return a.order - b.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
+    cat.items.length = 0;
+    Array.prototype.push.apply(cat.items, list);
+    cat.count = list.length;
+    visible = visible.concat(list);
+  });
+  window.SG_PRODUCTS.length = 0;
+  Array.prototype.push.apply(window.SG_PRODUCTS, NON_CATALOG.concat(visible));
+};
+
+// painel: todas as peças de uma categoria, inclusive ocultas, na ordem do site
+window.SG.catalogAll = function (categoryId) {
+  return Object.keys(ALL_BY_ID).map(function (id) { return ALL_BY_ID[id]; })
+    .filter(function (p) { return !p.gone && p.category === categoryId; })
+    .sort(function (a, b) { return a.order - b.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
+};
+window.SG.catalogFactory = function (id) { return FACTORY[id] || null; };
 
 export {};

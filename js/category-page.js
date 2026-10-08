@@ -26,24 +26,25 @@ export function mountCategoryPage(root, slug, onRequestClose) {
 
   function itemBodyHtml(item) {
     return (
-      '<p class="cat-item-name">' + item.name + "</p>" +
+      '<p class="cat-item-name">' + window.SG.esc(item.name) + "</p>" +
       '<p class="cat-item-price">' + item.priceLabel + "</p>" +
-      (item.consultWhatsApp
-        ? '<a class="round-btn round-btn--wa" href="' + window.SG.waProductLink(item) + '" target="_blank" rel="noopener" aria-label="Consultar preço de ' + item.name + ' no WhatsApp">' +
+      (item.soldOut ? "" : item.consultWhatsApp
+        ? '<a class="round-btn round-btn--wa" href="' + window.SG.waProductLink(item) + '" target="_blank" rel="noopener" aria-label="Consultar preço de ' + window.SG.esc(item.name) + ' no WhatsApp">' +
             '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z"/></svg></a>'
-        : '<button class="round-btn" aria-label="Adicionar ' + item.name + ' à sacola" data-add-to-cart="' + item.id + '">+</button>')
+        : '<button class="round-btn" aria-label="Adicionar ' + window.SG.esc(item.name) + ' à sacola" data-add-to-cart="' + item.id + '">+</button>')
     );
   }
 
-  var itemsHtml = cat.items.map(function (item) {
+  function itemHtml(item) {
     return (
-      '<article class="cat-item" data-product-id="' + item.id + '">' +
-        '<button class="favorite-btn" data-favorite-toggle="' + item.id + '" aria-pressed="false" aria-label="Favoritar ' + item.name + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-10-9.4C.4 7.6 2 4 5.6 4 8 4 10 5.4 12 8c2-2.6 4-4 6.4-4C22 4 23.6 7.6 22 11.1 19.5 15.9 12 20.5 12 20.5z"/></svg></button>' +
-        '<div class="cat-item-img" data-open-quickview="' + item.id + '"><img src="' + item.images[0] + '" alt="' + item.alt + '" loading="lazy" /></div>' +
+      '<article class="cat-item' + (item.soldOut ? " is-soldout" : "") + '" data-product-id="' + item.id + '">' +
+        '<button class="favorite-btn" data-favorite-toggle="' + item.id + '" aria-pressed="false" aria-label="Favoritar ' + window.SG.esc(item.name) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-10-9.4C.4 7.6 2 4 5.6 4 8 4 10 5.4 12 8c2-2.6 4-4 6.4-4C22 4 23.6 7.6 22 11.1 19.5 15.9 12 20.5 12 20.5z"/></svg></button>' +
+        '<div class="cat-item-img" data-open-quickview="' + item.id + '"><img src="' + window.SG.esc(item.images[0]) + '" alt="' + window.SG.esc(item.alt) + '" loading="lazy" /></div>' +
         '<div class="cat-item-body">' + itemBodyHtml(item) + "</div>" +
       "</article>"
     );
-  }).join("");
+  }
+  var itemsHtml = cat.items.map(itemHtml).join("");
 
   root.innerHTML =
     '<button class="cat-close" type="button" data-cat-close aria-label="Fechar categoria">' +
@@ -94,6 +95,17 @@ export function mountCategoryPage(root, slug, onRequestClose) {
   }
   window.addEventListener("sg:prices", onPrices);
 
+  // produto novo/removido/reordenado no painel e o banco respondeu depois de
+  // montar (cache antigo): refaz só a grade; hero e scrub seguem intactos
+  function onCatalog() {
+    grid.innerHTML = cat.items.map(itemHtml).join("");
+    items = Array.prototype.slice.call(grid.children);
+    var countEl = root.querySelector(".cat-catalog-head p");
+    if (countEl) countEl.textContent = cat.count + " peças";
+    if (revealed || !canScrub) items.forEach(function (el) { el.style.opacity = "1"; el.style.transform = "none"; });
+  }
+  window.addEventListener("sg:catalog", onCatalog);
+
   var reduced = window.SG.prefersReducedMotion();
   var canScrub = window.SG.hasGSAP && window.ScrollTrigger && !reduced;
 
@@ -129,6 +141,7 @@ export function mountCategoryPage(root, slug, onRequestClose) {
       closeBtn.removeEventListener("click", close);
       document.removeEventListener("keydown", onKeydown);
       window.removeEventListener("sg:prices", onPrices);
+      window.removeEventListener("sg:catalog", onCatalog);
     };
   }
 
@@ -262,6 +275,7 @@ export function mountCategoryPage(root, slug, onRequestClose) {
     closeBtn.removeEventListener("click", close);
     document.removeEventListener("keydown", onKeydown);
     window.removeEventListener("sg:prices", onPrices);
+    window.removeEventListener("sg:catalog", onCatalog);
     video.pause();
     video.removeAttribute("src");
     video.load();

@@ -24,8 +24,8 @@ export function mountCartPage(root, _params, onClose) {
           var p = r.product;
           return (
             '<div class="cart-item" data-cart-item="' + p.id + '">' +
-              '<img src="' + p.images[0] + '" alt="' + p.name + '" width="56" height="56">' +
-              '<div class="cart-item-info"><h4>' + p.name + "</h4><p class=\"cart-item-meta\">" + (p.frameColor || "") + "</p>" +
+              '<img src="' + window.SG.esc(p.images[0]) + '" alt="' + window.SG.esc(p.name) + '" width="56" height="56">' +
+              '<div class="cart-item-info"><h4>' + window.SG.esc(p.name) + "</h4><p class=\"cart-item-meta\">" + (p.frameColor || "") + "</p>" +
               '<p class="cart-item-price" data-price-for="' + p.id + '">' + p.priceLabel + "</p></div>" +
               '<div class="cart-item-actions">' +
                 '<div class="qty-stepper"><button data-qty-minus aria-label="Diminuir">-</button><span>' + r.qty + '</span><button data-qty-plus aria-label="Aumentar">+</button></div>' +

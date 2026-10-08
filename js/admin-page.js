@@ -9,7 +9,7 @@ export function mountAdminPage(root, _params, onClose) {
 
   var TABS = [
     { id: "pedidos", label: "Pedidos" },
-    { id: "precos", label: "Preços" },
+    { id: "produtos", label: "Produtos" },
     { id: "clientes", label: "Clientes" },
     { id: "comunidade", label: "Comunidade" },
     { id: "cupons", label: "Cupons & Recompensas" },
@@ -27,7 +27,7 @@ export function mountAdminPage(root, _params, onClose) {
   var REJECT_REASONS = ["Foto sem peça Street Goose", "Imagem com baixa qualidade", "Conteúdo impróprio", "Foto de outra pessoa/marca"];
   var MAX_ROWS = 400;
 
-  var svc = null, money = null, csv = null;
+  var svc = null, money = null, csv = null, imageLib = null;
   var destroyed = false;
   var unsubscribeAuth = null;
   var currentUserId; // undefined = ainda não checado
@@ -41,7 +41,7 @@ export function mountAdminPage(root, _params, onClose) {
     postStatus: "pending", posts: [], rejectingPostId: null,
     coupons: [], rewards: [], levels: [], editingCoupon: null, editingReward: null,
     newsletterFilter: "active", newsletterSearch: "", subscribers: [],
-    priceCategory: "lupa", priceSearch: "", prices: {}, pricesLoaded: false,
+    prodCategory: "lupa", prodSearch: "", prices: {}, overlay: {}, prodLoaded: false, openProdId: null, photoDraft: {}, newPhotos: [],
   };
 
   var robots = document.createElement("meta");
@@ -79,6 +79,7 @@ export function mountAdminPage(root, _params, onClose) {
   }
   function tabFromUrl() {
     var tab = new URLSearchParams(location.search).get("tab");
+    if (tab === "precos") tab = "produtos"; // link antigo da aba de preços
     return TABS.some(function (x) { return x.id === tab; }) ? tab : "pedidos";
   }
   function waLink(phone) {
@@ -113,10 +114,12 @@ export function mountAdminPage(root, _params, onClose) {
       import("../src/services/AdminService.ts"),
       import("../src/lib/money.ts"),
       import("../src/lib/csv.ts"),
+      import("../src/lib/image.ts"),
     ]);
     svc = mods[0].AdminService;
     money = mods[1];
     csv = mods[2];
+    imageLib = mods[3];
   }
 
   // ---------- gate ----------
@@ -225,7 +228,7 @@ export function mountAdminPage(root, _params, onClose) {
     var panel = bodyEl.querySelector("[data-admin-panel]");
     if (!panel) return;
     if (state.tab === "pedidos") { panel.innerHTML = ordersToolbar() + '<div class="admin-list" data-list="orders"></div>'; loadOrders(); }
-    else if (state.tab === "precos") { panel.innerHTML = pricesShell(); renderPriceCategory(); loadPrices(); }
+    else if (state.tab === "produtos") { panel.innerHTML = productsShell(); renderProdCategory(); loadProducts(); }
     else if (state.tab === "clientes") { panel.innerHTML = customersToolbar() + '<div data-list="customers"></div>'; loadCustomers(); }
     else if (state.tab === "comunidade") { panel.innerHTML = postsToolbar() + '<div data-list="posts"></div>'; loadPosts(); }
     else if (state.tab === "cupons") { panel.innerHTML = promoShell(); loadPromo(); }
@@ -371,45 +374,58 @@ export function mountAdminPage(root, _params, onClose) {
     loadOverview();
   }
 
-  // ---------- preços ----------
-  // Fonte única: public.product_prices — a mesma que grava o preço do pedido
-  // (create_whatsapp_order) e que o site aplica no boot (js/price-sync.js).
-  function priceCategory() {
+  // ---------- produtos ----------
+  // Lista = catálogo que o site está mostrando (window.SG.catalogAll, já com
+  // a camada public.products aplicada), inclusive peças ocultas. Preço vem de
+  // public.product_prices (fonte do pedido). Toda alteração grava no banco,
+  // recarrega o que o banco tem e reaplica no próprio site atrás do painel.
+  var CATEGORY_LABELS = { lupa: "Lupas", acessorios: "Acessórios", relogios: "Relógios", perfumes: "Perfumes", trajes: "Trajes" };
+  var UNSAFE_TEXT = /[<>"`]/;
+
+  function prodCategory() {
     var cats = window.SG_CATALOG || [];
-    return cats.find(function (c) { return c.id === state.priceCategory; }) || cats[0] || null;
+    return cats.find(function (c) { return c.id === state.prodCategory; }) || cats[0] || null;
   }
-  function findCatalogItem(id) {
+  function prodList() {
+    var cat = prodCategory();
+    return cat && window.SG.catalogAll ? window.SG.catalogAll(cat.id) : [];
+  }
+  function findProd(id) {
     var found = null;
     (window.SG_CATALOG || []).some(function (c) {
-      found = c.items.find(function (i) { return i.id === id; }) || null;
+      found = (window.SG.catalogAll ? window.SG.catalogAll(c.id) : []).find(function (p) { return p.id === id; }) || null;
       return !!found;
     });
     return found;
   }
-  function siteLabelWithoutPrice(item) {
-    return window.SG.priceLabelFor ? window.SG.priceLabelFor(item.category, null) : "Consultar disponibilidade";
+  function priceOf(id) { return state.prices[id] ? state.prices[id].price_cents : null; }
+  function siteLabelWithoutPrice(p) {
+    if (p.soldOut) return "Esgotado";
+    return window.SG.priceLabelFor ? window.SG.priceLabelFor(p.category, null) : "Consultar disponibilidade";
   }
 
-  function pricesShell() {
+  function productsShell() {
     var cats = window.SG_CATALOG || [];
     return '<div class="admin-toolbar">' +
         '<div class="admin-chips" role="group" aria-label="Categoria">' + cats.map(function (c) {
-          return chip("price-cat", c.id, c.label, state.priceCategory === c.id, c.count);
+          return chip("prod-cat", c.id, c.label, state.prodCategory === c.id);
         }).join("") + "</div>" +
-        '<label class="admin-search"><span class="sr-only">Buscar peça</span><input type="search" data-search="prices" placeholder="Buscar peça ou código" value="' + esc(state.priceSearch) + '" autocomplete="off"></label>' +
+        '<label class="admin-search"><span class="sr-only">Buscar produto</span><input type="search" data-search="products" placeholder="Buscar produto ou código" value="' + esc(state.prodSearch) + '" autocomplete="off"></label>' +
+        '<button class="btn btn-primary" type="button" data-action="prod-new">Novo produto</button>' +
       "</div>" +
-      '<p class="admin-hint">Vale para pedidos novos e aparece no site na hora. Pedidos já registrados mantêm o preço que tinham. Peça sem preço aparece como "Consultar" no site.</p>' +
+      '<p class="admin-hint">Tudo aqui aparece no site na hora: nome, preço, fotos, esgotado, oculto e ordem. Pedidos já registrados mantêm o nome e o preço que tinham. Peça sem preço aparece como "Consultar".</p>' +
+      "<div data-prod-new></div>" +
       "<div data-price-bulk></div>" +
-      '<div data-list="prices"></div>';
+      '<div data-list="products"></div>';
   }
 
-  function renderPriceCategory() {
-    var cat = priceCategory();
+  function renderProdCategory() {
+    var cat = prodCategory();
     var bulk = bodyEl.querySelector("[data-price-bulk]");
     if (!cat || !bulk) return;
     bulk.innerHTML =
       '<form class="admin-bulk" data-form="price-bulk" novalidate>' +
-        '<p class="admin-bulk-title"><b>' + esc(cat.label) + "</b> · " + cat.count + " peças<span data-price-unpriced></span></p>" +
+        '<p class="admin-bulk-title"><b>' + esc(cat.label) + "</b><span data-prod-count></span></p>" +
         '<div class="admin-bulk-row">' +
           '<label class="admin-money"><span class="sr-only">Mesmo preço para todas as peças de ' + esc(cat.label) + '</span><em>R$</em><input name="price" inputmode="decimal" placeholder="Mesmo preço para todas" autocomplete="off"></label>' +
           '<button class="btn btn-ghost" type="submit" data-bulk-submit>Aplicar a todas</button>' +
@@ -417,123 +433,404 @@ export function mountAdminPage(root, _params, onClose) {
         "</div>" +
         '<p class="admin-form-error" data-form-error role="alert" hidden></p>' +
       "</form>";
-    renderPriceList();
+    renderProdList();
   }
 
-  async function loadPrices() {
-    var el = list("prices");
+  async function reloadProductData() {
+    var res = await Promise.all([svc.listProducts(), svc.listPrices()]);
+    if (!res[0].ok) return res[0];
+    if (!res[1].ok) return res[1];
+    state.overlay = res[0].data;
+    state.prices = res[1].data;
+    state.prodLoaded = true;
+    // o site atrás do painel passa a refletir o banco (e o painel lista dele)
+    if (window.SG.catalog) await window.SG.catalog.refresh();
+    if (window.SG.prices) await window.SG.prices.refresh();
+    return { ok: true };
+  }
+
+  async function loadProducts() {
+    var el = list("products");
     if (!el) return;
-    var n = nextSeq("prices");
-    if (!state.pricesLoaded) el.innerHTML = loading();
-    var res = await svc.listPrices();
-    if (stale("prices", n)) return;
-    if (!res.ok) { el.innerHTML = errorState(res.message, "prices"); return; }
-    state.prices = res.data;
-    state.pricesLoaded = true;
-    renderPriceList();
+    var n = nextSeq("products");
+    if (!state.prodLoaded) el.innerHTML = loading();
+    var res = await reloadProductData();
+    if (stale("products", n)) return;
+    if (!res.ok) { el.innerHTML = errorState(res.message, "products"); return; }
+    renderProdList();
   }
 
-  function renderUnpricedCount() {
-    var cat = priceCategory();
-    var counter = bodyEl.querySelector("[data-price-unpriced]");
-    if (!cat || !counter || !state.pricesLoaded) return;
-    var unpriced = cat.items.filter(function (i) { return !state.prices[i.id]; }).length;
-    counter.textContent = unpriced ? " · " + unpriced + " sem preço" : " · todas com preço";
+  function renderProdCount() {
+    var counter = bodyEl.querySelector("[data-prod-count]");
+    if (!counter || !state.prodLoaded) return;
+    var all = prodList();
+    var onSite = all.filter(function (p) { return !p.hidden; }).length;
+    var unpriced = all.filter(function (p) { return !priceOf(p.id); }).length;
+    counter.textContent = " · " + all.length + " peças · " + onSite + " no site" + (unpriced ? " · " + unpriced + " sem preço" : "");
   }
 
-  function renderPriceList() {
-    var el = list("prices");
-    var cat = priceCategory();
-    if (!el || !cat || !state.pricesLoaded) return;
-    renderUnpricedCount();
-    var q = state.priceSearch.trim().toLowerCase();
-    var items = cat.items.filter(function (i) { return !q || i.name.toLowerCase().indexOf(q) !== -1 || i.id.indexOf(q) !== -1; });
-    el.innerHTML = items.length ? '<div class="admin-prices">' + items.map(priceRowHtml).join("") + "</div>" : emptyState("Nenhuma peça encontrada.");
+  function renderProdList() {
+    var el = list("products");
+    if (!el || !state.prodLoaded) return;
+    renderProdCount();
+    var q = state.prodSearch.trim().toLowerCase();
+    var items = prodList().filter(function (p) { return !q || p.name.toLowerCase().indexOf(q) !== -1 || p.id.indexOf(q) !== -1; });
+    el.innerHTML = items.length ? '<div class="admin-prods">' + items.map(prodRowHtml).join("") + "</div>" : emptyState("Nenhum produto encontrado.");
   }
 
-  function priceRowHtml(item) {
-    var row = state.prices[item.id];
-    var cents = row ? row.price_cents : null;
-    return '<form class="admin-price' + (cents ? "" : " is-unpriced") + '" data-form="price" data-id="' + esc(item.id) + '" novalidate>' +
-      '<img class="admin-price-thumb" src="' + esc(item.images[0]) + '" alt="" loading="lazy" width="56" height="56">' +
-      '<div class="admin-price-info"><b>' + esc(item.name) + "</b>" +
-        "<small>" + esc(item.id) + (row ? " · " + fmtDateTime(row.updated_at) : "") + "</small>" +
-        (cents ? "" : '<small class="admin-price-site">No site: ' + esc(siteLabelWithoutPrice(item)) + "</small>") +
-      "</div>" +
-      '<label class="admin-money"><span class="sr-only">Preço de ' + esc(item.name) + '</span><em>R$</em><input name="price" inputmode="decimal" value="' + money.centsToInput(cents) + '" placeholder="Sem preço" autocomplete="off"></label>' +
-      '<div class="admin-price-actions">' +
-        '<button class="btn btn-ghost" type="submit">Salvar</button>' +
-        (cents ? '<button class="admin-text-btn" type="button" data-action="price-clear" data-id="' + esc(item.id) + '">Tirar preço</button>' : "") +
+  function prodRowHtml(p) {
+    var open = state.openProdId === p.id;
+    var cents = priceOf(p.id);
+    var tags = [];
+    if (p.isCustom) tags.push('<span class="admin-tag admin-tag--accent">Novo</span>');
+    if (p.hidden) tags.push('<span class="admin-tag">Oculto</span>');
+    if (p.soldOut) tags.push('<span class="admin-tag admin-tag--warn">Esgotado</span>');
+    if (!p.isCustom && p.hasOverride) tags.push('<span class="admin-tag">Editado</span>');
+    return '<article class="admin-prod' + (p.hidden ? " is-hidden" : "") + (open ? " is-open" : "") + '" data-prod-id="' + esc(p.id) + '">' +
+      '<form class="admin-price admin-prod-row" data-form="product" data-id="' + esc(p.id) + '" novalidate>' +
+        '<img class="admin-price-thumb" src="' + esc(p.images[0] || "") + '" alt="" loading="lazy" width="56" height="56">' +
+        '<div class="admin-price-info">' +
+          '<label class="sr-only" for="pn-' + esc(p.id) + '">Nome de ' + esc(p.name) + "</label>" +
+          '<input class="admin-prod-name" id="pn-' + esc(p.id) + '" name="name" value="' + esc(p.name) + '" maxlength="120" autocomplete="off">' +
+          '<small>' + esc(p.id) + " " + tags.join("") + "</small>" +
+          (cents && !p.soldOut ? "" : '<small class="admin-price-site">No site: ' + esc(cents && p.soldOut ? "Esgotado" : siteLabelWithoutPrice(p)) + "</small>") +
+        "</div>" +
+        '<label class="admin-money"><span class="sr-only">Preço de ' + esc(p.name) + '</span><em>R$</em><input name="price" inputmode="decimal" value="' + money.centsToInput(cents) + '" placeholder="Sem preço" autocomplete="off"></label>' +
+        '<div class="admin-price-actions">' +
+          '<button class="btn btn-ghost" type="submit">Salvar</button>' +
+          '<button class="admin-text-btn" type="button" data-action="prod-toggle" data-id="' + esc(p.id) + '" aria-expanded="' + open + '" aria-controls="pd-' + esc(p.id) + '">' + (open ? "Fechar" : "Editar") + "</button>" +
+        "</div>" +
+        '<p class="admin-form-error" data-form-error role="alert" hidden></p>' +
+      "</form>" +
+      (open ? prodDetailHtml(p) : "") +
+    "</article>";
+  }
+
+  // rascunho de fotos do produto aberto: {ref, url} já salvas, {file, url} novas
+  function photoDraft(p) {
+    if (!state.photoDraft[p.id]) {
+      state.photoDraft[p.id] = (p.imageRefs || []).map(function (ref, i) { return { ref: ref, url: p.images[i] }; })
+        .filter(function (ph) { return !!ph.url; });
+    }
+    return state.photoDraft[p.id];
+  }
+
+  function photosHtml(p) {
+    return photoDraft(p).map(function (ph, i) {
+      return '<figure class="admin-photo' + (i === 0 ? " is-cover" : "") + '">' +
+        '<img src="' + esc(ph.url) + '" alt="Foto ' + (i + 1) + '">' +
+        (i === 0
+          ? "<figcaption>Capa</figcaption>"
+          : '<button type="button" class="admin-photo-cover" data-action="photo-cover" data-id="' + esc(p.id) + '" data-index="' + i + '">Usar como capa</button>') +
+        '<button type="button" class="admin-photo-remove" data-action="photo-remove" data-id="' + esc(p.id) + '" data-index="' + i + '" aria-label="Remover foto ' + (i + 1) + '">×</button>' +
+      "</figure>";
+    }).join("");
+  }
+
+  function prodDetailHtml(p) {
+    var cats = window.SG_CATALOG || [];
+    return '<form class="admin-prod-detail" id="pd-' + esc(p.id) + '" data-form="product-detail" data-id="' + esc(p.id) + '" novalidate>' +
+      '<div class="admin-prod-grid">' +
+        '<div class="admin-prod-photos"><h3>Fotos</h3>' +
+          '<div class="admin-photo-grid" data-photo-grid="' + esc(p.id) + '">' + photosHtml(p) + "</div>" +
+          '<label class="admin-photo-add"><input type="file" accept="image/jpeg,image/png,image/webp" multiple data-photo-input="' + esc(p.id) + '"><span>+ Adicionar fotos</span></label>' +
+          "<small>JPG, PNG ou WEBP. A primeira é a capa no site. O tamanho é otimizado automaticamente.</small>" +
+        "</div>" +
+        '<div class="admin-prod-fields">' +
+          '<label class="admin-field">Descrição<textarea name="description" rows="3" maxlength="600">' + esc(p.desc) + "</textarea></label>" +
+          (p.isCustom
+            ? '<label class="admin-field">Categoria<select name="category">' + cats.map(function (c) {
+                return '<option value="' + c.id + '"' + (c.id === p.category ? " selected" : "") + ">" + esc(c.label) + "</option>";
+              }).join("") + "</select></label>"
+            : "") +
+          '<label class="admin-check"><input type="checkbox" name="sold_out"' + (p.soldOut ? " checked" : "") + "> Esgotado (sem botão de compra)</label>" +
+          '<label class="admin-check"><input type="checkbox" name="hidden"' + (p.hidden ? " checked" : "") + "> Oculto do site</label>" +
+          '<div class="admin-prod-order"><span>Posição na categoria</span>' +
+            '<button type="button" class="btn btn-ghost" data-action="prod-move" data-dir="-1" data-id="' + esc(p.id) + '">↑ Subir</button>' +
+            '<button type="button" class="btn btn-ghost" data-action="prod-move" data-dir="1" data-id="' + esc(p.id) + '">↓ Descer</button>' +
+          "</div>" +
+        "</div>" +
       "</div>" +
       '<p class="admin-form-error" data-form-error role="alert" hidden></p>' +
+      '<div class="admin-form-actions">' +
+        (p.isCustom
+          ? '<button class="admin-text-btn admin-text-btn--danger" type="button" data-action="prod-delete" data-id="' + esc(p.id) + '">Excluir produto</button>'
+          : (p.hasOverride ? '<button class="admin-text-btn" type="button" data-action="prod-restore" data-id="' + esc(p.id) + '">Restaurar original</button>' : "")) +
+        '<button class="btn btn-primary" type="submit">Salvar detalhes</button>' +
+      "</div>" +
     "</form>";
   }
 
-  function priceForm(id) {
-    var el = list("prices");
-    return el ? el.querySelector('[data-form="price"][data-id="' + id + '"]') : null;
+  function rerenderProd(id) {
+    var el = list("products");
+    var card = el && el.querySelector('[data-prod-id="' + id + '"]');
+    var p = findProd(id);
+    if (card && p) card.outerHTML = prodRowHtml(p);
+    else renderProdList();
+    renderProdCount();
   }
 
-  function pricesChanged(ids, cents) {
-    var now = new Date().toISOString();
-    ids.forEach(function (id) {
-      if (cents) state.prices[id] = { product_id: id, price_cents: cents, updated_at: now };
-      else delete state.prices[id];
-    });
-    if (ids.length === 1) {
-      var formEl = priceForm(ids[0]);
-      var item = findCatalogItem(ids[0]);
-      if (formEl && item) formEl.outerHTML = priceRowHtml(item);
-      renderUnpricedCount();
-    } else {
-      renderPriceList();
+  function textProblem(value, label) {
+    return UNSAFE_TEXT.test(value) ? "Não use < > \" ou ` em " + label + "." : null;
+  }
+
+  async function afterProductChange(message, focusId) {
+    var res = await reloadProductData();
+    if (destroyed) return;
+    if (!res.ok) { toast(res.message.toUpperCase()); return; }
+    renderProdList();
+    if (message) toast(message);
+    if (focusId) {
+      var input = list("products").querySelector('[data-prod-id="' + focusId + '"] [name="price"]');
+      if (input) input.focus();
     }
-    // o próprio site atrás do painel já passa a mostrar o preço novo
-    if (window.SG.prices) window.SG.prices.refresh();
   }
 
-  // Enter num preço salva e já leva para a próxima peça (perfumes: 40 preços)
-  function focusNextPrice(id) {
-    var formEl = priceForm(id);
-    var next = formEl && formEl.nextElementSibling;
-    var input = next && next.querySelector('[name="price"]');
-    if (input) { input.focus(); input.select(); }
-  }
-
-  async function savePrice(form) {
+  // linha: nome + preço
+  async function saveProductRow(form) {
     var id = form.getAttribute("data-id");
-    var current = state.prices[id] ? state.prices[id].price_cents : null;
-    var raw = field(form, "price").value.trim();
-    var item = findCatalogItem(id);
+    var p = findProd(id);
+    if (!p) return;
     setFormError(form, "");
-    if (!raw) {
-      if (current === null) { toast("NADA PARA SALVAR"); return; }
-      clearPrice(id, form);
-      return;
-    }
-    var cents = money.parseMoneyToCents(raw);
-    if (cents === null) { setFormError(form, "Use o formato 197,00."); return; }
-    if (cents <= 0) { setFormError(form, "O preço precisa ser maior que zero. Para tirar o preço, deixe o campo vazio."); return; }
-    if (cents === current) { toast("NADA PARA SALVAR"); return; }
+    var name = field(form, "name").value.trim().replace(/\s+/g, " ");
+    if (!name) { setFormError(form, "O nome não pode ficar vazio."); return; }
+    var bad = textProblem(name, "nome");
+    if (bad) { setFormError(form, bad); return; }
+    var raw = field(form, "price").value.trim();
+    var cents = raw ? money.parseMoneyToCents(raw) : null;
+    if (raw && cents === null) { setFormError(form, "Preço no formato 197,00."); return; }
+    if (raw && cents <= 0) { setFormError(form, "O preço precisa ser maior que zero. Para tirar o preço, deixe vazio."); return; }
+
+    var factory = window.SG.catalogFactory ? window.SG.catalogFactory(id) : null;
+    var nameChanged = name !== p.name;
+    var priceChanged = cents !== priceOf(id);
+    if (!nameChanged && !priceChanged) { toast("NADA PARA SALVAR"); return; }
+
     setBusy(form, true);
-    var res = await svc.setPrices([{ productId: id, priceCents: cents }]);
+    var results = [];
+    if (nameChanged) {
+      results.push(await svc.saveProducts([{ id: id, category: p.category, name: factory && name === factory.name ? null : name }]));
+    }
+    if (priceChanged) {
+      results.push(cents ? await svc.setPrices([{ productId: id, priceCents: cents }]) : await svc.clearPrices([id]));
+    }
     if (destroyed) return;
     setBusy(form, false);
-    if (!res.ok) { setFormError(form, res.message); return; }
-    pricesChanged([id], cents);
-    toast((item ? item.name : id).toUpperCase() + " — " + brl(cents));
-    focusNextPrice(id);
+    var failed = results.find(function (r) { return !r.ok; });
+    if (failed) { setFormError(form, failed.message); return; }
+    var nextId = (function () {
+      var all = prodList();
+      var i = all.findIndex(function (x) { return x.id === id; });
+      return all[i + 1] ? all[i + 1].id : null;
+    })();
+    await afterProductChange(name.toUpperCase() + (cents ? " — " + brl(cents) : priceChanged ? " — SEM PREÇO" : "") , nextId);
   }
 
-  async function clearPrice(id, form) {
-    var item = findCatalogItem(id);
-    if (form) setBusy(form, true);
-    var res = await svc.clearPrices([id]);
+  // detalhe: descrição, fotos, esgotado, oculto, categoria (produto novo)
+  async function saveProductDetail(form) {
+    var id = form.getAttribute("data-id");
+    var p = findProd(id);
+    if (!p) return;
+    setFormError(form, "");
+    var description = field(form, "description").value.trim();
+    var bad = textProblem(description, "descrição");
+    if (bad) { setFormError(form, bad); return; }
+    var draft = photoDraft(p);
+    if (!draft.length) { setFormError(form, "Deixe pelo menos uma foto: sem foto o produto não aparece no site."); return; }
+    if (draft.length > 8) { setFormError(form, "No máximo 8 fotos por produto."); return; }
+
+    setBusy(form, true);
+    var uploaded = [];
+    for (var i = 0; i < draft.length; i++) {
+      if (!draft[i].file) continue;
+      var blob = await imageLib.optimizeImage(draft[i].file);
+      if (blob.size > imageLib.MAX_IMAGE_BYTES) { setBusy(form, false); setFormError(form, "Uma das fotos passou de 8MB mesmo otimizada."); return; }
+      var up = await svc.uploadProductImage(id, blob);
+      if (destroyed) return;
+      if (!up.ok) { setBusy(form, false); setFormError(form, up.message); await svc.removeProductImages(uploaded); return; }
+      uploaded.push(up.data);
+      draft[i] = { ref: up.data, url: draft[i].url };
+    }
+    var refs = draft.map(function (ph) { return ph.ref; });
+    var factory = window.SG.catalogFactory ? window.SG.catalogFactory(id) : null;
+    var isFactoryDefault = !!factory && refs.length === factory.images.length && refs.every(function (r, k) { return r === "base:" + k; });
+    var row = {
+      id: id,
+      category: p.isCustom ? field(form, "category").value : p.category,
+      description: factory && description === factory.desc ? null : (description || null),
+      images: isFactoryDefault ? [] : refs,
+      sold_out: field(form, "sold_out").checked,
+      hidden: field(form, "hidden").checked,
+    };
+    var previous = (state.overlay[id] && state.overlay[id].images) || [];
+    var res = await svc.saveProducts([row]);
     if (destroyed) return;
-    if (form) setBusy(form, false);
-    if (!res.ok) { if (form) setFormError(form, res.message); return; }
-    pricesChanged([id], null);
-    toast((item ? item.name : id).toUpperCase() + " — SEM PREÇO");
+    setBusy(form, false);
+    if (!res.ok) { setFormError(form, res.message); await svc.removeProductImages(uploaded); return; }
+    // fotos do bucket que saíram da lista: apagar de verdade
+    var dropped = previous.filter(function (ref) { return !/^base:/.test(ref) && refs.indexOf(ref) === -1; });
+    if (dropped.length) await svc.removeProductImages(dropped);
+    delete state.photoDraft[id];
+    if (row.category !== p.category) state.prodCategory = row.category;
+    await afterProductChange("PRODUTO SALVO — " + p.name.toUpperCase());
+    if (row.category !== p.category) renderPanel();
+  }
+
+  async function moveProduct(id, dir) {
+    var all = prodList();
+    var i = all.findIndex(function (x) { return x.id === id; });
+    var j = i + dir;
+    if (i < 0 || j < 0 || j >= all.length) { toast(dir < 0 ? "JÁ É O PRIMEIRO" : "JÁ É O ÚLTIMO"); return; }
+    var tmp = all[i]; all[i] = all[j]; all[j] = tmp;
+    var res = await svc.saveProducts(all.map(function (p, k) { return { id: p.id, category: p.category, sort_order: (k + 1) * 10 }; }));
+    if (destroyed) return;
+    if (!res.ok) { toast(res.message.toUpperCase()); return; }
+    await afterProductChange(dir < 0 ? "SUBIU UMA POSIÇÃO" : "DESCEU UMA POSIÇÃO");
+  }
+
+  async function restoreProduct(id) {
+    var row = state.overlay[id];
+    var res = await svc.deleteProduct(id);
+    if (destroyed) return;
+    if (!res.ok) { toast(res.message.toUpperCase()); return; }
+    var files = ((row && row.images) || []).filter(function (ref) { return !/^base:/.test(ref); });
+    if (files.length) await svc.removeProductImages(files);
+    delete state.photoDraft[id];
+    await afterProductChange("ORIGINAL RESTAURADO");
+  }
+
+  async function deleteProduct(id, btn) {
+    // dois cliques: o primeiro pede confirmação no próprio botão
+    if (btn.getAttribute("data-confirm") !== "1") {
+      btn.setAttribute("data-confirm", "1");
+      btn.textContent = "Confirmar: excluir de vez";
+      return;
+    }
+    var row = state.overlay[id];
+    btn.disabled = true;
+    var res = await svc.deleteProduct(id);
+    if (destroyed) return;
+    if (!res.ok) { btn.disabled = false; toast(res.message.toUpperCase()); return; }
+    await svc.clearPrices([id]);
+    var files = ((row && row.images) || []).filter(function (ref) { return !/^base:/.test(ref); });
+    if (files.length) await svc.removeProductImages(files);
+    delete state.photoDraft[id];
+    state.openProdId = null;
+    await afterProductChange("PRODUTO EXCLUÍDO");
+  }
+
+  // ----- novo produto -----
+  function newProductHtml() {
+    var cats = window.SG_CATALOG || [];
+    return '<form class="admin-editor" data-form="product-new" novalidate>' +
+      "<h3>Novo produto</h3>" +
+      '<div class="admin-form-grid">' +
+        '<label class="admin-field">Categoria<select name="category">' + cats.map(function (c) {
+          return '<option value="' + c.id + '"' + (c.id === state.prodCategory ? " selected" : "") + ">" + esc(c.label) + "</option>";
+        }).join("") + "</select></label>" +
+        '<label class="admin-field">Nome<input name="name" maxlength="120" autocomplete="off" placeholder="Ex.: Lupa Juliet Chrome"></label>' +
+        '<label class="admin-field">Preço<span class="admin-money"><em>R$</em><input name="price" inputmode="decimal" placeholder="Sem preço (Consultar)" autocomplete="off"></span></label>' +
+        '<label class="admin-field admin-field--wide">Descrição<textarea name="description" rows="2" maxlength="600" placeholder="Opcional"></textarea></label>' +
+      "</div>" +
+      '<div class="admin-photo-grid" data-new-photos>' + newPhotosHtml() + "</div>" +
+      '<label class="admin-photo-add"><input type="file" accept="image/jpeg,image/png,image/webp" multiple data-photo-input="__new"><span>+ Fotos (a primeira é a capa)</span></label>' +
+      '<p class="admin-form-error" data-form-error role="alert" hidden></p>' +
+      '<div class="admin-form-actions"><button class="btn btn-ghost" type="button" data-action="prod-new-cancel">Cancelar</button><button class="btn btn-primary" type="submit">Criar produto</button></div>' +
+    "</form>";
+  }
+  function newPhotosHtml() {
+    return state.newPhotos.map(function (ph, i) {
+      return '<figure class="admin-photo' + (i === 0 ? " is-cover" : "") + '"><img src="' + esc(ph.url) + '" alt="Foto ' + (i + 1) + '">' +
+        (i === 0 ? "<figcaption>Capa</figcaption>" : "") +
+        '<button type="button" class="admin-photo-remove" data-action="photo-remove" data-id="__new" data-index="' + i + '" aria-label="Remover foto ' + (i + 1) + '">×</button></figure>';
+    }).join("");
+  }
+  function openNewProduct() {
+    var box = bodyEl.querySelector("[data-prod-new]");
+    if (!box) return;
+    state.newPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
+    state.newPhotos = [];
+    box.innerHTML = newProductHtml();
+    box.querySelector('[name="name"]').focus();
+  }
+
+  async function createProduct(form) {
+    setFormError(form, "");
+    var category = field(form, "category").value;
+    var name = field(form, "name").value.trim().replace(/\s+/g, " ");
+    var description = field(form, "description").value.trim();
+    var raw = field(form, "price").value.trim();
+    var cents = raw ? money.parseMoneyToCents(raw) : null;
+    if (!name) { setFormError(form, "Dê um nome ao produto."); return; }
+    var bad = textProblem(name, "nome") || textProblem(description, "descrição");
+    if (bad) { setFormError(form, bad); return; }
+    if (raw && (cents === null || cents <= 0)) { setFormError(form, "Preço no formato 197,00 (ou deixe vazio)."); return; }
+    if (!state.newPhotos.length) { setFormError(form, "Adicione pelo menos uma foto."); return; }
+    if (state.newPhotos.length > 8) { setFormError(form, "No máximo 8 fotos por produto."); return; }
+
+    var id = category + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    setBusy(form, true);
+    var uploaded = [];
+    for (var i = 0; i < state.newPhotos.length; i++) {
+      var blob = await imageLib.optimizeImage(state.newPhotos[i].file);
+      if (blob.size > imageLib.MAX_IMAGE_BYTES) { setBusy(form, false); setFormError(form, "Uma das fotos passou de 8MB mesmo otimizada."); await svc.removeProductImages(uploaded); return; }
+      var up = await svc.uploadProductImage(id, blob);
+      if (destroyed) return;
+      if (!up.ok) { setBusy(form, false); setFormError(form, up.message); await svc.removeProductImages(uploaded); return; }
+      uploaded.push(up.data);
+    }
+    var last = window.SG.catalogAll ? window.SG.catalogAll(category) : [];
+    var sortOrder = last.length ? last[last.length - 1].order + 10 : 10;
+    var res = await svc.createProduct({ id: id, category: category, name: name, description: description || null, images: uploaded, sort_order: sortOrder });
+    if (destroyed) return;
+    if (!res.ok) { setBusy(form, false); setFormError(form, res.message); await svc.removeProductImages(uploaded); return; }
+    if (cents) await svc.setPrices([{ productId: id, priceCents: cents }]);
+    if (destroyed) return;
+    state.newPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
+    state.newPhotos = [];
+    bodyEl.querySelector("[data-prod-new]").innerHTML = "";
+    state.prodCategory = category;
+    state.prodSearch = "";
+    renderPanel();
+    await afterProductChange("PRODUTO CRIADO — " + name.toUpperCase());
+  }
+
+  // fotos escolhidas no input (produto aberto ou formulário de novo)
+  function addPhotos(input) {
+    var id = input.getAttribute("data-photo-input");
+    var files = Array.prototype.slice.call(input.files || []);
+    input.value = "";
+    var problems = files.map(function (f) { return imageLib.imageProblem(f); }).filter(Boolean);
+    var ok = files.filter(function (f) { return !imageLib.imageProblem(f); });
+    var form = input.closest("form");
+    if (problems.length) setFormError(form, problems[0]);
+    if (id === "__new") {
+      ok.forEach(function (f) { state.newPhotos.push({ file: f, url: URL.createObjectURL(f) }); });
+      bodyEl.querySelector("[data-new-photos]").innerHTML = newPhotosHtml();
+      return;
+    }
+    var p = findProd(id);
+    if (!p) return;
+    var draft = photoDraft(p);
+    ok.forEach(function (f) { draft.push({ file: f, url: URL.createObjectURL(f) }); });
+    var grid = bodyEl.querySelector('[data-photo-grid="' + id + '"]');
+    if (grid) grid.innerHTML = photosHtml(p);
+  }
+
+  function photoAction(action, id, index) {
+    if (id === "__new") {
+      var removed = state.newPhotos.splice(index, 1)[0];
+      if (removed) URL.revokeObjectURL(removed.url);
+      bodyEl.querySelector("[data-new-photos]").innerHTML = newPhotosHtml();
+      return;
+    }
+    var p = findProd(id);
+    if (!p) return;
+    var draft = photoDraft(p);
+    if (action === "photo-remove") draft.splice(index, 1);
+    else if (action === "photo-cover") draft.unshift(draft.splice(index, 1)[0]);
+    var grid = bodyEl.querySelector('[data-photo-grid="' + id + '"]');
+    if (grid) grid.innerHTML = photosHtml(p);
   }
 
   function resetBulk(form) {
@@ -548,29 +845,28 @@ export function mountAdminPage(root, _params, onClose) {
 
   // dois cliques: o primeiro mostra quantas peças e o valor, o segundo grava
   async function applyBulk(form) {
-    var cat = priceCategory();
+    var cat = prodCategory();
     if (!cat) return;
+    var all = prodList();
     var cents = money.parseMoneyToCents(field(form, "price").value);
     if (cents === null || cents <= 0) { setFormError(form, "Informe um preço maior que zero, ex: 197,00."); return; }
     var btn = form.querySelector("[data-bulk-submit]");
     if (form.getAttribute("data-confirm") !== String(cents)) {
       form.setAttribute("data-confirm", String(cents));
-      btn.textContent = "Confirmar: " + cat.count + " peças por " + brl(cents);
+      btn.textContent = "Confirmar: " + all.length + " peças por " + brl(cents);
       btn.classList.add("btn-primary");
       btn.classList.remove("btn-ghost");
       form.querySelector('[data-action="bulk-cancel"]').hidden = false;
       return;
     }
-    var ids = cat.items.map(function (i) { return i.id; });
     setBusy(form, true);
-    var res = await svc.setPrices(ids.map(function (pid) { return { productId: pid, priceCents: cents }; }));
+    var res = await svc.setPrices(all.map(function (p) { return { productId: p.id, priceCents: cents }; }));
     if (destroyed) return;
     setBusy(form, false);
     if (!res.ok) { setFormError(form, res.message); return; }
     resetBulk(form);
     field(form, "price").value = "";
-    pricesChanged(ids, cents);
-    toast(cat.label.toUpperCase() + " — " + cat.count + " PEÇAS POR " + brl(cents));
+    await afterProductChange(cat.label.toUpperCase() + " — " + all.length + " PEÇAS POR " + brl(cents));
   }
 
   // ---------- clientes ----------
@@ -953,7 +1249,7 @@ export function mountAdminPage(root, _params, onClose) {
     if (action === "login") { if (window.SG.auth) window.SG.auth.open(); }
     else if (action === "retry") {
       var what = btn.getAttribute("data-retry");
-      ({ orders: loadOrders, prices: loadPrices, customers: loadCustomers, posts: loadPosts, promo: loadPromo, newsletter: loadNewsletter })[what]();
+      ({ orders: loadOrders, products: loadProducts, customers: loadCustomers, posts: loadPosts, promo: loadPromo, newsletter: loadNewsletter })[what]();
     }
     else if (action === "order-filter") { state.orderStatus = value; state.openOrderId = null; markChip(btn); loadOrders(); }
     else if (action === "order-toggle") {
@@ -1018,15 +1314,32 @@ export function mountAdminPage(root, _params, onClose) {
       loadOverview();
     }
     else if (action === "export-newsletter") { exportNewsletter(); }
-    else if (action === "price-cat") {
-      state.priceCategory = value;
-      state.priceSearch = "";
-      var priceSearch = bodyEl.querySelector('[data-search="prices"]');
-      if (priceSearch) priceSearch.value = "";
+    else if (action === "prod-cat") {
+      state.prodCategory = value;
+      state.prodSearch = "";
+      state.openProdId = null;
+      var prodSearch = bodyEl.querySelector('[data-search="products"]');
+      if (prodSearch) prodSearch.value = "";
       markChip(btn);
-      renderPriceCategory();
+      renderProdCategory();
     }
-    else if (action === "price-clear") { clearPrice(id, btn.closest("form")); }
+    else if (action === "prod-toggle") {
+      var previous = state.openProdId;
+      state.openProdId = previous === id ? null : id;
+      delete state.photoDraft[id];
+      if (previous && previous !== id) rerenderProd(previous);
+      rerenderProd(id);
+    }
+    else if (action === "prod-new") { openNewProduct(); }
+    else if (action === "prod-new-cancel") {
+      state.newPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
+      state.newPhotos = [];
+      bodyEl.querySelector("[data-prod-new]").innerHTML = "";
+    }
+    else if (action === "photo-remove" || action === "photo-cover") { photoAction(action, id, Number(btn.getAttribute("data-index"))); }
+    else if (action === "prod-move") { btn.disabled = true; moveProduct(id, Number(btn.getAttribute("data-dir"))); }
+    else if (action === "prod-restore") { btn.disabled = true; restoreProduct(id); }
+    else if (action === "prod-delete") { deleteProduct(id, btn); }
     else if (action === "bulk-cancel") { resetBulk(btn.closest("form")); }
   }
 
@@ -1062,7 +1375,9 @@ export function mountAdminPage(root, _params, onClose) {
     }
     else if (kind === "coupon") saveCoupon(form);
     else if (kind === "reward") saveReward(form);
-    else if (kind === "price") savePrice(form);
+    else if (kind === "product") saveProductRow(form);
+    else if (kind === "product-detail") saveProductDetail(form);
+    else if (kind === "product-new") createProduct(form);
     else if (kind === "price-bulk") applyBulk(form);
   }
 
@@ -1075,7 +1390,7 @@ export function mountAdminPage(root, _params, onClose) {
     if (search) {
       var which = search.getAttribute("data-search");
       if (which === "newsletter") { state.newsletterSearch = search.value; renderNewsletterList(); return; }
-      if (which === "prices") { state.priceSearch = search.value; renderPriceList(); return; }
+      if (which === "products") { state.prodSearch = search.value; renderProdList(); return; }
       clearTimeout(searchTimer);
       searchTimer = setTimeout(function () {
         if (which === "orders") { state.orderSearch = search.value; loadOrders(); }
@@ -1085,6 +1400,11 @@ export function mountAdminPage(root, _params, onClose) {
     }
     if (e.target.matches("[data-item-price]")) recalcOrderForm(e.target.closest("form"));
     else if (e.target.matches('[data-form="order"] [name="total"]')) e.target.setAttribute("data-dirty", "");
+  }
+
+  // escolha de fotos (produto aberto ou novo produto)
+  function onChange(e) {
+    if (e.target.matches && e.target.matches("[data-photo-input]")) addPhotos(e.target);
   }
 
   function onKeydown(e) {
@@ -1107,6 +1427,7 @@ export function mountAdminPage(root, _params, onClose) {
   root.addEventListener("click", onClick);
   root.addEventListener("submit", onSubmit);
   root.addEventListener("input", onInput);
+  root.addEventListener("change", onChange);
   // captura: roda antes do ESC do auth-modal, enquanto ele ainda está aberto
   document.addEventListener("keydown", onKeydown, true);
 
@@ -1122,6 +1443,8 @@ export function mountAdminPage(root, _params, onClose) {
     root.removeEventListener("click", onClick);
     root.removeEventListener("submit", onSubmit);
     root.removeEventListener("input", onInput);
+    root.removeEventListener("change", onChange);
+    state.newPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
     robots.remove();
   };
 }

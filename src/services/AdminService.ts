@@ -3,6 +3,7 @@
    policies de RLS). Este serviço só chama — um não-admin que chegasse aqui
    receberia 'forbidden' / zero linhas, não dados. Nunca usa service_role. */
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { CATALOG_COLUMNS, type CatalogRow } from "./CatalogService";
 
 export type OrderStatus = "pending_payment" | "paid" | "fulfilled" | "cancelled" | "refunded";
 export type PostStatus = "pending" | "approved" | "rejected";
@@ -296,6 +297,64 @@ export const AdminService = {
     if (!supabase) return [];
     const { data } = await supabase.from("levels").select("level_number, name, xp_required").order("level_number");
     return (data ?? []) as AdminLevel[];
+  },
+
+  // ---------- produtos (migration 0102: camada sobre o catálogo de fábrica) ----------
+  async listProducts(): Promise<AdminResult<Record<string, CatalogRow>>> {
+    if (!supabase) return fail("not_configured");
+    const { data, error } = await supabase.from("products").select(CATALOG_COLUMNS).range(0, 4999);
+    if (error) return fromError(error);
+    const byId: Record<string, CatalogRow> = {};
+    for (const row of (data ?? []) as CatalogRow[]) byId[row.id] = row;
+    return { ok: true, data: byId };
+  },
+
+  /** Cria/atualiza linhas (só as colunas enviadas mudam). category é obrigatório
+   *  para linha nova; is_custom só vale na criação (createProduct). */
+  async saveProducts(rows: Array<Partial<CatalogRow> & { id: string; category: string }>): Promise<AdminResult<null>> {
+    if (!supabase) return fail("not_configured");
+    const clean = rows.map((r) => {
+      const { is_custom: _ignored, ...rest } = r;
+      return rest;
+    });
+    const { data, error } = await supabase.from("products").upsert(clean, { onConflict: "id" }).select("id");
+    if (error) return fromError(error);
+    if ((data ?? []).length !== rows.length) return fail("forbidden");
+    return { ok: true, data: null };
+  },
+
+  async createProduct(row: Omit<CatalogRow, "is_custom" | "hidden" | "sold_out"> & { hidden?: boolean; sold_out?: boolean }): Promise<AdminResult<null>> {
+    if (!supabase) return fail("not_configured");
+    const { data, error } = await supabase.from("products").insert({ ...row, is_custom: true }).select("id");
+    if (error) return fromError(error);
+    if ((data ?? []).length !== 1) return fail("forbidden");
+    return { ok: true, data: null };
+  },
+
+  /** Apaga a linha: peça de fábrica volta ao original; criada no painel some. */
+  async deleteProduct(id: string): Promise<AdminResult<null>> {
+    if (!supabase) return fail("not_configured");
+    const { error } = await supabase.from("products").delete().eq("id", id);
+    if (error) return fromError(error);
+    return { ok: true, data: null };
+  },
+
+  /** Sobe uma foto já otimizada para products/<id>/... e devolve o caminho. */
+  async uploadProductImage(productId: string, blob: Blob): Promise<AdminResult<string>> {
+    if (!supabase) return fail("not_configured");
+    const ext = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
+    const path = productId + "/" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + "." + ext;
+    const { error } = await supabase.storage.from("products").upload(path, blob, { contentType: blob.type, upsert: false });
+    if (error) return fail("upload_failed", "Falha ao enviar a foto: " + error.message);
+    return { ok: true, data: path };
+  },
+
+  async removeProductImages(paths: string[]): Promise<AdminResult<null>> {
+    if (!supabase) return fail("not_configured");
+    if (!paths.length) return { ok: true, data: null };
+    const { error } = await supabase.storage.from("products").remove(paths);
+    if (error) return fail("upload_failed", "Falha ao apagar fotos: " + error.message);
+    return { ok: true, data: null };
   },
 
   // ---------- preços (migration 0101: escrita só admin) ----------

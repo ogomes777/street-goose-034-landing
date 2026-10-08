@@ -23,8 +23,8 @@
       rows.map(function (r) {
         return (
           '<div class="checkout-summary-row">' +
-          '<img src="' + r.product.images[0] + '" alt="" width="48" height="48">' +
-          "<span>" + r.product.name + " × " + r.qty + "</span>" +
+          '<img src="' + window.SG.esc(r.product.images[0]) + '" alt="" width="48" height="48">' +
+          "<span>" + window.SG.esc(r.product.name) + " × " + r.qty + "</span>" +
           "<b data-price-for=\"" + r.product.id + "\">" + money(r.product) + "</b></div>"
         );
       }).join("") +

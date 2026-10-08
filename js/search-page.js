@@ -35,8 +35,8 @@ export function mountSearchPage(root, _params, onClose) {
   function cardHtml(p, i) {
     return (
       '<a class="search-result" href="#" data-search-result="' + i + '" data-open-quickview="' + p.id + '">' +
-        '<img src="' + p.images[0] + '" alt="' + p.name + '" loading="lazy">' +
-        '<div><p class="search-result-name">' + p.name + "</p><p class=\"search-result-cat\">" + (p.categoryLabel || p.category || "") + "</p></div>" +
+        '<img src="' + window.SG.esc(p.images[0]) + '" alt="' + window.SG.esc(p.name) + '" loading="lazy">' +
+        '<div><p class="search-result-name">' + window.SG.esc(p.name) + "</p><p class=\"search-result-cat\">" + (p.categoryLabel || p.category || "") + "</p></div>" +
       "</a>"
     );
   }

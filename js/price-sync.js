@@ -13,8 +13,10 @@
 
   var CACHE_KEY = "sgPrices";
   var products = window.SG_PRODUCTS || [];
+  var lastPrices = null;
 
   function apply(prices) {
+    lastPrices = prices;
     products.forEach(function (p) {
       if (!p.category) return; // só itens do catálogo têm linha em product_prices
       var cents = Object.prototype.hasOwnProperty.call(prices, p.id) ? prices[p.id] : null;
@@ -52,6 +54,11 @@
     paint();
     return true;
   }
+
+  // catálogo mudou (produto novo, reexibido): reaplica o último preço conhecido
+  window.addEventListener("sg:catalog", function () {
+    if (lastPrices) { apply(lastPrices); paint(); }
+  });
 
   window.SG.prices = { refresh: refresh };
   refresh().catch(function () {});

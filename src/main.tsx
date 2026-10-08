@@ -34,6 +34,10 @@ async function bootstrap() {
   await import("../js/toast.js");
   await import("../js/data.js");
   await import("../js/catalog.js");
+  // produtos do banco (/admin → Produtos) antes de qualquer coisa que leia o
+  // catálogo — ver js/catalog-sync.js (cache na hora, 1ª visita espera ≤1,5s)
+  const { catalogReady } = await import("../js/catalog-sync.js");
+  await catalogReady;
   await import("../js/price-sync.js");
   // sacola e favoritos antes do router: ele monta a rota da URL na hora em
   // que carrega, e /checkout lê window.SG.cart no mount (deep link ou F5 em

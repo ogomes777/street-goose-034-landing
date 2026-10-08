@@ -149,10 +149,10 @@
     var fav = window.SG.wishlist && window.SG.wishlist.isFavorite(product.id);
     var artEl = qvEl.querySelector("[data-qv-art]");
     artEl.innerHTML =
-      '<img src="' + product.images[0] + '" alt="' + product.name + '" data-open-zoom data-qv-main style="cursor:zoom-in">' +
+      '<img src="' + window.SG.esc(product.images[0]) + '" alt="' + window.SG.esc(product.name) + '" data-open-zoom data-qv-main style="cursor:zoom-in">' +
       (product.images.length > 1
         ? '<div class="qv-thumbs">' + product.images.map(function (src, i) {
-            return '<button type="button" class="qv-thumb' + (i === 0 ? " is-active" : "") + '" data-qv-thumb="' + i + '" aria-label="Foto ' + (i + 1) + " de " + product.images.length + '"' + (i === 0 ? ' aria-current="true"' : "") + '><img src="' + src + '" alt=""></button>';
+            return '<button type="button" class="qv-thumb' + (i === 0 ? " is-active" : "") + '" data-qv-thumb="' + i + '" aria-label="Foto ' + (i + 1) + " de " + product.images.length + '"' + (i === 0 ? ' aria-current="true"' : "") + '><img src="' + window.SG.esc(src) + '" alt=""></button>';
           }).join("") + "</div>"
         : "");
     artEl.querySelectorAll("[data-qv-thumb]").forEach(function (btn) {
@@ -191,8 +191,9 @@
     if (buyBtn) buyBtn.setAttribute("data-buy-now", product.id);
     var waBtn = qvEl.querySelector("[data-qv-wa]");
     var consult = !!product.consultWhatsApp;
-    if (addBtn) addBtn.hidden = consult;
-    if (buyBtn) buyBtn.hidden = consult;
+    // esgotada (painel): some sacola/comprar/WhatsApp, fica só o favorito
+    if (addBtn) addBtn.hidden = consult || !!product.soldOut;
+    if (buyBtn) buyBtn.hidden = consult || !!product.soldOut;
     if (waBtn) {
       waBtn.hidden = !consult;
       if (consult) waBtn.setAttribute("href", window.SG.waProductLink(product));
