@@ -167,9 +167,19 @@
     try { var raw = sessionStorage.getItem(PENDING_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
   }
 
+  // a ação pendente roda logo no boot (sessão já existe após o OAuth), antes
+  // de cart.js/wishlist.js carregarem — esperar o módulo em vez de descartar
+  // a ação em silêncio (o toast dizia "FEITO" e o item não entrava)
+  function whenReady(name, eventName) {
+    if (window.SG[name]) return Promise.resolve(window.SG[name]);
+    return new Promise(function (resolve) {
+      document.addEventListener(eventName, function () { resolve(window.SG[name]); }, { once: true });
+    });
+  }
+
   var ACTION_HANDLERS = {
-    favorite: function (payload) { if (window.SG.wishlist) window.SG.wishlist.toggle(payload.productId); },
-    addToCart: function (payload) { if (window.SG.cart) window.SG.cart.addWithFeedback(payload.productId); },
+    favorite: function (payload) { return whenReady("wishlist", "sg:wishlist-change").then(function (w) { w.toggle(payload.productId); }); },
+    addToCart: function (payload) { return whenReady("cart", "sg:cart-change").then(function (c) { c.addWithFeedback(payload.productId); }); },
   };
 
   async function runPendingAction() {
@@ -177,7 +187,8 @@
     if (!action) return;
     clearPendingAction();
     var handler = ACTION_HANDLERS[action.type];
-    if (handler) handler(action.payload || {});
+    if (!handler) return;
+    await handler(action.payload || {});
     if (window.SG.toast) window.SG.toast("FEITO — AÇÃO CONCLUÍDA APÓS LOGIN");
   }
 

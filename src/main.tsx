@@ -35,6 +35,13 @@ async function bootstrap() {
   await import("../js/data.js");
   await import("../js/catalog.js");
   await import("../js/price-sync.js");
+  // sacola e favoritos antes do router: ele monta a rota da URL na hora em
+  // que carrega, e /checkout lê window.SG.cart no mount (deep link ou F5 em
+  // /checkout mostrava "sacola vazia" com itens). Os dois só dependem do
+  // catálogo; corações renderizados depois são sincronizados pelos
+  // MutationObservers do wishlist.js.
+  await import("../js/cart.js");
+  await import("../js/wishlist.js");
   await import("../js/category-portals.js");
   await import("../js/router.js");
   await import("../js/nav-routes.js");
@@ -45,8 +52,6 @@ async function bootstrap() {
   await import("../js/hero3d-film.js");
   await import("../js/product-universe.js");
   await import("../js/drift-product.js");
-  await import("../js/cart.js");
-  await import("../js/wishlist.js");
   await import("../js/popup.js");
   await import("../js/checkout.js");
   await import("../js/reviews.js");
