@@ -36,7 +36,9 @@ grant select, insert, update, delete on public.cart_items to authenticated;
 grant select on public.orders, public.order_items, public.xp_ledger, public.reward_redemptions to authenticated;
 grant select on public.xp_totals to authenticated;
 grant select, delete on public.community_posts to authenticated;
-grant insert (user_id, image_path, caption, product_id, rating) on public.community_posts to authenticated;
+-- status entra no grant porque o CommunityService envia status: "pending";
+-- a policy de insert abaixo obriga que seja 'pending' (sem auto-aprovação)
+grant insert (user_id, image_path, caption, product_id, rating, status) on public.community_posts to authenticated;
 
 -- perfil: só colunas de preferência são graváveis pelo dono
 grant select on public.profiles to authenticated;
