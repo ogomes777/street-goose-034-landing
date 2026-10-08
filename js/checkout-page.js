@@ -40,22 +40,22 @@ export function mountCheckoutPage(root, _params, onClose) {
     if (STEPS[stepIndex] === "identification") {
       return (
         '<div class="checkout-grid">' +
-        '<label class="span-2">' + t("auth.name") + '<input name="name" required value="' + f.name + '"></label>' +
-        '<label>' + t("auth.email") + '<input type="email" name="email" required value="' + f.email + '"></label>' +
-        '<label>Telefone<input name="phone" required data-mask="phone" placeholder="(00) 00000-0000" value="' + f.phone + '"></label>' +
+        '<label class="span-2">' + t("auth.name") + '<input name="name" required value="' + window.SG.esc(f.name) + '\"></label>' +
+        '<label>' + t("auth.email") + '<input type="email" name="email" required value="' + window.SG.esc(f.email) + '\"></label>' +
+        '<label>Telefone<input name="phone" required data-mask="phone" placeholder="(00) 00000-0000" value="' + window.SG.esc(f.phone) + '\"></label>' +
         "</div>"
       );
     }
     if (STEPS[stepIndex] === "address") {
       return (
         '<div class="checkout-grid">' +
-        '<label>CEP<input name="cep" required data-mask="cep" placeholder="00000-000" value="' + f.cep + '"></label>' +
-        '<label class="span-2">Rua<input name="street" required value="' + f.street + '"></label>' +
-        '<label>Número<input name="number" required value="' + f.number + '"></label>' +
-        '<label>Complemento<input name="complement" value="' + f.complement + '"></label>' +
-        '<label>Bairro<input name="neighborhood" required value="' + f.neighborhood + '"></label>' +
-        '<label>Cidade<input name="city" required value="' + f.city + '"></label>' +
-        '<label>Estado<input name="state" required maxlength="2" placeholder="UF" value="' + f.state + '"></label>' +
+        '<label>CEP<input name="cep" required data-mask="cep" placeholder="00000-000" value="' + window.SG.esc(f.cep) + '\"></label>' +
+        '<label class="span-2">Rua<input name="street" required value="' + window.SG.esc(f.street) + '\"></label>' +
+        '<label>Número<input name="number" required value="' + window.SG.esc(f.number) + '\"></label>' +
+        '<label>Complemento<input name="complement" value="' + window.SG.esc(f.complement) + '\"></label>' +
+        '<label>Bairro<input name="neighborhood" required value="' + window.SG.esc(f.neighborhood) + '\"></label>' +
+        '<label>Cidade<input name="city" required value="' + window.SG.esc(f.city) + '\"></label>' +
+        '<label>Estado<input name="state" required maxlength="2" placeholder="UF" value="' + window.SG.esc(f.state) + '\"></label>' +
         "</div>"
       );
     }
@@ -79,8 +79,8 @@ export function mountCheckoutPage(root, _params, onClose) {
   function reviewStepHtml() {
     return (
       '<div class="checkout-review">' +
-        '<h3>' + t("checkout.step.identification") + '</h3><p>' + formData.name + " — " + formData.email + " — " + formData.phone + "</p>" +
-        '<h3>' + t("checkout.step.address") + '</h3><p>' + formData.street + ", " + formData.number + " — " + formData.neighborhood + ", " + formData.city + "/" + formData.state.toUpperCase() + " — " + formData.cep + "</p>" +
+        '<h3>' + t("checkout.step.identification") + '</h3><p>' + window.SG.esc(formData.name + " — " + formData.email + " — " + formData.phone) + "</p>" +
+        '<h3>' + t("checkout.step.address") + '</h3><p>' + window.SG.esc(formData.street + ", " + formData.number + " — " + formData.neighborhood + ", " + formData.city + "/" + formData.state.toUpperCase() + " — " + formData.cep) + "</p>" +
         '<h3>' + t("checkout.step.payment") + '</h3><p>' + t("checkout.payment." + formData.payment) + "</p>" +
         '<h3>' + t("cart.title") + '</h3>' +
         rows.map(function (r) { return "<p>" + r.product.name + " × " + r.qty + " — " + r.product.priceLabel + "</p>"; }).join("") +

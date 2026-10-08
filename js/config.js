@@ -40,6 +40,15 @@ window.SG.subtotalLabel = function (rows) {
   return window.SG.formatPrice(known) + " + itens a consultar";
 };
 
+// Escapa texto vindo de usuário/banco antes de entrar em innerHTML (apelido,
+// legenda, nome de item de pedido, busca, avaliação). Sem isso, qualquer
+// "<img onerror=...>" salvo no banco executaria no navegador de quem visse.
+window.SG.esc = function (value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+};
+
 // link de WhatsApp perguntando preço/disponibilidade de uma peça específica
 window.SG.waProductLink = function (product) {
   return window.SG.waLink("Olá! Quero saber o preço e a disponibilidade de " + product.name + " (" + (product.sku || product.id) + ") que vi no site da Street Goose 034.");

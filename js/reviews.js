@@ -41,10 +41,10 @@
     var p = findProduct(r.productId);
     return (
       '<article class="review-card">' +
-      (r.photo ? '<img class="review-photo" src="' + r.photo + '" alt="" width="80" height="80">' : "") +
+      (r.photo && /^(data:image\/|blob:|https:\/\/|\/)/.test(r.photo) ? '<img class="review-photo" src="' + window.SG.esc(r.photo) + '" alt="" width="80" height="80">' : "") +
       '<div class="review-stars" role="img" aria-label="' + Math.round(r.rating) + ' de 5 estrelas">' + starsMarkup(r.rating) + "</div>" +
-      '<p class="review-comment">“' + r.comment + '”</p>' +
-      '<div class="review-meta"><b>' + r.customerName + "</b>" + (p ? "<span>" + p.name + "</span>" : "") + "</div>" +
+      '<p class="review-comment">“' + window.SG.esc(r.comment) + '”</p>' +
+      '<div class="review-meta"><b>' + window.SG.esc(r.customerName) + "</b>" + (p ? "<span>" + window.SG.esc(p.name) + "</span>" : "") + "</div>" +
       (r.demo ? "" : '<span class="review-tag">pré-visualização</span>') +
       "</article>"
     );

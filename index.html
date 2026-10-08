@@ -340,6 +340,8 @@
       <div class="newsletter-copy"><p class="kicker">DROP LIST</p><h2>Chegou peça nova,<br>você fica sabendo.</h2></div>
       <div class="newsletter-form-wrap">
         <form data-newsletter-form>
+          <!-- isca anti-robô: invisível pra gente, robô preenche e é descartado -->
+          <div class="sg-hp" aria-hidden="true"><label>Não preencha<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
           <input type="email" required aria-label="Seu e-mail" placeholder="seu e-mail">
           <button class="btn btn-primary" type="submit">Entrar na lista</button>
         </form>
