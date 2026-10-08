@@ -63,12 +63,29 @@ function stem(key) { return key.replace(/^.*\//, "").replace(/\.[^.]+$/, ""); }
 // nos sites que o cliente indicou ficam null → "Consultar disponibilidade".
 // Manter em sincronia com public.product_prices (migration 0003), que é a
 // fonte usada pelo servidor ao registrar pedido.
-var CATEGORY_PRICE_CENTS = { lupa: 19700, acessorios: null, relogios: null, perfumes: null, trajes: null };
+// trajes = blusas de frio/moletons e relógios (Minute Machine e os
+// redondos) = R$220,00, informados pelo cliente.
+var CATEGORY_PRICE_CENTS = { lupa: 19700, acessorios: null, relogios: 22000, perfumes: null, trajes: 22000 };
 var FILE_PRICE_CENTS = {
+  "WhatsApp Image 2026-08-28 at 15.22.09 (1)": 80000, // mochila (3 fotos, ver PRODUCT_GROUPS) — preço do cliente, 08/10/2026
   "WhatsApp Image 2026-08-28 at 15.22.11 (2)": 19400, // chapéu bege
-  "WhatsApp Image 2026-08-28 at 15.22.15 (2)": 19400, // chapéu preto
-  "ChatGPT Image 28 de ago. de 2026, 16_10_26 (10)": 22000 // relógio Minute Machine (preço do cliente, 08/10/2026)
+  "WhatsApp Image 2026-08-28 at 15.22.12 (1)": 40000, // colete (detalhe) — preço do cliente, 08/10/2026
+  "WhatsApp Image 2026-08-28 at 15.22.14 (1)": 40000, // colete
+  "WhatsApp Image 2026-08-28 at 15.22.15 (2)": 19400 // chapéu preto
 };
+
+// Fotos diferentes do MESMO produto: a primeira (chave) vira o produto e as
+// demais entram como fotos extras dele, em vez de virar peças separadas.
+// O id continua vindo da posição original do arquivo (estável para sacola,
+// favoritos e public.product_prices); só a numeração exibida é recontada.
+var PRODUCT_GROUPS = {
+  // mochila: frente + duas laterais
+  "WhatsApp Image 2026-08-28 at 15.22.09 (1)": ["WhatsApp Image 2026-08-28 at 15.22.06 (1)", "WhatsApp Image 2026-08-28 at 15.22.13 (1)"]
+};
+var GROUPED_EXTRA = {};
+Object.keys(PRODUCT_GROUPS).forEach(function (primary) {
+  PRODUCT_GROUPS[primary].forEach(function (extra) { GROUPED_EXTRA[extra] = primary; });
+});
 
 window.SG_CATALOG = Object.keys(CATEGORY_META).map(function (categoryId) {
   var meta = CATEGORY_META[categoryId];
@@ -77,16 +94,22 @@ window.SG_CATALOG = Object.keys(CATEGORY_META).map(function (categoryId) {
     processedByStem[stem(key)] = processedGlobs[categoryId][key];
   });
   var keys = Object.keys(globs[categoryId]).sort();
+  var urlByStem = {};
+  keys.forEach(function (key) { urlByStem[stem(key)] = processedByStem[stem(key)] || globs[categoryId][key]; });
+  var shown = 0;
   var items = keys.map(function (key, i) {
-    var url = processedByStem[stem(key)] || globs[categoryId][key];
-    var n = String(i + 1).padStart(2, "0");
+    if (GROUPED_EXTRA[stem(key)]) return null;
+    var url = urlByStem[stem(key)];
+    var extraImages = (PRODUCT_GROUPS[stem(key)] || []).map(function (s2) { return urlByStem[s2]; }).filter(Boolean);
+    var idNum = String(i + 1).padStart(2, "0");
+    var n = String(++shown).padStart(2, "0");
     var priceCents = FILE_PRICE_CENTS[stem(key)] || CATEGORY_PRICE_CENTS[categoryId] || null;
     return {
-      id: categoryId + "-" + n,
+      id: categoryId + "-" + idNum,
       category: categoryId,
       categoryLabel: meta.label,
       name: meta.label.replace(/s$/, "") + " — Peça " + n,
-      images: [url],
+      images: [url].concat(extraImages),
       frameColor: meta.label,
       lensColor: "—",
       material: "—",
@@ -98,7 +121,7 @@ window.SG_CATALOG = Object.keys(CATEGORY_META).map(function (categoryId) {
       available: true,
       curated: false
     };
-  });
+  }).filter(Boolean);
   return {
     id: categoryId, label: meta.label, slug: meta.slug, folder: meta.folder,
     heroVideo: meta.heroVideo, heroVideoMobile: meta.heroVideoMobile, heroPoster: meta.heroPoster, heroPreview: meta.heroPreview,
