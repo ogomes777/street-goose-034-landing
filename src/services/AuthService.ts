@@ -27,16 +27,16 @@ export const AuthService = {
     return () => data.subscription.unsubscribe();
   },
 
-  async signInWithEmail(email: string, password: string): Promise<AuthResult> {
+  async signInWithEmail(email: string, password: string, captchaToken?: string | null): Promise<AuthResult> {
     if (!supabase) return { ok: false, reason: "not_configured", message: "Login ainda não configurado — falta VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY." };
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: captchaToken ? { captchaToken } : undefined });
     if (error) return { ok: false, reason: "invalid_credentials", message: error.message };
     return { ok: true };
   },
 
-  async signUpWithEmail(name: string, email: string, password: string): Promise<AuthResult> {
+  async signUpWithEmail(name: string, email: string, password: string, captchaToken?: string | null): Promise<AuthResult> {
     if (!supabase) return { ok: false, reason: "not_configured", message: "Cadastro ainda não configurado — falta VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY." };
-    const { error } = await supabase.auth.signUp({ email, password, options: { data: { name } } });
+    const { error } = await supabase.auth.signUp({ email, password, options: { data: { name }, ...(captchaToken ? { captchaToken } : {}) } });
     if (error) {
       const reason = /already registered|already exists/i.test(error.message) ? "email_taken" : "unknown";
       return { ok: false, reason, message: error.message };
@@ -54,10 +54,11 @@ export const AuthService = {
     return { ok: true }; // navegador redireciona — callback tratado em AuthCallback
   },
 
-  async resetPassword(email: string): Promise<AuthResult> {
+  async resetPassword(email: string, captchaToken?: string | null): Promise<AuthResult> {
     if (!supabase) return { ok: false, reason: "not_configured", message: "Recuperação de senha ainda não configurada." };
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + window.location.pathname,
+      ...(captchaToken ? { captchaToken } : {}),
     });
     if (error) return { ok: false, reason: "unknown", message: error.message };
     return { ok: true };

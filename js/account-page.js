@@ -1,8 +1,6 @@
 /* Street Goose 034 — /conta e /conta/pedidos.
    Sem Supabase configurado, mostra estado "faça login" (que por sua vez
    mostra "login não configurado" — honesto em cascata, nunca dado fake). */
-import { escapeHtml } from "../src/lib/html.ts";
-
 export function mountAccountPage(root, _params, onClose) {
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
   var isOrdersView = location.pathname.indexOf("/pedidos") !== -1;
@@ -41,7 +39,7 @@ export function mountAccountPage(root, _params, onClose) {
       }
       bodyEl.innerHTML = orders.length
         ? '<div class="orders-list">' + orders.map(function (o) {
-            return '<a class="order-row" href="/pedido/' + escapeHtml(o.id) + '"><span>#' + escapeHtml(o.id.slice(0, 8)) + "</span><span>" + escapeHtml(o.status) + "</span><span>" + (o.total_cents ? window.SG.formatPrice(o.total_cents) : t("common.consultAvailability")) + "</span></a>";
+            return '<a class="order-row" href="/pedido/' + encodeURIComponent(o.id) + '"><span>#' + window.SG.esc(o.id.slice(0, 8)) + "</span><span>" + window.SG.esc(o.status) + "</span><span>" + (o.total_cents ? window.SG.formatPrice(o.total_cents) : t("common.consultAvailability")) + "</span></a>";
           }).join("") + "</div>"
         : '<div class="app-page-empty"><h2>' + t("account.orders.empty") + "</h2></div>";
       return;
@@ -55,9 +53,9 @@ export function mountAccountPage(root, _params, onClose) {
 
     bodyEl.innerHTML =
       '<div class="account-summary">' +
-        '<p class="account-email">' + escapeHtml(session.user.email) + "</p>" +
+        '<p class="account-email">' + window.SG.esc(session.user.email || "") + "</p>" +
         (xpStatus
-          ? '<div class="account-level-card"><p>' + t("account.level") + " " + xpStatus.level.levelNumber + " — " + xpStatus.level.name + "</p>" +
+          ? '<div class="account-level-card"><p>' + t("account.level") + " " + xpStatus.level.levelNumber + " — " + window.SG.esc(xpStatus.level.name) + "</p>" +
             '<div class="xp-bar"><div class="xp-bar-fill" style="width:' + xpStatus.progressPct + '%"></div></div>' +
             (xpStatus.xpToNext !== null ? "<p class=\"account-xp-note\">" + xpStatus.xpToNext + " " + t("account.xpToNext") + "</p>" : "") + "</div>"
           : '<div class="account-level-card"><p>' + t("account.level") + " — " + t("common.consultAvailability") + "</p></div>") +

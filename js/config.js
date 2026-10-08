@@ -1,6 +1,7 @@
 /* Street Goose 034 — configuração central de loja/contato.
    Nenhum dado comercial real (telefone, CNPJ, gateway) é inventado aqui —
    os campos ficam com placeholder explícito até serem preenchidos de verdade. */
+import { escapeHtml } from "../src/lib/html.ts";
 window.SG_STORE_CONFIG = {
   currency: "BRL",
   locale: "pt-BR",
@@ -39,6 +40,12 @@ window.SG.subtotalLabel = function (rows) {
   if (!known) return "Consultar no atendimento";
   return window.SG.formatPrice(known) + " + itens a consultar";
 };
+
+// Escapa texto vindo de usuário/banco antes de entrar em innerHTML (apelido,
+// legenda, nome de item de pedido, busca, avaliação). Sem isso, qualquer
+// "<img onerror=...>" salvo no banco executaria no navegador de quem visse.
+// mesma função de src/lib/html.ts (coberta por teste), exposta pro código legado
+window.SG.esc = escapeHtml;
 
 // link de WhatsApp perguntando preço/disponibilidade de uma peça específica
 window.SG.waProductLink = function (product) {

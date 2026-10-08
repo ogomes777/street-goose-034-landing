@@ -47,7 +47,7 @@ export function mountSearchPage(root, _params, onClose) {
     resultsEl.innerHTML =
       '<p class="search-section-label">' + t("search.recent") + "</p>" +
       '<div class="search-history">' +
-      hist.map(function (h) { return '<button class="search-history-chip" data-search-history="' + h.replace(/"/g, "&quot;") + '">' + h + "</button>"; }).join("") +
+      hist.map(function (h) { return '<button class="search-history-chip" data-search-history="' + window.SG.esc(h) + '">' + window.SG.esc(h) + "</button>"; }).join("") +
       "</div>";
   }
 

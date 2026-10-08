@@ -2,8 +2,6 @@
    Sem backend real: envios ficam salvos só neste navegador (localStorage),
    claramente como pré-visualização de demo — nunca fingimos publicação
    pública nem "compra verificada" sem pedido real. */
-import { escapeHtml } from "../src/lib/html.ts";
-
 (function () {
   "use strict";
 
@@ -43,10 +41,10 @@ import { escapeHtml } from "../src/lib/html.ts";
     var p = findProduct(r.productId);
     return (
       '<article class="review-card">' +
-      (r.photo ? '<img class="review-photo" src="' + escapeHtml(r.photo) + '" alt="" width="80" height="80">' : "") +
+      (r.photo && /^(data:image\/|blob:|https:\/\/|\/)/.test(r.photo) ? '<img class="review-photo" src="' + window.SG.esc(r.photo) + '" alt="" width="80" height="80">' : "") +
       '<div class="review-stars" role="img" aria-label="' + Math.round(r.rating) + ' de 5 estrelas">' + starsMarkup(r.rating) + "</div>" +
-      '<p class="review-comment">“' + escapeHtml(r.comment) + '”</p>' +
-      '<div class="review-meta"><b>' + escapeHtml(r.customerName) + "</b>" + (p ? "<span>" + escapeHtml(p.name) + "</span>" : "") + "</div>" +
+      '<p class="review-comment">“' + window.SG.esc(r.comment) + '”</p>' +
+      '<div class="review-meta"><b>' + window.SG.esc(r.customerName) + "</b>" + (p ? "<span>" + window.SG.esc(p.name) + "</span>" : "") + "</div>" +
       (r.demo ? "" : '<span class="review-tag">pré-visualização</span>') +
       "</article>"
     );
@@ -69,7 +67,7 @@ import { escapeHtml } from "../src/lib/html.ts";
   }
 
   function formHtml() {
-    var options = products.map(function (p) { return '<option value="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + "</option>"; }).join("");
+    var options = products.map(function (p) { return '<option value="' + window.SG.esc(p.id) + '">' + window.SG.esc(p.name) + "</option>"; }).join("");
     return (
       '<form class="checkout-form" data-review-form novalidate>' +
       '<div class="checkout-grid">' +

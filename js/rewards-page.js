@@ -1,7 +1,5 @@
 /* Street Goose 034 — /recompensas. Lista config real do backend; resgate
    validado no servidor, nunca aplicado direto pela UI. */
-import { escapeHtml } from "../src/lib/html.ts";
-
 export function mountRewardsPage(root, _params, onClose) {
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
 
@@ -27,10 +25,10 @@ export function mountRewardsPage(root, _params, onClose) {
     bodyEl.innerHTML = '<div class="rewards-grid">' + rewards.map(function (r) {
       return (
         '<article class="reward-card">' +
-          '<p class="reward-kind">' + escapeHtml(r.kind.toUpperCase()) + "</p>" +
-          "<h3>" + escapeHtml(r.title) + "</h3><p>" + escapeHtml(r.description) + "</p>" +
+          '<p class="reward-kind">' + window.SG.esc(r.kind.toUpperCase()) + "</p>" +
+          "<h3>" + window.SG.esc(r.title) + "</h3><p>" + window.SG.esc(r.description) + "</p>" +
           (r.requirementLevel ? '<p class="reward-requirement">' + t("account.level") + " " + r.requirementLevel + "+</p>" : "") +
-          '<button class="btn btn-ghost" data-redeem="' + escapeHtml(r.id) + '">' + t("rewards.redeem") + "</button>" +
+          '<button class="btn btn-ghost" data-redeem="' + window.SG.esc(r.id) + '">' + t("rewards.redeem") + "</button>" +
         "</article>"
       );
     }).join("") + "</div>";

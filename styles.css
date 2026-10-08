@@ -563,6 +563,7 @@ img{max-width:100%;display:block}
 .newsletter-msg{margin:10px 0 0;font-size:12px;color:var(--muted)}
 .newsletter-msg.is-error{color:#ff5252}
 .newsletter-msg[hidden]{display:none}
+.sg-hp{position:absolute!important;left:-10000px!important;width:1px;height:1px;overflow:hidden}
 
 /* ===== FOOTER ===== */
 footer{max-width:var(--max);margin:auto;padding:0 24px 60px;display:grid;grid-template-columns:1fr 1fr;gap:26px;color:var(--muted)}

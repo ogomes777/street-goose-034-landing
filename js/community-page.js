@@ -1,7 +1,5 @@
 /* Street Goose 034 — /comunidade. Feed público (posts aprovados) + upload
    com moderação (nasce 'pending', só aparece público quando 'approved'). */
-import { escapeHtml } from "../src/lib/html.ts";
-
 export function mountCommunityPage(root, _params, onClose) {
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
 
@@ -32,8 +30,8 @@ export function mountCommunityPage(root, _params, onClose) {
     bodyEl.innerHTML = '<div class="community-grid">' + currentPosts.map(function (p, i) {
       return (
         '<figure class="community-card" data-community-open="' + i + '">' +
-          '<img src="' + escapeHtml(p.imageUrl) + '" alt="' + escapeHtml(p.caption) + '" loading="lazy">' +
-          (p.caption ? "<figcaption>" + escapeHtml(p.caption) + "</figcaption>" : "") +
+          '<img src="' + window.SG.esc(p.imageUrl) + '" alt="' + window.SG.esc(p.caption || "") + '" loading="lazy">' +
+          (p.caption ? "<figcaption>" + window.SG.esc(p.caption) + "</figcaption>" : "") +
         "</figure>"
       );
     }).join("") + "</div>";
@@ -54,9 +52,9 @@ export function mountCommunityPage(root, _params, onClose) {
     el.innerHTML =
       '<button class="popup-close" data-lightbox-close aria-label="' + t("common.close") + '">×</button>' +
       '<button class="community-lightbox-nav community-lightbox-prev" data-lightbox-prev aria-label="Anterior">‹</button>' +
-      '<img src="' + escapeHtml(p.imageUrl) + '" alt="' + escapeHtml(p.caption) + '">' +
+      '<img src="' + window.SG.esc(p.imageUrl) + '" alt="' + window.SG.esc(p.caption || "") + '">' +
       '<button class="community-lightbox-nav community-lightbox-next" data-lightbox-next aria-label="Próxima">›</button>' +
-      (p.caption ? '<p class="community-lightbox-caption">' + escapeHtml(p.caption) + "</p>" : "");
+      (p.caption ? '<p class="community-lightbox-caption">' + window.SG.esc(p.caption) + "</p>" : "");
     document.body.appendChild(el);
     el.querySelector("[data-lightbox-close]").addEventListener("click", function () { lightboxIndex = -1; renderLightbox(); });
     el.querySelector("[data-lightbox-prev]").addEventListener("click", function () { lightboxIndex = (lightboxIndex - 1 + currentPosts.length) % currentPosts.length; renderLightbox(); });

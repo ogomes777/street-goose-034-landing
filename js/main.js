@@ -78,6 +78,8 @@
       if (newsletterSubmitting) return;
       var input = form.querySelector("input[type=email]");
       var email = input.value.trim();
+      var trap = form.querySelector('input[name="website"]');
+      if (trap && trap.value) { form.reset(); return; } // robô: finge sucesso, não envia
       var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       if (!emailOk) {
         if (newsletterMsg) { newsletterMsg.textContent = "E-mail inválido."; newsletterMsg.hidden = false; newsletterMsg.className = "newsletter-msg is-error"; }
@@ -97,17 +99,20 @@
           btn.disabled = false; btn.textContent = original; newsletterSubmitting = false;
           return;
         }
-        // RPC newsletter_subscribe (migration 0002); cai no insert direto se a
-        // função ainda não existir no banco
+        // só via RPC newsletter_subscribe: valida, limita por IP e grava
+        // (insert direto na tabela é bloqueado no banco — migration 0010)
         mod.supabase.rpc("newsletter_subscribe", { p_email: email, p_locale: document.documentElement.lang || "pt-BR" }).then(function (r) {
-          if (!r.error) return { error: r.data && r.data.ok === false ? { code: r.data.reason } : null };
-          return mod.supabase.from("newsletter_subscribers").insert({ email: email.toLowerCase() });
+          if (r.error) return { error: r.error };
+          return { error: r.data && r.data.ok === false ? { code: r.data.reason } : null };
         }).then(function (res) {
           newsletterSubmitting = false;
           btn.disabled = false;
           if (res.error && res.error.code !== "23505") { // 23505 = já inscrito, trata como sucesso
             btn.textContent = original;
-            if (newsletterMsg) { newsletterMsg.textContent = "Algo deu errado. Tente de novo."; newsletterMsg.hidden = false; newsletterMsg.className = "newsletter-msg is-error"; }
+            var msg = res.error.code === "rate_limited" ? "Muitas tentativas. Espera uns minutos e tenta de novo."
+              : res.error.code === "invalid_email" ? "E-mail inválido."
+              : "Algo deu errado. Tente de novo.";
+            if (newsletterMsg) { newsletterMsg.textContent = msg; newsletterMsg.hidden = false; newsletterMsg.className = "newsletter-msg is-error"; }
             return;
           }
           btn.textContent = "Você está na lista ✓";

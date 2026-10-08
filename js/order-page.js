@@ -1,6 +1,4 @@
 /* Street Goose 034 — /pedido/:id. */
-import { escapeHtml } from "../src/lib/html.ts";
-
 export function mountOrderPage(root, params, onClose) {
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
 
@@ -26,10 +24,10 @@ export function mountOrderPage(root, params, onClose) {
     var { data: items } = await client.from("order_items").select("*").eq("order_id", order.id);
     bodyEl.innerHTML =
       '<div class="order-summary">' +
-        "<p>Status: <b>" + escapeHtml(order.status) + "</b></p>" +
+        "<p>Status: <b>" + window.SG.esc(order.status) + "</b></p>" +
         "<p>Total: <b>" + (order.total_cents ? window.SG.formatPrice(order.total_cents) : t("common.consultAvailability")) + "</b></p>" +
         '<div class="order-items">' + (items || []).map(function (it) {
-          return '<div class="order-item-row"><span>' + escapeHtml(it.product_name) + " × " + escapeHtml(it.qty) + "</span><span>" + window.SG.formatPrice(it.unit_price_cents * it.qty) + "</span></div>";
+          return '<div class="order-item-row"><span>' + window.SG.esc(it.product_name) + " × " + window.SG.esc(it.qty) + "</span><span>" + window.SG.formatPrice(it.unit_price_cents * it.qty) + "</span></div>";
         }).join("") + "</div>" +
       "</div>";
   }

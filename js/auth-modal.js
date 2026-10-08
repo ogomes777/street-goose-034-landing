@@ -66,9 +66,10 @@
         '<form class="auth-form" data-auth-form novalidate>' +
           (isSignUp ? '<label>' + i18nT("auth.name") + '<input type="text" name="name" required autocomplete="name"></label>' : "") +
           '<label>' + i18nT("auth.email") + '<input type="email" name="email" required autocomplete="email"></label>' +
-          '<label>' + i18nT("auth.password") + '<input type="password" name="password" required autocomplete="' + (isSignUp ? "new-password" : "current-password") + '" minlength="6"></label>' +
-          (isSignUp ? '<label>' + i18nT("auth.confirmPassword") + '<input type="password" name="confirmPassword" required autocomplete="new-password" minlength="6"></label>' : "") +
+          '<label>' + i18nT("auth.password") + '<input type="password" name="password" required autocomplete="' + (isSignUp ? "new-password" : "current-password") + '" minlength="' + (isSignUp ? 8 : 6) + '"></label>' +
+          (isSignUp ? '<label>' + i18nT("auth.confirmPassword") + '<input type="password" name="confirmPassword" required autocomplete="new-password" minlength="8"></label>' : "") +
           (isSignUp ? '<label class="auth-terms"><input type="checkbox" name="terms" required> <span>' + i18nT("auth.terms") + "</span></label>" : "") +
+          '<div class="auth-captcha" data-auth-captcha></div>' +
           '<p class="auth-error" data-auth-error hidden></p>' +
           '<button class="btn btn-primary auth-submit" type="submit" data-auth-submit>' + i18nT(isSignUp ? "auth.submitSignUp" : "auth.submitSignIn") + "</button>" +
         "</form>" +
@@ -78,9 +79,32 @@
     );
   }
 
+  var captcha = null;
+  async function mountCaptchaWidget() {
+    if (captcha) { captcha.destroy(); captcha = null; }
+    var box = overlay.querySelector("[data-auth-captcha]");
+    if (!box) return;
+    try {
+      var mod = await import("../src/lib/captcha.ts");
+      captcha = await mod.mountCaptcha(box);
+    } catch (e) {
+      captcha = null; // falha ao carregar o widget: o Supabase recusa e mostramos o erro dele
+    }
+  }
+  function captchaToken() {
+    return captcha ? captcha.getToken() : null;
+  }
+  function needsCaptcha() {
+    if (!captcha) return false;
+    if (captcha.getToken()) return false;
+    showError("Confirma que você não é robô antes de continuar.");
+    return true;
+  }
+
   function render() {
     overlay.innerHTML = formHtml();
     bindForm();
+    mountCaptchaWidget();
   }
 
   function showError(msg) {
@@ -105,8 +129,10 @@
       forgotBtn.addEventListener("click", async function () {
         var email = overlay.querySelector('[name="email"]').value.trim();
         if (!email) { showError("Digite seu e-mail acima primeiro."); return; }
+        if (needsCaptcha()) return;
         var svc = await loadAuthService();
-        var res = await svc.resetPassword(email);
+        var res = await svc.resetPassword(email, captchaToken());
+        if (captcha) captcha.reset();
         if (!res.ok) showError(res.message);
         else { if (window.SG.toast) window.SG.toast("LINK DE RECUPERAÇÃO ENVIADO, SE O E-MAIL EXISTIR"); }
       });
@@ -126,6 +152,10 @@
       var name = String(fd.get("name") || "").trim();
       overlay.querySelector("[data-auth-error]").hidden = true;
 
+      if (mode === "signUp" && password.length < 8) {
+        showError("A senha precisa de pelo menos 8 caracteres.");
+        return;
+      }
       if (mode === "signUp" && fd.get("password") !== fd.get("confirmPassword")) {
         showError(i18nT("auth.confirmPassword") + " — não confere.");
         return;
@@ -135,10 +165,13 @@
         return;
       }
 
+      if (needsCaptcha()) return;
       setLoading(true);
       var svc = await loadAuthService();
-      var res = mode === "signUp" ? await svc.signUpWithEmail(name, email, password) : await svc.signInWithEmail(email, password);
+      var token = captchaToken();
+      var res = mode === "signUp" ? await svc.signUpWithEmail(name, email, password, token) : await svc.signInWithEmail(email, password, token);
       setLoading(false);
+      if (captcha) captcha.reset();
       if (!res.ok) { showError(res.message); return; }
       close();
       await runPendingAction();
@@ -152,6 +185,7 @@
     render();
   }
   function close() {
+    if (captcha) { captcha.destroy(); captcha = null; }
     overlay.hidden = true;
     document.body.classList.remove("auth-modal-open");
     clearPendingAction();
