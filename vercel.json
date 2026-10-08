@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/categoria/:slug", "destination": "/index.html" },
+    { "source": "/busca", "destination": "/index.html" },
+    { "source": "/favoritos", "destination": "/index.html" },
+    { "source": "/sacola", "destination": "/index.html" },
+    { "source": "/checkout", "destination": "/index.html" },
+    { "source": "/conta", "destination": "/index.html" },
+    { "source": "/conta/pedidos", "destination": "/index.html" },
+    { "source": "/pedido/:id", "destination": "/index.html" },
+    { "source": "/ranking", "destination": "/index.html" },
+    { "source": "/recompensas", "destination": "/index.html" },
+    { "source": "/comunidade", "destination": "/index.html" }
+  ]
+}

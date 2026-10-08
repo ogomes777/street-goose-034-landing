@@ -1,0 +1,8 @@
+CLAUDE.md
+assets/heroes/*.mp4
+assets/heroes/*.png
+assets/banners/*.png
+!assets/banners/popup-street-goose-drop-orange.png
+assets/products/*.png
+assets/logos/*.png
+assets/lifestyle/*.webp
