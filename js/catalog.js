@@ -67,7 +67,7 @@ function stem(key) { return key.replace(/^.*\//, "").replace(/\.[^.]+$/, ""); }
 // redondos) = R$220,00, informados pelo cliente.
 var CATEGORY_PRICE_CENTS = { lupa: 19700, acessorios: null, relogios: 22000, perfumes: null, trajes: 22000 };
 var FILE_PRICE_CENTS = {
-  "WhatsApp Image 2026-08-28 at 15.22.09 (1)": 40000, // mochila (3 fotos, ver PRODUCT_GROUPS) — preço do cliente, 08/10/2026
+  "WhatsApp Image 2026-08-28 at 15.22.09 (1)": 80000, // mochila (3 fotos, ver PRODUCT_GROUPS) — preço do cliente, 08/10/2026
   "WhatsApp Image 2026-08-28 at 15.22.11 (2)": 19400, // chapéu bege
   "WhatsApp Image 2026-08-28 at 15.22.12 (1)": 40000, // colete (detalhe) — preço do cliente, 08/10/2026
   "WhatsApp Image 2026-08-28 at 15.22.14 (1)": 40000, // colete
