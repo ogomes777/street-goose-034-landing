@@ -27,6 +27,19 @@ window.SG.formatPrice = function (cents) {
   }).format(cents / 100);
 };
 
+// Subtotal da sacola: soma o que tem preço; se algum item não tem, avisa
+// que o restante é confirmado no atendimento em vez de mostrar total falso.
+window.SG.subtotalLabel = function (rows) {
+  var known = 0, unknown = 0;
+  rows.forEach(function (r) {
+    if (typeof r.product.price === "number") known += r.product.price * r.qty;
+    else unknown += r.qty;
+  });
+  if (!unknown) return window.SG.formatPrice(known);
+  if (!known) return "Consultar no atendimento";
+  return window.SG.formatPrice(known) + " + itens a consultar";
+};
+
 window.SG.waLink = function (message) {
   var cfg = window.SG_CONTACT_CONFIG;
   var base = cfg.whatsappNumber ? "https://wa.me/" + cfg.whatsappNumber : cfg.whatsappFallbackUrl;

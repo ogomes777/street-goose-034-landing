@@ -84,6 +84,7 @@ export function mountCheckoutPage(root, _params, onClose) {
         '<h3>' + t("checkout.step.payment") + '</h3><p>' + t("checkout.payment." + formData.payment) + "</p>" +
         '<h3>' + t("cart.title") + '</h3>' +
         rows.map(function (r) { return "<p>" + r.product.name + " × " + r.qty + " — " + r.product.priceLabel + "</p>"; }).join("") +
+        '<p class="checkout-review-total"><b>Total: ' + window.SG.subtotalLabel(rows) + "</b></p>" +
       "</div>"
     );
   }
@@ -120,6 +121,7 @@ export function mountCheckoutPage(root, _params, onClose) {
     var lines = ["Olá! Quero fechar esse pedido Street Goose 034:", ""];
     if (orderId) { lines[0] = "Olá! Quero fechar o pedido #" + orderId.slice(0, 8).toUpperCase() + " Street Goose 034:"; }
     rows.forEach(function (r) { lines.push("• " + r.product.name + " (" + r.qty + "x) — " + r.product.priceLabel); });
+    lines.push("Total: " + window.SG.subtotalLabel(rows));
     lines.push("");
     lines.push("Nome: " + formData.name);
     lines.push("Telefone: " + formData.phone);

@@ -18,7 +18,6 @@
   function money(p) { return p.priceLabel; }
 
   function orderSummaryHtml(rows) {
-    var subtotalKnown = rows.every(function (r) { return typeof r.product.price === "number"; });
     return (
       '<div class="checkout-summary">' +
       rows.map(function (r) {
@@ -30,7 +29,7 @@
         );
       }).join("") +
       '<div class="checkout-summary-total"><span>Total</span><b>' +
-      (subtotalKnown ? "—" : "Consultar no atendimento") + "</b></div></div>"
+      window.SG.subtotalLabel(rows) + "</b></div></div>"
     );
   }
 

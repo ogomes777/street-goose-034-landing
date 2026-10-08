@@ -57,17 +57,29 @@ var processedGlobs = {
 };
 function stem(key) { return key.replace(/^.*\//, "").replace(/\.[^.]+$/, ""); }
 
+// Preços (centavos) — referência de mercado levantada em 08/10/2026:
+// lupas = linha padrão da Trance Lupas (trancelupass.com.br, R$197,00);
+// chapéus = Bucket/Chapéu da Trance (R$194,00). Categorias sem referência
+// nos sites que o cliente indicou ficam null → "Consultar disponibilidade".
+// Manter em sincronia com public.product_prices (migration 0003), que é a
+// fonte usada pelo servidor ao registrar pedido.
+var CATEGORY_PRICE_CENTS = { lupa: 19700, acessorios: null, relogios: null, perfumes: null, trajes: null };
+var FILE_PRICE_CENTS = {
+  "WhatsApp Image 2026-08-28 at 15.22.11 (2)": 19400, // chapéu bege
+  "WhatsApp Image 2026-08-28 at 15.22.15 (2)": 19400  // chapéu preto
+};
+
 window.SG_CATALOG = Object.keys(CATEGORY_META).map(function (categoryId) {
   var meta = CATEGORY_META[categoryId];
   var processedByStem = {};
   Object.keys(processedGlobs[categoryId]).forEach(function (key) {
     processedByStem[stem(key)] = processedGlobs[categoryId][key];
   });
-  var urls = Object.keys(globs[categoryId])
-    .sort()
-    .map(function (key) { return processedByStem[stem(key)] || globs[categoryId][key]; });
-  var items = urls.map(function (url, i) {
+  var keys = Object.keys(globs[categoryId]).sort();
+  var items = keys.map(function (key, i) {
+    var url = processedByStem[stem(key)] || globs[categoryId][key];
     var n = String(i + 1).padStart(2, "0");
+    var priceCents = FILE_PRICE_CENTS[stem(key)] || CATEGORY_PRICE_CENTS[categoryId] || null;
     return {
       id: categoryId + "-" + n,
       category: categoryId,
@@ -80,7 +92,8 @@ window.SG_CATALOG = Object.keys(CATEGORY_META).map(function (categoryId) {
       tag: "CATÁLOGO",
       desc: "peça " + n + " do catálogo " + meta.label.toLowerCase(),
       alt: meta.label + " Street Goose 034 — peça " + n,
-      priceLabel: "Consultar disponibilidade",
+      price: priceCents,
+      priceLabel: priceCents ? window.SG.formatPrice(priceCents) : "Consultar disponibilidade",
       available: true,
       curated: false
     };

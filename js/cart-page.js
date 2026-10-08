@@ -9,7 +9,6 @@ export function mountCartPage(root, _params, onClose) {
 
   var bodyEl = root.querySelector("[data-cart-page-body]");
 
-  function priceKnown(rows) { return rows.every(function (r) { return typeof r.product.price === "number"; }); }
 
   function render() {
     var rows = window.SG.cart ? window.SG.cart.getItems() : [];
@@ -35,7 +34,7 @@ export function mountCartPage(root, _params, onClose) {
           );
         }).join("") + "</div>" +
         '<div class="cart-page-summary">' +
-          '<p class="cart-page-summary-row"><span>' + t("cart.subtotal") + '</span><b>' + (priceKnown(rows) ? "—" : t("common.consultAvailability")) + "</b></p>" +
+          '<p class="cart-page-summary-row"><span>' + t("cart.subtotal") + '</span><b>' + window.SG.subtotalLabel(rows) + "</b></p>" +
           '<button class="btn btn-primary" data-go-checkout>' + t("cart.checkout") + "</button>" +
           '<a class="text-link" href="/">' + t("cart.continueShopping") + "</a>" +
         "</div>" +
