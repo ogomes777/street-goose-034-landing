@@ -63,7 +63,8 @@ function stem(key) { return key.replace(/^.*\//, "").replace(/\.[^.]+$/, ""); }
 // nos sites que o cliente indicou ficam null → "Consultar disponibilidade".
 // Manter em sincronia com public.product_prices (migration 0003), que é a
 // fonte usada pelo servidor ao registrar pedido.
-var CATEGORY_PRICE_CENTS = { lupa: 19700, acessorios: null, relogios: null, perfumes: null, trajes: null };
+// trajes = blusas de frio/moletons, R$220,00 informado pelo cliente.
+var CATEGORY_PRICE_CENTS = { lupa: 19700, acessorios: null, relogios: null, perfumes: null, trajes: 22000 };
 var FILE_PRICE_CENTS = {
   "WhatsApp Image 2026-08-28 at 15.22.11 (2)": 19400, // chapéu bege
   "WhatsApp Image 2026-08-28 at 15.22.12 (1)": 40000, // colete (detalhe) — preço do cliente, 08/10/2026
