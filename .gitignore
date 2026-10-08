@@ -4,3 +4,13 @@ dist
 .codex-tmp
 test-results
 playwright-report
+
+# segredos e arquivos locais
+.env.local
+.env*.local
+supabase/.temp
+
+# vídeos grandes (servidos pelo deploy da Vercel, não pelo git)
+*.mp4
+*.mov
+*.webm
