@@ -174,11 +174,27 @@
     qvEl.querySelector("[data-qv-lens]").textContent = product.lensColor;
     qvEl.querySelector("[data-qv-material]").textContent = product.material || "—";
     qvEl.querySelector("[data-qv-sku]").textContent = product.sku;
+    // Armação/Lente só fazem sentido para óculos; linha sem dado real ("—")
+    // some em vez de exibir campo vazio (perfume com "Armação: Perfumes")
+    var isEyewear = !product.category || product.category === "lupa";
+    [["[data-qv-frame]", isEyewear], ["[data-qv-lens]", isEyewear && product.lensColor !== "—"], ["[data-qv-material]", !!product.material && product.material !== "—"]]
+      .forEach(function (row) {
+        var li = qvEl.querySelector(row[0]);
+        if (li && li.parentElement) li.parentElement.hidden = !row[1];
+      });
     var addBtn = qvEl.querySelector("[data-qv-add]");
     var buyBtn = qvEl.querySelector("[data-qv-buy]");
     var favBtn = qvEl.querySelector("[data-qv-fav]");
     if (addBtn) addBtn.setAttribute("data-add-to-cart", product.id);
     if (buyBtn) buyBtn.setAttribute("data-buy-now", product.id);
+    var waBtn = qvEl.querySelector("[data-qv-wa]");
+    var consult = !!product.consultWhatsApp;
+    if (addBtn) addBtn.hidden = consult;
+    if (buyBtn) buyBtn.hidden = consult;
+    if (waBtn) {
+      waBtn.hidden = !consult;
+      if (consult) waBtn.setAttribute("href", window.SG.waProductLink(product));
+    }
     if (favBtn) {
       favBtn.setAttribute("data-favorite-toggle", product.id);
       favBtn.classList.toggle("is-active", !!fav);

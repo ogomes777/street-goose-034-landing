@@ -32,7 +32,10 @@ export function mountCategoryPage(root, slug, onRequestClose) {
         '<div class="cat-item-body">' +
           '<p class="cat-item-name">' + item.name + "</p>" +
           '<p class="cat-item-price">' + item.priceLabel + "</p>" +
-          '<button class="round-btn" aria-label="Adicionar ' + item.name + ' à sacola" data-add-to-cart="' + item.id + '">+</button>' +
+          (item.consultWhatsApp
+            ? '<a class="round-btn round-btn--wa" href="' + window.SG.waProductLink(item) + '" target="_blank" rel="noopener" aria-label="Consultar preço de ' + item.name + ' no WhatsApp">' +
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z"/></svg></a>'
+            : '<button class="round-btn" aria-label="Adicionar ' + item.name + ' à sacola" data-add-to-cart="' + item.id + '">+</button>') +
         "</div>" +
       "</article>"
     );
