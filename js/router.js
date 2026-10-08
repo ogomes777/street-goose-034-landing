@@ -1,6 +1,6 @@
 /* Street Goose 034 — Router mínimo: /categoria/:slug (hero scroll-scrub,
    overlay próprio) + rotas de app genéricas (busca, favoritos, sacola,
-   checkout, conta, ranking, recompensas, comunidade — overlay [data-app-page]
+   checkout, conta, ranking, recompensas, comunidade, admin — overlay [data-app-page]
    compartilhado). History API + fallback SPA (vercel.json rewrite). Uma
    única fonte de verdade para "rota ativa"; navigate()/popstate convergem
    no mesmo render(). Cada módulo de página é importado sob demanda. */
@@ -26,6 +26,7 @@
     "/recompensas": function () { return import("./rewards-page.js").then(function (m) { return m.mountRewardsPage; }); },
     "/comunidade": function () { return import("./community-page.js").then(function (m) { return m.mountCommunityPage; }); },
     "/pedido/:id": function () { return import("./order-page.js").then(function (m) { return m.mountOrderPage; }); },
+    "/admin": function () { return import("./admin-page.js").then(function (m) { return m.mountAdminPage; }); },
   };
 
   var scrollY = 0;

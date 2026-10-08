@@ -14,6 +14,7 @@
     { "source": "/pedido/:id", "destination": "/index.html" },
     { "source": "/ranking", "destination": "/index.html" },
     { "source": "/recompensas", "destination": "/index.html" },
-    { "source": "/comunidade", "destination": "/index.html" }
+    { "source": "/comunidade", "destination": "/index.html" },
+    { "source": "/admin", "destination": "/index.html" }
   ]
 }

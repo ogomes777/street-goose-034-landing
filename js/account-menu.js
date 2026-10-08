@@ -21,12 +21,30 @@
       '<button class="account-dropdown-item" type="button" data-account-signout>' + t("nav.account.signOut") + "</button>";
   }
 
+  // "Painel da loja" só aparece para quem o banco diz que é admin (is_admin(),
+  // migration 0010). Esconder o link é conveniência — quem protege é o RLS.
+  // Checado a cada abertura: a conta logada pode ter mudado desde a última.
+  function renderAdminLink() {
+    import("../src/services/AdminService.ts")
+      .then(function (m) { return m.AdminService.isAdmin(); })
+      .catch(function () { return false; })
+      .then(function (isAdmin) {
+        if (!isAdmin || !open || dropdown.querySelector("[data-account-admin]")) return;
+        var link = document.createElement("a");
+        link.className = "account-dropdown-item";
+        link.href = "/admin";
+        link.setAttribute("data-account-admin", "");
+        link.textContent = "Painel da loja";
+        dropdown.insertBefore(link, dropdown.querySelector(".account-dropdown-divider"));
+      });
+  }
+
   var open = false;
   function setOpen(v) {
     open = v;
     dropdown.hidden = !v;
     btn.setAttribute("aria-expanded", String(v));
-    if (v) render();
+    if (v) { render(); renderAdminLink(); }
   }
 
   btn.addEventListener("click", function (e) {
