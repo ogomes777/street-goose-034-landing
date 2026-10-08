@@ -54,6 +54,26 @@ alter table public.orders add column if not exists staff_note text;
 alter table public.community_posts add column if not exists moderated_by uuid references auth.users(id) on delete set null;
 
 -- ============================================================
+-- GRANTS — o projeto de produção não concede acesso automático a tabela
+-- nova, e a 0010 revoga tudo de anon/authenticated. Sem GRANT a policy
+-- abaixo não libera nada; com GRANT, a RLS ainda filtra linha a linha
+-- (só admin enxerga/grava). Só o que o painel usa, por coluna quando dá.
+-- Leitura pública de levels/rewards é da 0010; repetida aqui só para o
+-- painel não depender da ordem em que as duas forem aplicadas.
+-- ============================================================
+grant select on public.levels to authenticated;
+grant select on public.coupons to authenticated;
+grant insert (code, discount_percent, discount_cents, max_uses, valid_from, valid_until, active),
+      update (code, discount_percent, discount_cents, max_uses, valid_from, valid_until, active)
+  on public.coupons to authenticated;
+grant select on public.rewards to authenticated;
+grant insert (title, description, kind, requirement_level, coupon_code, discount_percent, active),
+      update (title, description, kind, requirement_level, coupon_code, discount_percent, active)
+  on public.rewards to authenticated;
+grant select on public.reward_redemptions to authenticated;
+grant select, update (unsubscribed_at) on public.newsletter_subscribers to authenticated;
+
+-- ============================================================
 -- RLS — CRUD simples direto pela API, só para admin
 -- ============================================================
 drop policy if exists "coupons: admin reads" on public.coupons;

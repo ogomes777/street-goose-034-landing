@@ -25,6 +25,14 @@ create trigger product_prices_touch
   before insert or update on public.product_prices
   for each row execute function public.touch_product_price();
 
+-- sem GRANT a policy não libera nada (produção não concede acesso
+-- automático; a 0010 revoga tudo). Leitura pública é da 0010, repetida
+-- para o site/painel não dependerem da ordem de aplicação. updated_at e
+-- updated_by ficam de fora: só o trigger escreve neles.
+grant select on public.product_prices to anon, authenticated;
+grant insert (product_id, price_cents), update (product_id, price_cents), delete
+  on public.product_prices to authenticated;
+
 drop policy if exists "product_prices: admin inserts" on public.product_prices;
 drop policy if exists "product_prices: admin updates" on public.product_prices;
 drop policy if exists "product_prices: admin deletes" on public.product_prices;
