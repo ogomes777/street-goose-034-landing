@@ -49,7 +49,19 @@ def main():
                     help="refino de borda via pymatting (bem mais lento em CPU; o BiRefNet já entrega alpha suave)")
     args = ap.parse_args()
 
-    session = new_session(args.model)
+    # GPU NVIDIA quando disponível (pip install "onnxruntime-gpu[cuda,cudnn]"):
+    # BiRefNet leva ~2 min/foto em CPU; em GPU, segundos
+    providers = ["CPUExecutionProvider"]
+    try:
+        import onnxruntime as ort
+        if hasattr(ort, "preload_dlls"):
+            ort.preload_dlls()
+        if "CUDAExecutionProvider" in ort.get_available_providers():
+            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+    except Exception:
+        pass
+    print("providers:", providers, flush=True)
+    session = new_session(args.model, providers=providers)
     out_root = pathlib.Path(args.out)
     for spec in args.targets:
         folder, files = parse_target(spec)
