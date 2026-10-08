@@ -8,7 +8,7 @@ window.SG_STORE_CONFIG = {
 };
 
 window.SG_CONTACT_CONFIG = {
-  whatsappNumber: "", // formato E.164 sem "+", ex: "5534999999999" — preencher quando disponível
+  whatsappNumber: "553497281423", // +55 34 9728-1423 (cliente, 08/10/2026) — formato E.164 sem "+"
   whatsappFallbackUrl: "https://wa.me/",
   instagramHandle: "",
   instagramFallbackUrl: "https://instagram.com/"
