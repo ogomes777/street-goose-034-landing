@@ -40,6 +40,11 @@ window.SG.subtotalLabel = function (rows) {
   return window.SG.formatPrice(known) + " + itens a consultar";
 };
 
+// link de WhatsApp perguntando preço/disponibilidade de uma peça específica
+window.SG.waProductLink = function (product) {
+  return window.SG.waLink("Olá! Quero saber o preço e a disponibilidade de " + product.name + " (" + (product.sku || product.id) + ") que vi no site da Street Goose 034.");
+};
+
 window.SG.waLink = function (message) {
   var cfg = window.SG_CONTACT_CONFIG;
   var base = cfg.whatsappNumber ? "https://wa.me/" + cfg.whatsappNumber : cfg.whatsappFallbackUrl;

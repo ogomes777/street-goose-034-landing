@@ -78,6 +78,10 @@ var FILE_PRICE_CENTS = {
 // demais entram como fotos extras dele, em vez de virar peças separadas.
 // O id continua vindo da posição original do arquivo (estável para sacola,
 // favoritos e public.product_prices); só a numeração exibida é recontada.
+// Categorias em que cada peça tem preço diferente (cliente, 08/10/2026):
+// sem preço fixo no site, o card leva direto pro WhatsApp com a peça.
+var CONSULT_WHATSAPP = { perfumes: true };
+
 var PRODUCT_GROUPS = {
   // mochila: frente + duas laterais
   "WhatsApp Image 2026-08-28 at 15.22.09 (1)": ["WhatsApp Image 2026-08-28 at 15.22.06 (1)", "WhatsApp Image 2026-08-28 at 15.22.13 (1)"]
@@ -117,7 +121,8 @@ window.SG_CATALOG = Object.keys(CATEGORY_META).map(function (categoryId) {
       desc: "peça " + n + " do catálogo " + meta.label.toLowerCase(),
       alt: meta.label + " Street Goose 034 — peça " + n,
       price: priceCents,
-      priceLabel: priceCents ? window.SG.formatPrice(priceCents) : "Consultar disponibilidade",
+      priceLabel: priceCents ? window.SG.formatPrice(priceCents) : (CONSULT_WHATSAPP[categoryId] ? "Consultar no WhatsApp" : "Consultar disponibilidade"),
+      consultWhatsApp: !priceCents && !!CONSULT_WHATSAPP[categoryId],
       available: true,
       curated: false
     };
