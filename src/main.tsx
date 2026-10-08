@@ -34,6 +34,7 @@ async function bootstrap() {
   await import("../js/toast.js");
   await import("../js/data.js");
   await import("../js/catalog.js");
+  await import("../js/price-sync.js");
   await import("../js/category-portals.js");
   await import("../js/router.js");
   await import("../js/nav-routes.js");

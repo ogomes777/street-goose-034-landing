@@ -61,8 +61,9 @@ function stem(key) { return key.replace(/^.*\//, "").replace(/\.[^.]+$/, ""); }
 // lupas = linha padrão da Trance Lupas (trancelupass.com.br, R$197,00);
 // chapéus = Bucket/Chapéu da Trance (R$194,00). Categorias sem referência
 // nos sites que o cliente indicou ficam null → "Consultar disponibilidade".
-// Manter em sincronia com public.product_prices (migration 0003), que é a
-// fonte usada pelo servidor ao registrar pedido.
+// FALLBACK: a fonte real é public.product_prices, editável em /admin →
+// Preços (js/price-sync.js aplica por cima no boot). Estes mapas só valem
+// enquanto o banco não respondeu ou sem Supabase configurado.
 // trajes = blusas de frio/moletons e relógios (Minute Machine e os
 // redondos) = R$220,00, informados pelo cliente.
 var CATEGORY_PRICE_CENTS = { lupa: 19700, acessorios: null, relogios: 22000, perfumes: null, trajes: 22000 };
@@ -86,6 +87,19 @@ var PRODUCT_GROUPS = {
   // mochila: frente + duas laterais
   "WhatsApp Image 2026-08-28 at 15.22.09 (1)": ["WhatsApp Image 2026-08-28 at 15.22.06 (1)", "WhatsApp Image 2026-08-28 at 15.22.13 (1)"]
 };
+// rótulo único para "tem preço" / "sem preço" — usado aqui no build e pelo
+// price-sync.js quando o preço do banco chega (mesmos objetos de produto)
+window.SG.priceLabelFor = function (category, cents) {
+  if (typeof cents === "number" && cents > 0) return window.SG.formatPrice(cents);
+  return CONSULT_WHATSAPP[category] ? "Consultar no WhatsApp" : "Consultar disponibilidade";
+};
+window.SG.setProductPrice = function (product, cents) {
+  var priced = typeof cents === "number" && cents > 0;
+  product.price = priced ? cents : null;
+  product.priceLabel = window.SG.priceLabelFor(product.category, cents);
+  product.consultWhatsApp = !priced && !!CONSULT_WHATSAPP[product.category];
+};
+
 var GROUPED_EXTRA = {};
 Object.keys(PRODUCT_GROUPS).forEach(function (primary) {
   PRODUCT_GROUPS[primary].forEach(function (extra) { GROUPED_EXTRA[extra] = primary; });
@@ -121,7 +135,7 @@ window.SG_CATALOG = Object.keys(CATEGORY_META).map(function (categoryId) {
       desc: "peça " + n + " do catálogo " + meta.label.toLowerCase(),
       alt: meta.label + " Street Goose 034 — peça " + n,
       price: priceCents,
-      priceLabel: priceCents ? window.SG.formatPrice(priceCents) : (CONSULT_WHATSAPP[categoryId] ? "Consultar no WhatsApp" : "Consultar disponibilidade"),
+      priceLabel: window.SG.priceLabelFor(categoryId, priceCents),
       consultWhatsApp: !priceCents && !!CONSULT_WHATSAPP[categoryId],
       available: true,
       curated: false

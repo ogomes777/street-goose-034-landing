@@ -117,6 +117,12 @@ export interface NewsletterSubscriber {
   unsubscribed_at: string | null;
 }
 
+export interface AdminPrice {
+  product_id: string;
+  price_cents: number;
+  updated_at: string;
+}
+
 export type AdminResult<T> = { ok: true; data: T } | { ok: false; reason: string; message: string };
 
 const MESSAGES: Record<string, string> = {
@@ -290,6 +296,37 @@ export const AdminService = {
     if (!supabase) return [];
     const { data } = await supabase.from("levels").select("level_number, name, xp_required").order("level_number");
     return (data ?? []) as AdminLevel[];
+  },
+
+  // ---------- preços (migration 0101: escrita só admin) ----------
+  async listPrices(): Promise<AdminResult<Record<string, AdminPrice>>> {
+    if (!supabase) return fail("not_configured");
+    const { data, error } = await supabase.from("product_prices").select("product_id, price_cents, updated_at").range(0, 4999);
+    if (error) return fromError(error);
+    const byId: Record<string, AdminPrice> = {};
+    for (const row of (data ?? []) as AdminPrice[]) byId[row.product_id] = row;
+    return { ok: true, data: byId };
+  },
+
+  async setPrices(rows: Array<{ productId: string; priceCents: number }>): Promise<AdminResult<null>> {
+    if (!supabase) return fail("not_configured");
+    if (rows.some((r) => !Number.isInteger(r.priceCents) || r.priceCents <= 0)) return fail("invalid_price");
+    // .select() devolve as linhas gravadas: RLS que barrasse em silêncio
+    // apareceria como "0 linhas" em vez de sucesso falso
+    const { data, error } = await supabase
+      .from("product_prices")
+      .upsert(rows.map((r) => ({ product_id: r.productId, price_cents: r.priceCents })), { onConflict: "product_id" })
+      .select("product_id");
+    if (error) return fromError(error);
+    if ((data ?? []).length !== rows.length) return fail("forbidden");
+    return { ok: true, data: null };
+  },
+
+  async clearPrices(productIds: string[]): Promise<AdminResult<null>> {
+    if (!supabase) return fail("not_configured");
+    const { error } = await supabase.from("product_prices").delete().in("product_id", productIds);
+    if (error) return fromError(error);
+    return { ok: true, data: null };
   },
 
   // ---------- newsletter ----------

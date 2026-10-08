@@ -86,7 +86,7 @@
             '<div class="cart-item-info">' +
             "<h4>" + p.name + "</h4>" +
             '<p class="cart-item-meta">' + p.frameColor + "</p>" +
-            '<p class="cart-item-price">' + p.priceLabel + "</p>" +
+            '<p class="cart-item-price" data-price-for="' + p.id + '">' + p.priceLabel + "</p>" +
             "</div>" +
             '<div class="cart-item-actions">' +
             '<div class="qty-stepper">' +

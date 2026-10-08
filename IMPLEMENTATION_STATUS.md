@@ -73,6 +73,7 @@ Marcado como feito só depois de: editar → rodar localmente → abrir no naveg
 - [x] Abas: Pedidos (preço por item, total, status, nota interna; "marcar pago" dispara o XP), Clientes, Comunidade (aprovar/rejeitar com motivo), Cupons & Recompensas, Newsletter (exportar CSV)
 - [x] Não-admin vê só "Acesso restrito"; o banco recusa as chamadas admin (`forbidden`) mesmo se forçadas
 - [x] Link "Painel da loja" no menu da conta aparece só para admin
+- [x] Aba Preços (migration 0101): `public.product_prices` é a fonte única — o site aplica no boot (`js/price-sync.js`) e o pedido grava dela. Editar por peça, tirar preço (vira "Consultar") ou aplicar um preço a toda a categoria. Os mapas em `js/catalog.js` viraram só fallback (sem Supabase / antes do banco responder).
 
 **Tornar alguém admin** (SQL editor do Supabase, depois de a pessoa ter criado conta no site):
 

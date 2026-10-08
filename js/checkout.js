@@ -25,10 +25,10 @@
           '<div class="checkout-summary-row">' +
           '<img src="' + r.product.images[0] + '" alt="" width="48" height="48">' +
           "<span>" + r.product.name + " × " + r.qty + "</span>" +
-          "<b>" + money(r.product) + "</b></div>"
+          "<b data-price-for=\"" + r.product.id + "\">" + money(r.product) + "</b></div>"
         );
       }).join("") +
-      '<div class="checkout-summary-total"><span>Total</span><b>' +
+      '<div class="checkout-summary-total"><span>Total</span><b data-cart-subtotal>' +
       window.SG.subtotalLabel(rows) + "</b></div></div>"
     );
   }

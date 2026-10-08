@@ -85,8 +85,8 @@ export function mountCheckoutPage(root, _params, onClose) {
         '<h3>' + t("checkout.step.address") + '</h3><p>' + escapeHtml(formData.street) + ", " + escapeHtml(formData.number) + " — " + escapeHtml(formData.neighborhood) + ", " + escapeHtml(formData.city) + "/" + escapeHtml(formData.state.toUpperCase()) + " — " + escapeHtml(formData.cep) + "</p>" +
         '<h3>' + t("checkout.step.payment") + '</h3><p>' + t("checkout.payment." + formData.payment) + "</p>" +
         '<h3>' + t("cart.title") + '</h3>' +
-        rows.map(function (r) { return "<p>" + escapeHtml(r.product.name) + " × " + escapeHtml(r.qty) + " — " + escapeHtml(r.product.priceLabel) + "</p>"; }).join("") +
-        '<p class="checkout-review-total"><b>Total: ' + window.SG.subtotalLabel(rows) + "</b></p>" +
+        rows.map(function (r) { return "<p>" + escapeHtml(r.product.name) + " × " + escapeHtml(r.qty) + " — <span data-price-for=\"" + escapeHtml(r.product.id) + "\">" + escapeHtml(r.product.priceLabel) + "</span></p>"; }).join("") +
+        '<p class="checkout-review-total"><b>Total: <span data-cart-subtotal>' + window.SG.subtotalLabel(rows) + "</span></b></p>" +
       "</div>"
     );
   }

@@ -948,6 +948,26 @@ footer>small{grid-column:1/-1;border-top:1px solid var(--line);padding-top:24px;
 .admin-form-grid .admin-field{min-width:0}
 .admin-field--wide{grid-column:1/-1}
 
+.admin-hint{max-width:760px;margin:-4px 0 18px;font-size:12px;line-height:1.55;color:var(--muted)}
+.admin-bulk{margin-bottom:14px;padding:14px 16px;border:1px dashed var(--border-strong);border-radius:14px;background:var(--surface)}
+.admin-bulk-title{margin:0 0 10px;font-size:13px;color:var(--text-2)}
+.admin-bulk-title b{color:var(--text)}
+.admin-bulk-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.admin-bulk-row .admin-money{flex:1;min-width:200px;max-width:280px}
+.admin-bulk-row .admin-money input{text-align:left}
+.admin-bulk .admin-form-error{margin-top:10px}
+.admin-prices{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.admin-price{display:grid;grid-template-columns:56px minmax(0,1fr) 170px auto;align-items:center;gap:14px;padding:10px 16px;background:var(--surface)}
+.admin-price+.admin-price{border-top:1px solid var(--border)}
+.admin-price-thumb{width:56px;height:56px;object-fit:contain;border-radius:10px;background:radial-gradient(circle at 50% 42%,#18191b,#0b0c0d 70%)}
+.admin-price-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.admin-price-info b{font-size:14px;color:var(--text);overflow-wrap:anywhere}
+.admin-price-info small{font-size:11px;color:var(--muted)}
+.admin-price-info .admin-price-site{color:var(--admin-warn)}
+.admin-price-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px}
+.admin-price-actions .btn{min-height:40px;padding:0 16px}
+.admin-price .admin-form-error{grid-column:2/-1;margin:0}
+
 @media(max-width:1100px){
   .admin-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
   .admin-split{grid-template-columns:1fr}
@@ -992,6 +1012,13 @@ footer>small{grid-column:1/-1;border-top:1px solid var(--line);padding-top:24px;
   .admin-card{flex-direction:column;align-items:stretch}
   .admin-card-side{flex-direction:row;align-items:center;justify-content:space-between}
   .admin-gate{margin:40px auto}
+  .admin-bulk-row .admin-money{max-width:none;min-width:100%}
+  .admin-bulk-row .btn{flex:1}
+  .admin-price{grid-template-columns:48px minmax(0,1fr);row-gap:10px;padding:12px 14px}
+  .admin-price-thumb{width:48px;height:48px}
+  .admin-price .admin-money,.admin-price-actions,.admin-price .admin-form-error{grid-column:1/-1}
+  .admin-price-actions{justify-content:space-between}
+  .admin-price-actions .btn{flex:1}
 }
 
 /* ===== CHECKOUT PAGE ===== */

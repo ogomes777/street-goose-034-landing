@@ -11,6 +11,7 @@ export function mountAdminPage(root, _params, onClose) {
 
   var TABS = [
     { id: "pedidos", label: "Pedidos" },
+    { id: "precos", label: "Preços" },
     { id: "clientes", label: "Clientes" },
     { id: "comunidade", label: "Comunidade" },
     { id: "cupons", label: "Cupons & Recompensas" },
@@ -42,6 +43,7 @@ export function mountAdminPage(root, _params, onClose) {
     postStatus: "pending", posts: [], rejectingPostId: null,
     coupons: [], rewards: [], levels: [], editingCoupon: null, editingReward: null,
     newsletterFilter: "active", newsletterSearch: "", subscribers: [],
+    priceCategory: "lupa", priceSearch: "", prices: {}, pricesLoaded: false,
   };
 
   var robots = document.createElement("meta");
@@ -225,6 +227,7 @@ export function mountAdminPage(root, _params, onClose) {
     var panel = bodyEl.querySelector("[data-admin-panel]");
     if (!panel) return;
     if (state.tab === "pedidos") { panel.innerHTML = ordersToolbar() + '<div class="admin-list" data-list="orders"></div>'; loadOrders(); }
+    else if (state.tab === "precos") { panel.innerHTML = pricesShell(); renderPriceCategory(); loadPrices(); }
     else if (state.tab === "clientes") { panel.innerHTML = customersToolbar() + '<div data-list="customers"></div>'; loadCustomers(); }
     else if (state.tab === "comunidade") { panel.innerHTML = postsToolbar() + '<div data-list="posts"></div>'; loadPosts(); }
     else if (state.tab === "cupons") { panel.innerHTML = promoShell(); loadPromo(); }
@@ -368,6 +371,208 @@ export function mountAdminPage(root, _params, onClose) {
     toast(patch.status ? "PEDIDO #" + order.short_id + " — " + ORDER_STATUS[patch.status].toUpperCase() : "PEDIDO #" + order.short_id + " SALVO");
     loadOrders();
     loadOverview();
+  }
+
+  // ---------- preços ----------
+  // Fonte única: public.product_prices — a mesma que grava o preço do pedido
+  // (create_whatsapp_order) e que o site aplica no boot (js/price-sync.js).
+  function priceCategory() {
+    var cats = window.SG_CATALOG || [];
+    return cats.find(function (c) { return c.id === state.priceCategory; }) || cats[0] || null;
+  }
+  function findCatalogItem(id) {
+    var found = null;
+    (window.SG_CATALOG || []).some(function (c) {
+      found = c.items.find(function (i) { return i.id === id; }) || null;
+      return !!found;
+    });
+    return found;
+  }
+  function siteLabelWithoutPrice(item) {
+    return window.SG.priceLabelFor ? window.SG.priceLabelFor(item.category, null) : "Consultar disponibilidade";
+  }
+
+  function pricesShell() {
+    var cats = window.SG_CATALOG || [];
+    return '<div class="admin-toolbar">' +
+        '<div class="admin-chips" role="group" aria-label="Categoria">' + cats.map(function (c) {
+          return chip("price-cat", c.id, c.label, state.priceCategory === c.id, c.count);
+        }).join("") + "</div>" +
+        '<label class="admin-search"><span class="sr-only">Buscar peça</span><input type="search" data-search="prices" placeholder="Buscar peça ou código" value="' + esc(state.priceSearch) + '" autocomplete="off"></label>' +
+      "</div>" +
+      '<p class="admin-hint">Vale para pedidos novos e aparece no site na hora. Pedidos já registrados mantêm o preço que tinham. Peça sem preço aparece como "Consultar" no site.</p>' +
+      "<div data-price-bulk></div>" +
+      '<div data-list="prices"></div>';
+  }
+
+  function renderPriceCategory() {
+    var cat = priceCategory();
+    var bulk = bodyEl.querySelector("[data-price-bulk]");
+    if (!cat || !bulk) return;
+    bulk.innerHTML =
+      '<form class="admin-bulk" data-form="price-bulk" novalidate>' +
+        '<p class="admin-bulk-title"><b>' + esc(cat.label) + "</b> · " + cat.count + " peças<span data-price-unpriced></span></p>" +
+        '<div class="admin-bulk-row">' +
+          '<label class="admin-money"><span class="sr-only">Mesmo preço para todas as peças de ' + esc(cat.label) + '</span><em>R$</em><input name="price" inputmode="decimal" placeholder="Mesmo preço para todas" autocomplete="off"></label>' +
+          '<button class="btn btn-ghost" type="submit" data-bulk-submit>Aplicar a todas</button>' +
+          '<button class="admin-text-btn" type="button" data-action="bulk-cancel" hidden>Cancelar</button>' +
+        "</div>" +
+        '<p class="admin-form-error" data-form-error role="alert" hidden></p>' +
+      "</form>";
+    renderPriceList();
+  }
+
+  async function loadPrices() {
+    var el = list("prices");
+    if (!el) return;
+    var n = nextSeq("prices");
+    if (!state.pricesLoaded) el.innerHTML = loading();
+    var res = await svc.listPrices();
+    if (stale("prices", n)) return;
+    if (!res.ok) { el.innerHTML = errorState(res.message, "prices"); return; }
+    state.prices = res.data;
+    state.pricesLoaded = true;
+    renderPriceList();
+  }
+
+  function renderUnpricedCount() {
+    var cat = priceCategory();
+    var counter = bodyEl.querySelector("[data-price-unpriced]");
+    if (!cat || !counter || !state.pricesLoaded) return;
+    var unpriced = cat.items.filter(function (i) { return !state.prices[i.id]; }).length;
+    counter.textContent = unpriced ? " · " + unpriced + " sem preço" : " · todas com preço";
+  }
+
+  function renderPriceList() {
+    var el = list("prices");
+    var cat = priceCategory();
+    if (!el || !cat || !state.pricesLoaded) return;
+    renderUnpricedCount();
+    var q = state.priceSearch.trim().toLowerCase();
+    var items = cat.items.filter(function (i) { return !q || i.name.toLowerCase().indexOf(q) !== -1 || i.id.indexOf(q) !== -1; });
+    el.innerHTML = items.length ? '<div class="admin-prices">' + items.map(priceRowHtml).join("") + "</div>" : emptyState("Nenhuma peça encontrada.");
+  }
+
+  function priceRowHtml(item) {
+    var row = state.prices[item.id];
+    var cents = row ? row.price_cents : null;
+    return '<form class="admin-price' + (cents ? "" : " is-unpriced") + '" data-form="price" data-id="' + esc(item.id) + '" novalidate>' +
+      '<img class="admin-price-thumb" src="' + esc(item.images[0]) + '" alt="" loading="lazy" width="56" height="56">' +
+      '<div class="admin-price-info"><b>' + esc(item.name) + "</b>" +
+        "<small>" + esc(item.id) + (row ? " · " + fmtDateTime(row.updated_at) : "") + "</small>" +
+        (cents ? "" : '<small class="admin-price-site">No site: ' + esc(siteLabelWithoutPrice(item)) + "</small>") +
+      "</div>" +
+      '<label class="admin-money"><span class="sr-only">Preço de ' + esc(item.name) + '</span><em>R$</em><input name="price" inputmode="decimal" value="' + money.centsToInput(cents) + '" placeholder="Sem preço" autocomplete="off"></label>' +
+      '<div class="admin-price-actions">' +
+        '<button class="btn btn-ghost" type="submit">Salvar</button>' +
+        (cents ? '<button class="admin-text-btn" type="button" data-action="price-clear" data-id="' + esc(item.id) + '">Tirar preço</button>' : "") +
+      "</div>" +
+      '<p class="admin-form-error" data-form-error role="alert" hidden></p>' +
+    "</form>";
+  }
+
+  function priceForm(id) {
+    var el = list("prices");
+    return el ? el.querySelector('[data-form="price"][data-id="' + id + '"]') : null;
+  }
+
+  function pricesChanged(ids, cents) {
+    var now = new Date().toISOString();
+    ids.forEach(function (id) {
+      if (cents) state.prices[id] = { product_id: id, price_cents: cents, updated_at: now };
+      else delete state.prices[id];
+    });
+    if (ids.length === 1) {
+      var formEl = priceForm(ids[0]);
+      var item = findCatalogItem(ids[0]);
+      if (formEl && item) formEl.outerHTML = priceRowHtml(item);
+      renderUnpricedCount();
+    } else {
+      renderPriceList();
+    }
+    // o próprio site atrás do painel já passa a mostrar o preço novo
+    if (window.SG.prices) window.SG.prices.refresh();
+  }
+
+  // Enter num preço salva e já leva para a próxima peça (perfumes: 40 preços)
+  function focusNextPrice(id) {
+    var formEl = priceForm(id);
+    var next = formEl && formEl.nextElementSibling;
+    var input = next && next.querySelector('[name="price"]');
+    if (input) { input.focus(); input.select(); }
+  }
+
+  async function savePrice(form) {
+    var id = form.getAttribute("data-id");
+    var current = state.prices[id] ? state.prices[id].price_cents : null;
+    var raw = field(form, "price").value.trim();
+    var item = findCatalogItem(id);
+    setFormError(form, "");
+    if (!raw) {
+      if (current === null) { toast("NADA PARA SALVAR"); return; }
+      clearPrice(id, form);
+      return;
+    }
+    var cents = money.parseMoneyToCents(raw);
+    if (cents === null) { setFormError(form, "Use o formato 197,00."); return; }
+    if (cents <= 0) { setFormError(form, "O preço precisa ser maior que zero. Para tirar o preço, deixe o campo vazio."); return; }
+    if (cents === current) { toast("NADA PARA SALVAR"); return; }
+    setBusy(form, true);
+    var res = await svc.setPrices([{ productId: id, priceCents: cents }]);
+    if (destroyed) return;
+    setBusy(form, false);
+    if (!res.ok) { setFormError(form, res.message); return; }
+    pricesChanged([id], cents);
+    toast((item ? item.name : id).toUpperCase() + " — " + brl(cents));
+    focusNextPrice(id);
+  }
+
+  async function clearPrice(id, form) {
+    var item = findCatalogItem(id);
+    if (form) setBusy(form, true);
+    var res = await svc.clearPrices([id]);
+    if (destroyed) return;
+    if (form) setBusy(form, false);
+    if (!res.ok) { if (form) setFormError(form, res.message); return; }
+    pricesChanged([id], null);
+    toast((item ? item.name : id).toUpperCase() + " — SEM PREÇO");
+  }
+
+  function resetBulk(form) {
+    if (!form || !form.hasAttribute("data-confirm")) return;
+    form.removeAttribute("data-confirm");
+    var btn = form.querySelector("[data-bulk-submit]");
+    btn.textContent = "Aplicar a todas";
+    btn.classList.add("btn-ghost");
+    btn.classList.remove("btn-primary");
+    form.querySelector('[data-action="bulk-cancel"]').hidden = true;
+  }
+
+  // dois cliques: o primeiro mostra quantas peças e o valor, o segundo grava
+  async function applyBulk(form) {
+    var cat = priceCategory();
+    if (!cat) return;
+    var cents = money.parseMoneyToCents(field(form, "price").value);
+    if (cents === null || cents <= 0) { setFormError(form, "Informe um preço maior que zero, ex: 197,00."); return; }
+    var btn = form.querySelector("[data-bulk-submit]");
+    if (form.getAttribute("data-confirm") !== String(cents)) {
+      form.setAttribute("data-confirm", String(cents));
+      btn.textContent = "Confirmar: " + cat.count + " peças por " + brl(cents);
+      btn.classList.add("btn-primary");
+      btn.classList.remove("btn-ghost");
+      form.querySelector('[data-action="bulk-cancel"]').hidden = false;
+      return;
+    }
+    var ids = cat.items.map(function (i) { return i.id; });
+    setBusy(form, true);
+    var res = await svc.setPrices(ids.map(function (pid) { return { productId: pid, priceCents: cents }; }));
+    if (destroyed) return;
+    setBusy(form, false);
+    if (!res.ok) { setFormError(form, res.message); return; }
+    resetBulk(form);
+    field(form, "price").value = "";
+    pricesChanged(ids, cents);
+    toast(cat.label.toUpperCase() + " — " + cat.count + " PEÇAS POR " + brl(cents));
   }
 
   // ---------- clientes ----------
@@ -750,7 +955,7 @@ export function mountAdminPage(root, _params, onClose) {
     if (action === "login") { if (window.SG.auth) window.SG.auth.open(); }
     else if (action === "retry") {
       var what = btn.getAttribute("data-retry");
-      ({ orders: loadOrders, customers: loadCustomers, posts: loadPosts, promo: loadPromo, newsletter: loadNewsletter })[what]();
+      ({ orders: loadOrders, prices: loadPrices, customers: loadCustomers, posts: loadPosts, promo: loadPromo, newsletter: loadNewsletter })[what]();
     }
     else if (action === "order-filter") { state.orderStatus = value; state.openOrderId = null; markChip(btn); loadOrders(); }
     else if (action === "order-toggle") {
@@ -815,6 +1020,16 @@ export function mountAdminPage(root, _params, onClose) {
       loadOverview();
     }
     else if (action === "export-newsletter") { exportNewsletter(); }
+    else if (action === "price-cat") {
+      state.priceCategory = value;
+      state.priceSearch = "";
+      var priceSearch = bodyEl.querySelector('[data-search="prices"]');
+      if (priceSearch) priceSearch.value = "";
+      markChip(btn);
+      renderPriceCategory();
+    }
+    else if (action === "price-clear") { clearPrice(id, btn.closest("form")); }
+    else if (action === "bulk-cancel") { resetBulk(btn.closest("form")); }
   }
 
   function markChip(btn) {
@@ -849,16 +1064,20 @@ export function mountAdminPage(root, _params, onClose) {
     }
     else if (kind === "coupon") saveCoupon(form);
     else if (kind === "reward") saveReward(form);
+    else if (kind === "price") savePrice(form);
+    else if (kind === "price-bulk") applyBulk(form);
   }
 
   function onInput(e) {
     // erro de validação some assim que o lojista mexe no formulário
     var editing = e.target.closest("[data-form]");
     if (editing) setFormError(editing, "");
+    if (editing && editing.getAttribute("data-form") === "price-bulk") resetBulk(editing);
     var search = e.target.closest("[data-search]");
     if (search) {
       var which = search.getAttribute("data-search");
       if (which === "newsletter") { state.newsletterSearch = search.value; renderNewsletterList(); return; }
+      if (which === "prices") { state.priceSearch = search.value; renderPriceList(); return; }
       clearTimeout(searchTimer);
       searchTimer = setTimeout(function () {
         if (which === "orders") { state.orderSearch = search.value; loadOrders(); }

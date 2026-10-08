@@ -14,7 +14,7 @@
       '<span class="tag">' + p.tag + "</span>" +
       '<button class="favorite-btn" data-favorite-toggle="' + p.id + '" aria-pressed="false" aria-label="Favoritar ' + p.name + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-10-9.4C.4 7.6 2 4 5.6 4 8 4 10 5.4 12 8c2-2.6 4-4 6.4-4C22 4 23.6 7.6 22 11.1 19.5 15.9 12 20.5 12 20.5z"/></svg></button>' +
       '<div class="product-media"><img src="' + p.images[0] + '" alt="' + p.name + " — " + p.frameColor + '" loading="lazy" width="900" height="900"></div>' +
-      '<div class="product-info"><div><h3>' + p.name + "</h3><p>" + p.desc + '</p><p class="product-price">' + p.priceLabel + '</p></div>' +
+      '<div class="product-info"><div><h3>' + p.name + "</h3><p>" + p.desc + '</p><p class="product-price" data-price-for="' + p.id + '">' + p.priceLabel + '</p></div>' +
       '<div class="product-info-actions">' +
       '<button class="round-btn" aria-label="Adicionar ' + p.name + ' à sacola" data-add-to-cart="' + p.id + '">+</button>' +
       '<button class="round-btn" aria-label="Abrir ' + p.name + '" data-open-quickview="' + p.id + '">↗</button>' +

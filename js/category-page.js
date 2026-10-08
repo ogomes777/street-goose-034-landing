@@ -24,19 +24,23 @@ export function mountCategoryPage(root, slug, onRequestClose) {
   var isMobileHero = window.innerWidth <= 860 && cat.heroVideoMobile;
   var heroVideoSrc = isMobileHero ? cat.heroVideoMobile : cat.heroVideo;
 
+  function itemBodyHtml(item) {
+    return (
+      '<p class="cat-item-name">' + item.name + "</p>" +
+      '<p class="cat-item-price">' + item.priceLabel + "</p>" +
+      (item.consultWhatsApp
+        ? '<a class="round-btn round-btn--wa" href="' + window.SG.waProductLink(item) + '" target="_blank" rel="noopener" aria-label="Consultar preço de ' + item.name + ' no WhatsApp">' +
+            '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z"/></svg></a>'
+        : '<button class="round-btn" aria-label="Adicionar ' + item.name + ' à sacola" data-add-to-cart="' + item.id + '">+</button>')
+    );
+  }
+
   var itemsHtml = cat.items.map(function (item) {
     return (
       '<article class="cat-item" data-product-id="' + item.id + '">' +
         '<button class="favorite-btn" data-favorite-toggle="' + item.id + '" aria-pressed="false" aria-label="Favoritar ' + item.name + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-10-9.4C.4 7.6 2 4 5.6 4 8 4 10 5.4 12 8c2-2.6 4-4 6.4-4C22 4 23.6 7.6 22 11.1 19.5 15.9 12 20.5 12 20.5z"/></svg></button>' +
         '<div class="cat-item-img" data-open-quickview="' + item.id + '"><img src="' + item.images[0] + '" alt="' + item.alt + '" loading="lazy" /></div>' +
-        '<div class="cat-item-body">' +
-          '<p class="cat-item-name">' + item.name + "</p>" +
-          '<p class="cat-item-price">' + item.priceLabel + "</p>" +
-          (item.consultWhatsApp
-            ? '<a class="round-btn round-btn--wa" href="' + window.SG.waProductLink(item) + '" target="_blank" rel="noopener" aria-label="Consultar preço de ' + item.name + ' no WhatsApp">' +
-                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19z"/></svg></a>'
-            : '<button class="round-btn" aria-label="Adicionar ' + item.name + ' à sacola" data-add-to-cart="' + item.id + '">+</button>') +
-        "</div>" +
+        '<div class="cat-item-body">' + itemBodyHtml(item) + "</div>" +
       "</article>"
     );
   }).join("");
@@ -79,6 +83,17 @@ export function mountCategoryPage(root, slug, onRequestClose) {
   function onKeydown(e) { if (e.key === "Escape") close(); }
   document.addEventListener("keydown", onKeydown);
 
+  // preço do banco chegou depois de montar (ex.: deep link /categoria/...):
+  // troca só o corpo do card — preço e, se a peça ganhou/perdeu preço, o
+  // botão (sacola ↔ WhatsApp). Hero, scrub e reveal não são tocados.
+  function onPrices() {
+    cat.items.forEach(function (item) {
+      var body = grid.querySelector('[data-product-id="' + item.id + '"] .cat-item-body');
+      if (body) body.innerHTML = itemBodyHtml(item);
+    });
+  }
+  window.addEventListener("sg:prices", onPrices);
+
   var reduced = window.SG.prefersReducedMotion();
   var canScrub = window.SG.hasGSAP && window.ScrollTrigger && !reduced;
 
@@ -113,6 +128,7 @@ export function mountCategoryPage(root, slug, onRequestClose) {
     return function () {
       closeBtn.removeEventListener("click", close);
       document.removeEventListener("keydown", onKeydown);
+      window.removeEventListener("sg:prices", onPrices);
     };
   }
 
@@ -245,6 +261,7 @@ export function mountCategoryPage(root, slug, onRequestClose) {
     document.removeEventListener("visibilitychange", onVisibilityChange);
     closeBtn.removeEventListener("click", close);
     document.removeEventListener("keydown", onKeydown);
+    window.removeEventListener("sg:prices", onPrices);
     video.pause();
     video.removeAttribute("src");
     video.load();

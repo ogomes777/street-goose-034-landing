@@ -56,7 +56,7 @@
         '<div class="cart-item" data-favorite-item="' + p.id + '">' +
         '<img src="' + p.images[0] + '" alt="' + p.name + '" width="72" height="72">' +
         '<div class="cart-item-info"><h4>' + p.name + "</h4><p class=\"cart-item-meta\">" + p.frameColor + "</p>" +
-        '<p class="cart-item-price">' + p.priceLabel + "</p></div>" +
+        '<p class="cart-item-price" data-price-for="' + p.id + '">' + p.priceLabel + "</p></div>" +
         '<div class="cart-item-actions">' +
         '<button class="round-btn" aria-label="Adicionar ' + p.name + ' à sacola" data-add-to-cart="' + p.id + '">+</button>' +
         '<button class="cart-item-remove" data-favorite-toggle="' + p.id + '">Remover</button>' +

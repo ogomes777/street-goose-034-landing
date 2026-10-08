@@ -169,7 +169,9 @@
     qvEl.querySelector("[data-qv-tag]").textContent = product.tag;
     qvEl.querySelector("[data-qv-name]").textContent = product.name;
     qvEl.querySelector("[data-qv-desc]").textContent = product.desc;
-    qvEl.querySelector("[data-qv-price]").textContent = product.priceLabel;
+    var qvPrice = qvEl.querySelector("[data-qv-price]");
+    qvPrice.textContent = product.priceLabel;
+    qvPrice.setAttribute("data-price-for", product.id);
     qvEl.querySelector("[data-qv-frame]").textContent = product.frameColor;
     qvEl.querySelector("[data-qv-lens]").textContent = product.lensColor;
     qvEl.querySelector("[data-qv-material]").textContent = product.material || "—";

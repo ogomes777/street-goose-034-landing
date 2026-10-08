@@ -23,7 +23,7 @@ export function mountFavoritesPage(root, _params, onClose) {
       return (
         '<article class="fav-card">' +
           '<div class="fav-card-img" data-open-quickview="' + p.id + '"><img src="' + p.images[0] + '" alt="' + p.name + '" loading="lazy"></div>' +
-          '<div class="fav-card-body"><h3>' + p.name + "</h3><p>" + p.priceLabel + "</p>" +
+          '<div class="fav-card-body"><h3>' + p.name + "</h3><p data-price-for=\"" + p.id + "\">" + p.priceLabel + "</p>" +
           '<div class="fav-card-actions">' +
           '<button class="btn btn-primary" data-add-to-cart="' + p.id + '">' + t("favorites.moveToCart") + "</button>" +
           '<button class="text-link" data-favorite-toggle="' + p.id + '">' + t("favorites.remove") + "</button>" +

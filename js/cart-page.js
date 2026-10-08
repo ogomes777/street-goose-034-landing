@@ -26,7 +26,7 @@ export function mountCartPage(root, _params, onClose) {
             '<div class="cart-item" data-cart-item="' + p.id + '">' +
               '<img src="' + p.images[0] + '" alt="' + p.name + '" width="56" height="56">' +
               '<div class="cart-item-info"><h4>' + p.name + "</h4><p class=\"cart-item-meta\">" + (p.frameColor || "") + "</p>" +
-              '<p class="cart-item-price">' + p.priceLabel + "</p></div>" +
+              '<p class="cart-item-price" data-price-for="' + p.id + '">' + p.priceLabel + "</p></div>" +
               '<div class="cart-item-actions">' +
                 '<div class="qty-stepper"><button data-qty-minus aria-label="Diminuir">-</button><span>' + r.qty + '</span><button data-qty-plus aria-label="Aumentar">+</button></div>' +
                 '<button class="cart-item-remove" data-remove>' + t("favorites.remove") + "</button>" +
@@ -34,7 +34,7 @@ export function mountCartPage(root, _params, onClose) {
           );
         }).join("") + "</div>" +
         '<div class="cart-page-summary">' +
-          '<p class="cart-page-summary-row"><span>' + t("cart.subtotal") + '</span><b>' + window.SG.subtotalLabel(rows) + "</b></p>" +
+          '<p class="cart-page-summary-row"><span>' + t("cart.subtotal") + '</span><b data-cart-subtotal>' + window.SG.subtotalLabel(rows) + "</b></p>" +
           '<button class="btn btn-primary" data-go-checkout>' + t("cart.checkout") + "</button>" +
           '<a class="text-link" href="/">' + t("cart.continueShopping") + "</a>" +
         "</div>" +
