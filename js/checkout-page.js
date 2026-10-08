@@ -90,13 +90,35 @@ export function mountCheckoutPage(root, _params, onClose) {
 
   function confirmationStepHtml() {
     if (formData.payment === "whatsapp") {
-      return '<div class="app-page-empty"><h2>Pedido enviado para o WhatsApp.</h2><p>A equipe Street Goose confirma disponibilidade e fecha o pagamento por lá.</p><a class="btn btn-primary" href="/">' + t("cart.continueShopping") + "</a></div>";
+      return '<div class="app-page-empty"><h2>Pedido enviado para o WhatsApp.</h2>' +
+        (orderId ? '<p>Pedido <strong>#' + orderId.slice(0, 8).toUpperCase() + '</strong> salvo na sua conta.</p>' : "") +
+        '<p>A equipe Street Goose confirma disponibilidade e fecha o pagamento por lá.</p><a class="btn btn-primary" href="/">' + t("cart.continueShopping") + "</a></div>";
     }
     return '<div class="app-page-empty"><h2>' + t("checkout.payment.unavailable") + "</h2><p>Esse método ainda depende de um provedor de pagamento configurado.</p></div>";
   }
 
+  var orderId = null;
+  var idempotencyKey = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+
+  // Registra o pedido no backend quando há sessão (RPC create_whatsapp_order).
+  // Sem login/backend, segue só pelo WhatsApp — nunca bloqueia a compra.
+  async function registerOrder() {
+    try {
+      var mod = await import("../src/services/OrderService.ts");
+      var res = await mod.OrderService.createWhatsAppOrder(
+        rows.map(function (r) { return { productId: String(r.product.id), productName: r.product.name, qty: r.qty }; }),
+        { name: formData.name, email: formData.email, phone: formData.phone, cep: formData.cep, street: formData.street,
+          number: formData.number, complement: formData.complement, neighborhood: formData.neighborhood,
+          city: formData.city, state: formData.state.toUpperCase() },
+        idempotencyKey
+      );
+      if (res.ok) orderId = res.orderId;
+    } catch (_e) { /* segue pelo WhatsApp */ }
+  }
+
   function buildWhatsAppMessage() {
     var lines = ["Olá! Quero fechar esse pedido Street Goose 034:", ""];
+    if (orderId) { lines[0] = "Olá! Quero fechar o pedido #" + orderId.slice(0, 8).toUpperCase() + " Street Goose 034:"; }
     rows.forEach(function (r) { lines.push("• " + r.product.name + " (" + r.qty + "x) — " + r.product.priceLabel); });
     lines.push("");
     lines.push("Nome: " + formData.name);
@@ -163,7 +185,7 @@ export function mountCheckoutPage(root, _params, onClose) {
     var backBtn = bodyEl.querySelector("[data-checkout-back]");
     if (backBtn) backBtn.addEventListener("click", function () { stepIndex--; renderStep(); });
     var nextBtn = bodyEl.querySelector("[data-checkout-next]");
-    if (nextBtn) nextBtn.addEventListener("click", function () {
+    if (nextBtn) nextBtn.addEventListener("click", async function () {
       if (stepName === "identification" || stepName === "address") { collectFields(); if (!validateStep()) return; }
       if (stepName === "payment") {
         var checked = bodyEl.querySelector('input[name="payment"]:checked');
@@ -171,7 +193,14 @@ export function mountCheckoutPage(root, _params, onClose) {
       }
       if (stepName === "review") {
         if (formData.payment === "whatsapp") {
-          window.open(window.SG.waLink(buildWhatsAppMessage()), "_blank", "noopener");
+          // abre a aba já no clique (senão o bloqueador de popup barra
+          // depois do await) e só depois aponta para o link com o nº do pedido
+          var waWin = window.open("", "_blank");
+          nextBtn.disabled = true;
+          await registerOrder();
+          var link = window.SG.waLink(buildWhatsAppMessage());
+          if (waWin) { try { waWin.opener = null; } catch (_e) {} waWin.location.href = link; }
+          else window.location.href = link;
           if (window.SG.cart) window.SG.cart.clear();
         }
       }

@@ -32,6 +32,27 @@ export function mountRewardsPage(root, _params, onClose) {
         "</article>"
       );
     }).join("") + "</div>";
+
+    bodyEl.querySelectorAll("[data-redeem]").forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        var session = window.SG.auth ? await window.SG.auth.getSession() : null;
+        if (!session) { if (window.SG.auth) window.SG.auth.open(); return; }
+        btn.disabled = true;
+        var res = await svc.redeem(btn.getAttribute("data-redeem"));
+        var msgs = {
+          level_too_low: "Seu nível ainda não libera essa recompensa.",
+          already_redeemed: "Você já resgatou essa recompensa.",
+          not_found: "Recompensa indisponível.",
+        };
+        if (res.ok) {
+          btn.textContent = res.couponCode ? "Cupom: " + res.couponCode : "Resgatado ✓";
+        } else {
+          btn.disabled = false;
+          var msg = msgs[res.reason] || "Não foi possível resgatar agora.";
+          if (window.SG.toast) window.SG.toast(msg); else btn.textContent = msg;
+        }
+      });
+    });
   }
 
   root.querySelector("[data-app-close]").addEventListener("click", onClose);

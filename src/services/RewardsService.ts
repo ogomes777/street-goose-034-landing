@@ -83,21 +83,23 @@ export const RewardsService = {
 
   async getRanking(limit = 7): Promise<RankingRow[]> {
     if (!supabase) return [];
-    // ranking respeita ranking_opt_in via RLS na policy de profiles — a
-    // query só enxerga quem optou por aparecer
-    const { data, error } = await supabase
-      .from("xp_totals")
-      .select("user_id, total_xp, profiles!inner(public_handle, avatar_url, ranking_opt_in)")
-      .eq("profiles.ranking_opt_in", true)
-      .order("total_xp", { ascending: false })
-      .limit(limit);
+    // RPC get_ranking (migration 0002) só devolve quem deu ranking_opt_in
+    const { data, error } = await supabase.rpc("get_ranking", { p_limit: limit });
     if (error || !data) return [];
-    return data.map((r: any) => ({
+    return (data as any[]).map((r) => ({
       userId: r.user_id,
-      handle: r.profiles?.public_handle ?? "Membro Street Goose",
-      avatarUrl: r.profiles?.avatar_url ?? null,
-      level: 1,
-      totalXp: r.total_xp,
+      handle: r.handle ?? "Membro Street Goose",
+      avatarUrl: r.avatar_url ?? null,
+      level: r.level ?? 1,
+      totalXp: Number(r.total_xp) || 0,
     }));
+  },
+
+  async redeem(rewardId: string): Promise<{ ok: true; couponCode: string | null } | { ok: false; reason: string }> {
+    if (!supabase) return { ok: false, reason: "not_configured" };
+    const { data, error } = await supabase.rpc("redeem_reward", { p_reward_id: rewardId });
+    if (error || !data) return { ok: false, reason: "network_error" };
+    const res = data as { ok: boolean; reason?: string; coupon_code?: string | null };
+    return res.ok ? { ok: true, couponCode: res.coupon_code ?? null } : { ok: false, reason: res.reason ?? "unknown" };
   },
 };

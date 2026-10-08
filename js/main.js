@@ -97,7 +97,12 @@
           btn.disabled = false; btn.textContent = original; newsletterSubmitting = false;
           return;
         }
-        mod.supabase.from("newsletter_subscribers").insert({ email: email }).then(function (res) {
+        // RPC newsletter_subscribe (migration 0002); cai no insert direto se a
+        // função ainda não existir no banco
+        mod.supabase.rpc("newsletter_subscribe", { p_email: email, p_locale: document.documentElement.lang || "pt-BR" }).then(function (r) {
+          if (!r.error) return { error: r.data && r.data.ok === false ? { code: r.data.reason } : null };
+          return mod.supabase.from("newsletter_subscribers").insert({ email: email.toLowerCase() });
+        }).then(function (res) {
           newsletterSubmitting = false;
           btn.disabled = false;
           if (res.error && res.error.code !== "23505") { // 23505 = já inscrito, trata como sucesso
