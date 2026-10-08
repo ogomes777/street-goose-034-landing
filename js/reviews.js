@@ -2,6 +2,8 @@
    Sem backend real: envios ficam salvos só neste navegador (localStorage),
    claramente como pré-visualização de demo — nunca fingimos publicação
    pública nem "compra verificada" sem pedido real. */
+import { escapeHtml } from "../src/lib/html.ts";
+
 (function () {
   "use strict";
 
@@ -41,10 +43,10 @@
     var p = findProduct(r.productId);
     return (
       '<article class="review-card">' +
-      (r.photo ? '<img class="review-photo" src="' + r.photo + '" alt="" width="80" height="80">' : "") +
+      (r.photo ? '<img class="review-photo" src="' + escapeHtml(r.photo) + '" alt="" width="80" height="80">' : "") +
       '<div class="review-stars" role="img" aria-label="' + Math.round(r.rating) + ' de 5 estrelas">' + starsMarkup(r.rating) + "</div>" +
-      '<p class="review-comment">“' + r.comment + '”</p>' +
-      '<div class="review-meta"><b>' + r.customerName + "</b>" + (p ? "<span>" + p.name + "</span>" : "") + "</div>" +
+      '<p class="review-comment">“' + escapeHtml(r.comment) + '”</p>' +
+      '<div class="review-meta"><b>' + escapeHtml(r.customerName) + "</b>" + (p ? "<span>" + escapeHtml(p.name) + "</span>" : "") + "</div>" +
       (r.demo ? "" : '<span class="review-tag">pré-visualização</span>') +
       "</article>"
     );
@@ -67,7 +69,7 @@
   }
 
   function formHtml() {
-    var options = products.map(function (p) { return '<option value="' + p.id + '">' + p.name + "</option>"; }).join("");
+    var options = products.map(function (p) { return '<option value="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + "</option>"; }).join("");
     return (
       '<form class="checkout-form" data-review-form novalidate>' +
       '<div class="checkout-grid">' +

@@ -1,5 +1,7 @@
 /* Street Goose 034 — /ranking. Sem participantes reais (opt-in), mostra
    estado vazio premium em vez de inventar usuários. */
+import { escapeHtml } from "../src/lib/html.ts";
+
 export function mountRankingPage(root, _params, onClose) {
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
 
@@ -23,7 +25,7 @@ export function mountRankingPage(root, _params, onClose) {
       return;
     }
     bodyEl.innerHTML = '<ol class="ranking-list">' + rows.map(function (r, i) {
-      return '<li class="ranking-row ranking-row--' + (i + 1) + '"><span class="ranking-pos">' + (i + 1) + '</span><span class="ranking-handle">' + r.handle + '</span><span class="ranking-xp">' + r.totalXp + " XP</span></li>";
+      return '<li class="ranking-row ranking-row--' + (i + 1) + '"><span class="ranking-pos">' + (i + 1) + '</span><span class="ranking-handle">' + escapeHtml(r.handle) + '</span><span class="ranking-xp">' + r.totalXp + " XP</span></li>";
     }).join("") + "</ol>";
   }
 

@@ -4,6 +4,8 @@
    dados é o banco (migration 0100): não-admin que forçasse as chamadas
    recebe 'forbidden' / zero linhas. Todo texto vindo de cliente (nome,
    legenda, endereço) passa por esc() — o painel roda com a sessão do dono. */
+import { escapeHtml } from "../src/lib/html.ts";
+
 export function mountAdminPage(root, _params, onClose) {
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
 
@@ -57,11 +59,7 @@ export function mountAdminPage(root, _params, onClose) {
   var bodyEl = root.querySelector("[data-admin-body]");
 
   // ---------- helpers ----------
-  function esc(v) {
-    return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-    });
-  }
+  var esc = escapeHtml;
   var DATE_TIME = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
   var DATE_ONLY = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
   function fmtDateTime(iso) { return iso ? DATE_TIME.format(new Date(iso)) : "—"; }

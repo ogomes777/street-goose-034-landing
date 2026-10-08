@@ -3,6 +3,8 @@
    hoje é o handoff por WhatsApp (mesma lógica que já existia no modal
    antigo) — os demais aparecem desabilitados até um PSP ser configurado
    (ver PaymentService). Nenhum pagamento é aprovado no cliente. */
+import { escapeHtml } from "../src/lib/html.ts";
+
 export function mountCheckoutPage(root, _params, onClose) {
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
 
@@ -40,22 +42,22 @@ export function mountCheckoutPage(root, _params, onClose) {
     if (STEPS[stepIndex] === "identification") {
       return (
         '<div class="checkout-grid">' +
-        '<label class="span-2">' + t("auth.name") + '<input name="name" required value="' + f.name + '"></label>' +
-        '<label>' + t("auth.email") + '<input type="email" name="email" required value="' + f.email + '"></label>' +
-        '<label>Telefone<input name="phone" required data-mask="phone" placeholder="(00) 00000-0000" value="' + f.phone + '"></label>' +
+        '<label class="span-2">' + t("auth.name") + '<input name="name" required value="' + escapeHtml(f.name) + '"></label>' +
+        '<label>' + t("auth.email") + '<input type="email" name="email" required value="' + escapeHtml(f.email) + '"></label>' +
+        '<label>Telefone<input name="phone" required data-mask="phone" placeholder="(00) 00000-0000" value="' + escapeHtml(f.phone) + '"></label>' +
         "</div>"
       );
     }
     if (STEPS[stepIndex] === "address") {
       return (
         '<div class="checkout-grid">' +
-        '<label>CEP<input name="cep" required data-mask="cep" placeholder="00000-000" value="' + f.cep + '"></label>' +
-        '<label class="span-2">Rua<input name="street" required value="' + f.street + '"></label>' +
-        '<label>Número<input name="number" required value="' + f.number + '"></label>' +
-        '<label>Complemento<input name="complement" value="' + f.complement + '"></label>' +
-        '<label>Bairro<input name="neighborhood" required value="' + f.neighborhood + '"></label>' +
-        '<label>Cidade<input name="city" required value="' + f.city + '"></label>' +
-        '<label>Estado<input name="state" required maxlength="2" placeholder="UF" value="' + f.state + '"></label>' +
+        '<label>CEP<input name="cep" required data-mask="cep" placeholder="00000-000" value="' + escapeHtml(f.cep) + '"></label>' +
+        '<label class="span-2">Rua<input name="street" required value="' + escapeHtml(f.street) + '"></label>' +
+        '<label>Número<input name="number" required value="' + escapeHtml(f.number) + '"></label>' +
+        '<label>Complemento<input name="complement" value="' + escapeHtml(f.complement) + '"></label>' +
+        '<label>Bairro<input name="neighborhood" required value="' + escapeHtml(f.neighborhood) + '"></label>' +
+        '<label>Cidade<input name="city" required value="' + escapeHtml(f.city) + '"></label>' +
+        '<label>Estado<input name="state" required maxlength="2" placeholder="UF" value="' + escapeHtml(f.state) + '"></label>' +
         "</div>"
       );
     }
@@ -79,11 +81,11 @@ export function mountCheckoutPage(root, _params, onClose) {
   function reviewStepHtml() {
     return (
       '<div class="checkout-review">' +
-        '<h3>' + t("checkout.step.identification") + '</h3><p>' + formData.name + " — " + formData.email + " — " + formData.phone + "</p>" +
-        '<h3>' + t("checkout.step.address") + '</h3><p>' + formData.street + ", " + formData.number + " — " + formData.neighborhood + ", " + formData.city + "/" + formData.state.toUpperCase() + " — " + formData.cep + "</p>" +
+        '<h3>' + t("checkout.step.identification") + '</h3><p>' + escapeHtml(formData.name) + " — " + escapeHtml(formData.email) + " — " + escapeHtml(formData.phone) + "</p>" +
+        '<h3>' + t("checkout.step.address") + '</h3><p>' + escapeHtml(formData.street) + ", " + escapeHtml(formData.number) + " — " + escapeHtml(formData.neighborhood) + ", " + escapeHtml(formData.city) + "/" + escapeHtml(formData.state.toUpperCase()) + " — " + escapeHtml(formData.cep) + "</p>" +
         '<h3>' + t("checkout.step.payment") + '</h3><p>' + t("checkout.payment." + formData.payment) + "</p>" +
         '<h3>' + t("cart.title") + '</h3>' +
-        rows.map(function (r) { return "<p>" + r.product.name + " × " + r.qty + " — " + r.product.priceLabel + "</p>"; }).join("") +
+        rows.map(function (r) { return "<p>" + escapeHtml(r.product.name) + " × " + escapeHtml(r.qty) + " — " + escapeHtml(r.product.priceLabel) + "</p>"; }).join("") +
         '<p class="checkout-review-total"><b>Total: ' + window.SG.subtotalLabel(rows) + "</b></p>" +
       "</div>"
     );
