@@ -66,7 +66,8 @@ function stem(key) { return key.replace(/^.*\//, "").replace(/\.[^.]+$/, ""); }
 var CATEGORY_PRICE_CENTS = { lupa: 19700, acessorios: null, relogios: null, perfumes: null, trajes: null };
 var FILE_PRICE_CENTS = {
   "WhatsApp Image 2026-08-28 at 15.22.11 (2)": 19400, // chapéu bege
-  "WhatsApp Image 2026-08-28 at 15.22.15 (2)": 19400  // chapéu preto
+  "WhatsApp Image 2026-08-28 at 15.22.15 (2)": 19400, // chapéu preto
+  "ChatGPT Image 28 de ago. de 2026, 16_10_26 (10)": 22000 // relógio Minute Machine (preço do cliente, 08/10/2026)
 };
 
 window.SG_CATALOG = Object.keys(CATEGORY_META).map(function (categoryId) {
