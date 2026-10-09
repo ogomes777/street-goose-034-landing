@@ -65,9 +65,104 @@ export function mountAccountPage(root, _params, onClose) {
         '<a href="/favoritos">' + t("nav.account.favorites") + "</a>" +
         '<a href="/ranking">' + t("nav.account.level") + "</a>" +
         '<a href="/recompensas">' + t("nav.account.rewards") + "</a>" +
-      "</nav>";
+      "</nav>" +
+      '<div class="account-grid">' +
+        '<section class="account-card" data-ranking-card><h3>Ranking</h3><p class="account-muted">' + t("common.loading") + "</p></section>" +
+        '<section class="account-card"><h3>Como ganhar XP</h3><ul class="account-rules">' +
+          "<li><b>1 XP por R$ 1</b> em pedido pago (mínimo 50 XP por pedido)</li>" +
+          "<li><b>+30 XP</b> por foto aprovada na comunidade</li>" +
+          "<li>Bônus da equipe em eventos e campanhas</li>" +
+          "<li>Pedido cancelado ou reembolsado devolve o XP dele</li>" +
+        "</ul></section>" +
+        '<section class="account-card" data-xp-history><h3>Histórico de XP</h3><p class="account-muted">' + t("common.loading") + "</p></section>" +
+        '<section class="account-card" data-my-coupons><h3>Meus cupons</h3><p class="account-muted">' + t("common.loading") + "</p></section>" +
+      "</div>";
+    loadExtras();
   }
 
+  // ---- ranking (opt-in + apelido), histórico de XP e cupons resgatados ----
+  var XP_REASONS = { order_paid: "Pedido pago", community_post_approved: "Foto aprovada na comunidade", review_approved: "Avaliação aprovada", promo: "Promoção" };
+  var HANDLE_RE = /^[A-Za-z0-9_.]{3,24}$/;
+  var rewardsSvc = null, profileSvc = null;
+
+  function xpLabel(e) {
+    if (e.reason === "admin_adjustment") return e.refType === "order" ? "Ajuste de pedido" + (e.note ? " — " + e.note : "") : (e.note || "Bônus da equipe");
+    return XP_REASONS[e.reason] || e.reason;
+  }
+
+  async function loadExtras() {
+    var mods = await Promise.all([import("../src/services/RewardsService.ts"), import("../src/services/ProfileService.ts")]);
+    rewardsSvc = mods[0].RewardsService;
+    profileSvc = mods[1].ProfileService;
+    var results = await Promise.all([rewardsSvc.getMyRanking(), profileSvc.getMine(), rewardsSvc.getMyXpHistory(10), rewardsSvc.getMyRedemptions()]);
+    if (destroyed) return;
+    renderRanking(results[0], results[1]);
+    var hist = bodyEl.querySelector("[data-xp-history]");
+    if (hist) {
+      hist.innerHTML = "<h3>Histórico de XP</h3>" + (results[2].length
+        ? '<ul class="account-xp-list">' + results[2].map(function (e) {
+            return '<li><span>' + window.SG.esc(xpLabel(e)) + "<small>" + new Date(e.createdAt).toLocaleDateString("pt-BR") + "</small></span><b class=\"" + (e.amount < 0 ? "is-minus" : "is-plus") + "\">" + (e.amount > 0 ? "+" : "") + e.amount + " XP</b></li>";
+          }).join("") + "</ul>"
+        : '<p class="account-muted">Seu primeiro XP chega com o primeiro pedido pago.</p>');
+    }
+    var coupons = bodyEl.querySelector("[data-my-coupons]");
+    if (coupons) {
+      var withCode = results[3].filter(function (r) { return r.couponCode; });
+      coupons.innerHTML = "<h3>Meus cupons</h3>" + (withCode.length
+        ? '<ul class="account-coupons">' + withCode.map(function (r) {
+            return "<li><b>" + window.SG.esc(r.couponCode) + "</b><span>" + window.SG.esc(r.title) + '</span><button type="button" class="text-link" data-copy-coupon="' + window.SG.esc(r.couponCode) + '">Copiar</button></li>';
+          }).join("") + '</ul><p class="account-muted">Use no checkout, no campo Cupom.</p>'
+        : '<p class="account-muted">Nenhum cupom ainda. <a href="/recompensas">Ver recompensas</a></p>');
+    }
+  }
+
+  function renderRanking(me, profile) {
+    var card = bodyEl.querySelector("[data-ranking-card]");
+    if (!card) return;
+    var opted = !!(profile && profile.rankingOptIn);
+    var handle = (profile && profile.publicHandle) || "";
+    card.innerHTML = "<h3>Ranking</h3>" +
+      (me && me.optedIn && me.position ? '<p class="account-rank-pos">Você está em <b>Nº ' + me.position + "</b> de " + me.participants + " · " + me.totalXp + " XP</p>" : "") +
+      '<form class="account-form" data-ranking-form novalidate>' +
+        '<label class="account-switch"><input type="checkbox" name="opt_in"' + (opted ? " checked" : "") + "> Aparecer no ranking público</label>" +
+        '<label class="account-field">Apelido no ranking<input name="handle" value="' + window.SG.esc(handle) + '" maxlength="24" autocomplete="off" placeholder="ex.: goose.rider"></label>' +
+        "<small>3 a 24 caracteres: letras, números, ponto ou _. Sem apelido, aparece só o seu primeiro nome.</small>" +
+        '<p class="account-form-msg" data-ranking-msg role="status"></p>' +
+        '<button class="btn btn-primary" type="submit">Salvar</button>' +
+      "</form>";
+  }
+
+  bodyEl.addEventListener("submit", async function (e) {
+    var form = e.target.closest("[data-ranking-form]");
+    if (!form || !rewardsSvc) return;
+    e.preventDefault();
+    var msg = form.querySelector("[data-ranking-msg]");
+    var handle = form.querySelector('[name="handle"]').value.trim();
+    if (handle && !HANDLE_RE.test(handle)) { msg.textContent = "Apelido com 3 a 24 caracteres: letras, números, ponto ou _."; return; }
+    var btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    // set_my_ranking (0104): apelido único sem diferenciar maiúsculas, erro como dado
+    var res = await rewardsSvc.setMyRanking(form.querySelector('[name="opt_in"]').checked, handle || null);
+    if (destroyed) return;
+    btn.disabled = false;
+    if (!res.ok) {
+      msg.textContent = res.reason === "handle_taken" ? "Esse apelido já está em uso. Tente outro."
+        : res.reason === "invalid_handle" ? "Apelido com 3 a 24 caracteres: letras, números, ponto ou _."
+        : "Não foi possível salvar agora.";
+      return;
+    }
+    if (window.SG.toast) window.SG.toast("RANKING ATUALIZADO");
+    var results = await Promise.all([rewardsSvc.getMyRanking(), profileSvc.getMine()]);
+    if (!destroyed) renderRanking(results[0], results[1]);
+  });
+
+  bodyEl.addEventListener("click", async function (e) {
+    var copy = e.target.closest("[data-copy-coupon]");
+    if (!copy) return;
+    try { await navigator.clipboard.writeText(copy.getAttribute("data-copy-coupon")); if (window.SG.toast) window.SG.toast("CUPOM COPIADO"); } catch (err) {}
+  });
+
+  var destroyed = false;
   root.querySelector("[data-app-close]").addEventListener("click", onClose);
   function onKeydown(e) { if (e.key === "Escape") onClose(); }
   document.addEventListener("keydown", onKeydown);
@@ -75,6 +170,7 @@ export function mountAccountPage(root, _params, onClose) {
   render();
 
   return function destroy() {
+    destroyed = true;
     document.removeEventListener("keydown", onKeydown);
   };
 }

@@ -773,6 +773,70 @@ footer>small{grid-column:1/-1;border-top:1px solid var(--line);padding-top:24px;
 .reward-card h3{margin:0 0 8px;color:var(--text);font-size:17px}
 .reward-card p{margin:0 0 14px;color:var(--muted);font-size:13px}
 .reward-requirement{color:var(--text-2) !important}
+.reward-card.is-locked{opacity:.6}
+.reward-card.is-redeemed{border-color:var(--accent)}
+.reward-card .reward-coupon{margin:0 0 6px;color:var(--text)}
+.reward-card .reward-coupon b{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;color:var(--accent)}
+.rewards-status{display:flex;flex-direction:column;gap:8px;max-width:560px;margin:0 0 24px;padding:18px 20px;background:var(--surface);border:1px solid var(--border);border-radius:14px}
+.rewards-status p{margin:0;font-size:14px;color:var(--text-2)}
+.rewards-status b{color:var(--text)}
+.rewards-status small{font-size:12px;color:var(--muted)}
+.rewards-status a{color:var(--accent)}
+.rewards-status .btn{align-self:flex-start}
+
+/* ranking: sua posição */
+.ranking-me{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;max-width:640px;margin:0 0 18px;padding:16px 20px;border:1px dashed var(--border-strong);border-radius:12px;color:var(--text-2)}
+.ranking-me p{margin:0;font-size:14px}
+.ranking-me b{color:var(--text)}
+.ranking-me.is-in{border-style:solid;border-color:var(--accent)}
+.ranking-me.is-in b{color:var(--accent)}
+.ranking-level{font-size:12px;color:var(--muted);white-space:nowrap}
+.ranking-rules{max-width:640px;margin:18px 0 0;font-size:12px;line-height:1.5;color:var(--muted)}
+
+/* minha conta: ranking, XP, cupons */
+.account-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:28px}
+.account-card{min-width:0;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:14px}
+.account-card h3{margin:0 0 12px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.account-muted{margin:0;font-size:13px;color:var(--muted)}
+.account-muted a{color:var(--accent)}
+.account-rules{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.5;color:var(--text-2)}
+.account-rules b{color:var(--text)}
+.account-form{display:flex;flex-direction:column;gap:10px}
+.account-switch{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px;color:var(--text);cursor:pointer}
+.account-switch input{width:18px;height:18px;accent-color:var(--accent)}
+.account-field{display:flex;flex-direction:column;gap:6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.account-field input{min-height:44px;padding:0 12px;border:1px solid var(--input-border);border-radius:10px;background:var(--input-bg);color:var(--input-text);font:inherit;font-size:14px;letter-spacing:0;text-transform:none;outline:none}
+.account-field input:focus{border-color:var(--accent)}
+.account-form small{font-size:11px;color:var(--muted)}
+.account-form-msg{margin:0;font-size:12px;color:var(--accent)}
+.account-form-msg:empty{display:none}
+.account-form .btn{align-self:flex-start}
+.account-rank-pos{margin:0 0 12px;font-size:14px;color:var(--text-2)}
+.account-rank-pos b{color:var(--accent)}
+.account-xp-list,.account-coupons{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.account-xp-list li,.account-coupons li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--border);font-size:13px;color:var(--text-2)}
+.account-xp-list li:first-child,.account-coupons li:first-child{border-top:0}
+.account-xp-list span{display:flex;flex-direction:column;min-width:0}
+.account-xp-list small{font-size:11px;color:var(--muted)}
+.account-xp-list b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.account-xp-list .is-plus{color:var(--accent)}
+.account-xp-list .is-minus{color:var(--muted)}
+.account-coupons b{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;color:var(--text)}
+.account-coupons span{flex:1;min-width:0;color:var(--muted);overflow-wrap:anywhere}
+.account-coupons+.account-muted{margin-top:8px}
+@media(max-width:720px){.account-grid{grid-template-columns:1fr}}
+
+/* checkout: cupom */
+.checkout-coupon{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.checkout-coupon-form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
+.checkout-coupon-form label{flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.checkout-coupon-form input{min-height:44px;padding:0 12px;border:1px solid var(--input-border);border-radius:4px;background:var(--input-bg);color:var(--input-text);font:inherit;font-size:14px;letter-spacing:.06em;text-transform:uppercase;outline:none}
+.checkout-coupon-form input:focus{border-color:var(--accent)}
+.checkout-coupon-form .btn{min-height:44px}
+.checkout-coupon-msg{margin:8px 0 0;font-size:12px;color:var(--accent)}
+.checkout-coupon-msg:empty{display:none}
+.checkout-coupon-applied,.checkout-coupon-hint{margin:0 0 6px;font-size:14px;color:var(--text)}
+.checkout-coupon-applied span{color:var(--accent);font-weight:700}
 
 /* ===== COMMUNITY PAGE ===== */
 .app-page-head-actions{display:flex;align-items:center;gap:12px}

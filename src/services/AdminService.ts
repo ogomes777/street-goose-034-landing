@@ -106,6 +106,8 @@ export interface AdminCoupon {
   discount_percent: number | null;
   discount_cents: number | null;
   max_uses: number | null;
+  /** quantas vezes cada cliente pode usar (null = sem limite) — migration 0104 */
+  per_customer_limit: number | null;
   uses_count: number;
   valid_from: string;
   valid_until: string | null;
@@ -281,6 +283,7 @@ export const AdminService = {
       discount_percent: coupon.discount_percent,
       discount_cents: coupon.discount_cents,
       max_uses: coupon.max_uses,
+      per_customer_limit: coupon.per_customer_limit,
       valid_from: coupon.valid_from,
       valid_until: coupon.valid_until,
       active: coupon.active,

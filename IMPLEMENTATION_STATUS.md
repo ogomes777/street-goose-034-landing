@@ -60,10 +60,10 @@ Marcado como feito só depois de: editar → rodar localmente → abrir no naveg
 ## Etapa 6 — NÃO iniciada nesta rodada (escopo grande, ver relatório)
 - [ ] Tema claro/escuro/sistema
 - [ ] PT/EN/ES
-- [ ] Login/logout (Google/Apple/e-mail — pendem de credenciais reais)
+- [~] Login/logout: Google ativo e verificado em produção; e-mail funciona mas exige confirmação (SMTP padrão do Supabase, com limite de envio); Apple não configurado
 - [ ] Favoritos/sacola premium (redesign visual, já funcionais estruturalmente)
 - [ ] Checkout completo
-- [ ] Ranking/XP/níveis/cupons
+- [x] Ranking/XP/níveis/cupons — ver "Fidelidade" abaixo
 - [ ] Comunidade/avaliações com foto grande/lightbox (já existe versão básica, falta redesign)
 - [ ] Busca
 - [ ] Newsletter com estados reais
@@ -83,3 +83,9 @@ insert into public.admins (user_id) select id from auth.users where email = 'don
 ```
 
 Remover: `delete from public.admins where user_id = (select id from auth.users where email = 'dono@exemplo.com');`
+
+## Fidelidade — XP, ranking, recompensas e cupons (migration 0104)
+- [x] XP real: pedido pago dá 1 XP por R$ 1 (mínimo 50), foto aprovada na comunidade +30, ajuste manual no painel; cancelar/reembolsar devolve. Níveis calculados no banco (`level_for_xp`).
+- [x] Ranking com opt-in: o cliente escolhe aparecer e o apelido em /conta (apelido único, 3–24 caracteres); sem apelido aparece só o primeiro nome. /ranking mostra a posição de quem está logado.
+- [x] Recompensas publicadas pelo lojista (aba Cupons & Recompensas): ativas aparecem em /recompensas, bloqueadas até o nível pedido; resgate grava no banco e entrega o cupom ligado à recompensa (também em /conta → Meus cupons).
+- [x] Cupom de verdade no checkout: campo na revisão (cliente logado), validação no servidor (`validate_coupon`) e desconto calculado e gravado no pedido por `create_whatsapp_order` — ativo, validade, limite total, limite por cliente (novo) e cupom de recompensa só para quem resgatou. Uso contado de forma atômica; a mensagem do WhatsApp e o pedido mostram o desconto.

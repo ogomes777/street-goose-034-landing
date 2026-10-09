@@ -1246,7 +1246,7 @@ export function mountAdminPage(root, _params, onClose) {
       var expired = c.valid_until && new Date(c.valid_until) < new Date();
       return '<li class="admin-card' + (c.active ? "" : " is-off") + '">' +
         '<div class="admin-card-main"><p class="admin-code">' + esc(c.code) + "</p>" +
-          "<p>" + couponDiscount(c) + " off · " + c.uses_count + (c.max_uses ? " / " + c.max_uses : "") + " usos</p>" +
+          "<p>" + couponDiscount(c) + " off · " + c.uses_count + (c.max_uses ? " / " + c.max_uses : "") + " usos" + (c.per_customer_limit ? " · " + c.per_customer_limit + " por cliente" : "") + "</p>" +
           "<small>" + (c.valid_until ? (expired ? "Expirou " : "Até ") + fmtDate(c.valid_until) : "Sem data de fim") + "</small></div>" +
         '<div class="admin-card-side"><span class="admin-status admin-status--' + (c.active && !expired ? "on" : "off") + '">' + (c.active ? (expired ? "Expirado" : "Ativo") : "Inativo") + "</span>" +
           '<div class="admin-card-actions"><button class="admin-text-btn" type="button" data-action="coupon-edit" data-id="' + esc(c.code) + '">Editar</button>' +
@@ -1257,7 +1257,7 @@ export function mountAdminPage(root, _params, onClose) {
 
   function couponEditorHtml(c) {
     var isNew = !c;
-    c = c || { code: "", discount_percent: 10, discount_cents: null, max_uses: null, valid_from: new Date().toISOString(), valid_until: null, active: true };
+    c = c || { code: "", discount_percent: 10, discount_cents: null, max_uses: null, per_customer_limit: null, valid_from: new Date().toISOString(), valid_until: null, active: true };
     var kind = c.discount_cents ? "cents" : "percent";
     return '<form class="admin-editor" data-form="coupon" data-new="' + isNew + '" novalidate>' +
       '<h3>' + (isNew ? "Novo cupom" : "Editar " + esc(c.code)) + "</h3>" +
@@ -1265,7 +1265,8 @@ export function mountAdminPage(root, _params, onClose) {
         '<label class="admin-field">Código<input name="code" value="' + esc(c.code) + '" maxlength="32" autocapitalize="characters" autocomplete="off" placeholder="RUA034"' + (isNew ? "" : " readonly") + "></label>" +
         '<label class="admin-field">Tipo<select name="kind"><option value="percent"' + (kind === "percent" ? " selected" : "") + '>% de desconto</option><option value="cents"' + (kind === "cents" ? " selected" : "") + ">Valor fixo (R$)</option></select></label>" +
         '<label class="admin-field">Desconto<input name="amount" inputmode="decimal" value="' + (kind === "percent" ? esc(c.discount_percent || "") : money.centsToInput(c.discount_cents)) + '" placeholder="10"></label>' +
-        '<label class="admin-field">Limite de usos<input name="max_uses" inputmode="numeric" value="' + esc(c.max_uses || "") + '" placeholder="Sem limite"></label>' +
+        '<label class="admin-field">Limite de usos (total)<input name="max_uses" inputmode="numeric" value="' + esc(c.max_uses || "") + '" placeholder="Sem limite"></label>' +
+        '<label class="admin-field">Limite por cliente<input name="per_customer_limit" inputmode="numeric" value="' + esc(c.per_customer_limit || "") + '" placeholder="Sem limite"></label>' +
         '<label class="admin-field">Começa em<input type="date" name="valid_from" value="' + dateInput(c.valid_from) + '"></label>' +
         '<label class="admin-field">Termina em<input type="date" name="valid_until" value="' + dateInput(c.valid_until) + '"></label>' +
       "</div>" +
@@ -1298,13 +1299,15 @@ export function mountAdminPage(root, _params, onClose) {
     }
     var maxUses = field(form, "max_uses").value.trim() ? Number(field(form, "max_uses").value) : null;
     if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) { setFormError(form, "Limite de usos deve ser um número inteiro."); return; }
+    var perCustomer = field(form, "per_customer_limit").value.trim() ? Number(field(form, "per_customer_limit").value) : null;
+    if (perCustomer !== null && (!Number.isInteger(perCustomer) || perCustomer < 1)) { setFormError(form, "Limite por cliente deve ser um número inteiro."); return; }
     var from = dateFromInput(field(form, "valid_from").value, false) || new Date().toISOString();
     var until = dateFromInput(field(form, "valid_until").value, true);
     if (until && until < from) { setFormError(form, "A data de fim vem antes do início."); return; }
     if (isNew && state.coupons.some(function (c) { return c.code === code; })) { setFormError(form, "Já existe um cupom com esse código."); return; }
 
     setBusy(form, true);
-    var res = await svc.saveCoupon({ code: code, discount_percent: percent, discount_cents: cents, max_uses: maxUses, valid_from: from, valid_until: until, active: field(form, "active").checked }, isNew);
+    var res = await svc.saveCoupon({ code: code, discount_percent: percent, discount_cents: cents, max_uses: maxUses, per_customer_limit: perCustomer, valid_from: from, valid_until: until, active: field(form, "active").checked }, isNew);
     if (destroyed) return;
     setBusy(form, false);
     if (!res.ok) { setFormError(form, res.message); return; }
@@ -1345,7 +1348,7 @@ export function mountAdminPage(root, _params, onClose) {
         '<label class="admin-field">Nível mínimo<select name="level"><option value="">Livre</option>' + state.levels.map(function (l) {
           return '<option value="' + l.level_number + '"' + (l.level_number === r.requirement_level ? " selected" : "") + ">" + l.level_number + " — " + esc(l.name) + "</option>";
         }).join("") + "</select></label>" +
-        '<label class="admin-field">Cupom entregue<input name="coupon_code" value="' + esc(r.coupon_code || "") + '" list="admin-coupon-codes" maxlength="32" autocomplete="off" placeholder="Opcional"></label>' +
+        '<label class="admin-field">Cupom entregue<input name="coupon_code" value="' + esc(r.coupon_code || "") + '" list="admin-coupon-codes" maxlength="32" autocomplete="off" placeholder="Opcional"><small>Cupom ligado a recompensa só vale para quem resgatou.</small></label>' +
         '<datalist id="admin-coupon-codes">' + state.coupons.map(function (c) { return '<option value="' + esc(c.code) + '">'; }).join("") + "</datalist>" +
         '<label class="admin-field">Desconto %<input name="discount_percent" inputmode="numeric" value="' + esc(r.discount_percent || "") + '" placeholder="Opcional"></label>' +
       "</div>" +
