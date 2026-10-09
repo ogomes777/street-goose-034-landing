@@ -127,13 +127,26 @@
   // Imagens lazy que carregam depois do refresh inicial do ScrollTrigger
   // deslocam a altura da página e deixam os triggers mais abaixo (ex: Final
   // Act, footer) com posições erradas — nunca disparam. Recalcula com debounce
-  // sempre que uma imagem termina de carregar.
+  // quando uma imagem termina de carregar — mas SÓ se a altura da página
+  // mudou de fato, e nunca no meio de uma rolagem: o carrossel do universo
+  // troca 4 imagens a cada produto, e o refresh no meio da inércia do dedo
+  // (celular) cortava o movimento e fazia a página pular pra trás/frente.
   if (window.ScrollTrigger) {
     var stRefreshTimer;
+    var lastDocHeight = document.documentElement.scrollHeight;
+    var lastScrollAt = 0;
+    addEventListener("scroll", function () { lastScrollAt = Date.now(); }, { passive: true });
+    var maybeRefresh = function () {
+      if (Date.now() - lastScrollAt < 300) { stRefreshTimer = setTimeout(maybeRefresh, 300); return; }
+      var h = document.documentElement.scrollHeight;
+      if (Math.abs(h - lastDocHeight) < 2) return;
+      lastDocHeight = h;
+      window.ScrollTrigger.refresh();
+    };
     document.addEventListener("load", function (e) {
       if (e.target.tagName !== "IMG") return;
       clearTimeout(stRefreshTimer);
-      stRefreshTimer = setTimeout(function () { window.ScrollTrigger.refresh(); }, 200);
+      stRefreshTimer = setTimeout(maybeRefresh, 200);
     }, true);
   }
 

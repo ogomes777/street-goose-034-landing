@@ -395,6 +395,13 @@ img{max-width:100%;display:block}
 .universe-meta{position:relative;z-index:4;margin-top:28px;text-align:center}
 .universe-name{margin:0 0 6px;font-size:22px;font-weight:700;color:#fff;letter-spacing:-.01em}
 .universe-count{margin:0;font-size:11px;letter-spacing:.18em;color:var(--orange)}
+/* toque/celular: blur nas peças laterais e blend do canvas são caros pra
+   GPU móvel durante a rolagem — opacidade sozinha já dá a profundidade */
+@media(hover:none),(pointer:coarse),(max-width:980px){
+  .universe-slot--left,.universe-slot--right,.universe-slot--back{filter:none}
+  .universe-slot img{filter:drop-shadow(0 18px 28px rgba(0,0,0,.5))}
+  .universe-particles{mix-blend-mode:normal}
+}
 @media(max-width:980px){
   .universe-stage{height:270vh}
   .universe-track{height:min(48vh,420px)}

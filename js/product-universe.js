@@ -7,13 +7,16 @@
    alvo — nunca existe um segundo estado de índice competindo com o scroll.
    NOTA: "shorts-oakley-png" não existe no projeto (confirmado por busca
    recursiva) — o 7º PNG solto real é quartz-oakley-png.png (relógio). */
-import chapeuImg from "../assets/chapeu-oakley-png.png";
-import coleteImg from "../assets/colete-oakley-png.png";
-import lupaImg from "../assets/lupa-animacao-png.png";
-import mochilaImg from "../assets/mochila-oakley-png.png";
-import moletomImg from "../assets/moletom-animacao-png.png";
-import perfumeImg from "../assets/perfume-animacao-png.png";
-import quartzImg from "../assets/quartz-oakley-png.png";
+// WebP 840px gerados dos PNGs 1254px originais (9,7 MB -> 485 KB): o palco
+// troca 4 imagens a cada produto e, no celular, decodificar PNG de 2 MB a
+// cada troca era a principal fonte de engasgo
+import chapeuImg from "../assets/universe-web/chapeu-oakley.webp";
+import coleteImg from "../assets/universe-web/colete-oakley.webp";
+import lupaImg from "../assets/universe-web/lupa-animacao.webp";
+import mochilaImg from "../assets/universe-web/mochila-oakley.webp";
+import moletomImg from "../assets/universe-web/moletom-animacao.webp";
+import perfumeImg from "../assets/universe-web/perfume-animacao.webp";
+import quartzImg from "../assets/universe-web/quartz-oakley.webp";
 
 (function () {
   "use strict";
@@ -45,11 +48,16 @@ import quartzImg from "../assets/quartz-oakley-png.png";
   var nextBtn = section.querySelector("[data-universe-next]");
   var particleCanvas = section.querySelector("[data-universe-particles]");
 
-  // preload de todas as imagens do palco
-  UNIVERSE_ITEMS.forEach(function (item) {
+  // preload + decode de todas as imagens do palco, mantidas em memória: a
+  // troca de produto vira só "apontar o src", sem decodificar na hora
+  var preloaded = UNIVERSE_ITEMS.map(function (item) {
     var img = new Image();
+    img.decoding = "async";
     img.src = item.image;
+    if (img.decode) img.decode().catch(function () {});
+    return img;
   });
+  Object.keys(slots).forEach(function (k) { if (slots[k]) slots[k].decoding = "async"; });
 
   var N = UNIVERSE_ITEMS.length;
   function norm(i) { return ((i % N) + N) % N; }
@@ -64,7 +72,19 @@ import quartzImg from "../assets/quartz-oakley-png.png";
     el.style.transform = "scale(" + (item.scale || 1) + ")";
   }
 
-  function render(index) {
+  var motionOk = !window.SG.prefersReducedMotion();
+  // entrada suave da peça nova (só transform/opacity — barato até no celular)
+  function settle(el, item, strength) {
+    if (!motionOk || !el.animate) return;
+    var base = "scale(" + (item.scale || 1) + ")";
+    el.animate(
+      [{ opacity: 1 - strength, transform: base + " translateY(" + (10 * strength) + "px) scale(" + (1 - 0.06 * strength) + ")" },
+       { opacity: 1, transform: base }],
+      { duration: 420, easing: "cubic-bezier(.2,.75,.2,1)" }
+    );
+  }
+
+  function render(index, animate) {
     // scrub dispara onUpdate a cada micro-variação de progresso, mas index
     // quantiza pra inteiro — sem essa guarda, o mesmo índice reescrevia 4
     // <img src>, 2 textos e 2 custom properties dezenas de vezes por segundo
@@ -78,6 +98,11 @@ import quartzImg from "../assets/quartz-oakley-png.png";
     setSlot(slots.left, itemAt(index - 1));
     setSlot(slots.center, center);
     setSlot(slots.right, itemAt(index + 1));
+    if (animate) {
+      settle(slots.center, center, 0.65);
+      settle(slots.left, itemAt(index - 1), 0.4);
+      settle(slots.right, itemAt(index + 1), 0.4);
+    }
 
     if (ghost.textContent !== center.label) ghost.textContent = center.label;
 
@@ -99,19 +124,27 @@ import quartzImg from "../assets/quartz-oakley-png.png";
     particleCtx = particleCanvas.getContext("2d");
     var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
-    function resizeParticles() {
-      var r = section.getBoundingClientRect();
-      particleCanvas.width = window.innerWidth * dpr;
-      particleCanvas.height = window.innerHeight * dpr;
+    // no celular a barra de endereço aparece/some durante a rolagem e dispara
+    // resize sem parar; realocar o canvas a cada um custava quadros. Só
+    // redimensiona quando a largura muda ou a altura muda de verdade.
+    var partW = 0, partH = 0;
+    function resizeParticles(force) {
+      var w = window.innerWidth;
+      var h = sticky.clientHeight || window.innerHeight;
+      if (!force && w === partW && Math.abs(h - partH) < 140) return;
+      partW = w; partH = h;
+      particleCanvas.width = Math.round(w * dpr);
+      particleCanvas.height = Math.round(h * dpr);
       particleCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
-    resizeParticles();
+    resizeParticles(true);
 
-    var DOT_COUNT = 46;
+    var coarse = matchMedia("(hover:none), (pointer:coarse)").matches;
+    var DOT_COUNT = coarse ? 26 : 46;
     for (var i = 0; i < DOT_COUNT; i++) {
       particleDots.push({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
+        x: Math.random() * partW,
+        y: Math.random() * partH,
         r: 0.6 + Math.random() * 1.6,
         vy: 0.06 + Math.random() * 0.14,
         drift: (Math.random() - 0.5) * 0.06,
@@ -131,7 +164,7 @@ import quartzImg from "../assets/quartz-oakley-png.png";
     function tickParticles() {
       particleFrame = 0;
       if (particlesDestroyed || !particlesVisible || document.hidden || overlayOpen) return;
-      var w = window.innerWidth, h = window.innerHeight;
+      var w = partW, h = partH;
       particleCtx.clearRect(0, 0, w, h);
       particleCtx.fillStyle = currentParticle;
       for (var j = 0; j < particleDots.length; j++) {
@@ -174,8 +207,8 @@ import quartzImg from "../assets/quartz-oakley-png.png";
   /* ---------------- Fallback estático: reduced motion / sem GSAP ---------------- */
   if (!canScrub) {
     section.classList.add("universe-stage--static");
-    prevBtn.addEventListener("click", function () { render(norm(activeIndex - 1)); });
-    nextBtn.addEventListener("click", function () { render(norm(activeIndex + 1)); });
+    prevBtn.addEventListener("click", function () { render(norm(activeIndex - 1), true); });
+    nextBtn.addEventListener("click", function () { render(norm(activeIndex + 1), true); });
     return;
   }
 
@@ -187,13 +220,31 @@ import quartzImg from "../assets/quartz-oakley-png.png";
     return { top: top, distance: Math.max(1, height - vh) };
   }
 
+  // histerese: só troca de produto quando a rolagem passa claramente do meio
+  // do caminho. Sem ela, parar perto da fronteira (ou a inércia do dedo no
+  // celular assentando) fazia o produto piscar entre o anterior e o próximo.
+  var HYSTERESIS = 0.18;
   function indexFromProgress(p) {
-    return Math.round(p * (N - 1));
+    var pos = p * (N - 1);
+    if (activeIndex >= 0 && Math.abs(pos - activeIndex) < 0.5 + HYSTERESIS) return activeIndex;
+    return Math.round(pos);
   }
 
+  // enquanto os botões/swipe rolam até o produto escolhido, o progresso passa
+  // pelos índices intermediários — antes isso re-renderizava o produto
+  // anterior no meio do caminho ("voltava pro de trás"). Agora o palco
+  // espera a rolagem chegar perto do alvo.
+  var navTarget = null, navTimer = 0;
   universeST = window.ScrollTrigger.create({
-    trigger: section, start: "top top", end: "bottom bottom", scrub: 0.15,
-    onUpdate: function (self) { render(indexFromProgress(self.progress)); }
+    trigger: section, start: "top top", end: "bottom bottom",
+    onUpdate: function (self) {
+      if (navTarget !== null) {
+        if (Math.abs(self.progress * (N - 1) - navTarget) > 0.35) return;
+        navTarget = null;
+      }
+      var next = indexFromProgress(self.progress);
+      if (next !== activeIndex) render(next, true);
+    }
   });
 
   // botões/teclado/swipe só movem a posição de scroll — o ScrollTrigger acima
@@ -204,7 +255,10 @@ import quartzImg from "../assets/quartz-oakley-png.png";
     navLocked = true;
     setTimeout(function () { navLocked = false; }, 650);
     var target = norm(i);
-    render(target); // resposta otimista imediata
+    render(target, true); // resposta otimista imediata
+    navTarget = target;
+    clearTimeout(navTimer);
+    navTimer = setTimeout(function () { navTarget = null; }, 1400); // trava de segurança
     var range = sectionRange();
     var y = range.top + (N > 1 ? target / (N - 1) : 0) * range.distance;
     window.scrollTo({ top: y, behavior: "smooth" });
