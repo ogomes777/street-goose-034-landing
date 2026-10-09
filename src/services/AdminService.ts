@@ -15,6 +15,62 @@ export interface AdminOverview {
   posts_pending: number;
   customers: number;
   newsletter_active: number;
+  // financeiro (0106)
+  receivable_cents: number;
+  in_30d_cents: number;
+  out_30d_cents: number;
+  balance_cents: number;
+  spark: FinancePoint[];
+}
+
+export type FinanceKind = "in" | "out";
+export type FinanceBucket = "day" | "week" | "month";
+
+export interface FinancePoint {
+  d: string;
+  in: number;
+  out: number;
+}
+
+export interface FinanceSummary {
+  from: string;
+  to: string;
+  bucket: FinanceBucket;
+  balance_cents: number;
+  in_cents: number;
+  out_cents: number;
+  prev_in_cents: number;
+  prev_out_cents: number;
+  sales_count: number;
+  sales_cents: number;
+  avg_ticket_cents: number;
+  refunds_cents: number;
+  receivable_cents: number;
+  receivable_count: number;
+  by_category: { kind: FinanceKind; category: string; cents: number; count: number }[];
+  series: FinancePoint[];
+  top_products: { product_id: string; name: string; qty: number; cents: number }[];
+}
+
+export interface FinanceEntry {
+  id: string;
+  kind: FinanceKind;
+  amount_cents: number;
+  category: string;
+  description: string | null;
+  occurred_at: string;
+  order_id: string | null;
+  order_status: string | null;
+  source: "order" | "manual";
+  created_at: string;
+}
+
+export interface FinanceEntryInput {
+  kind: FinanceKind;
+  category: string;
+  amount_cents: number;
+  description: string;
+  occurred_at: string;
 }
 
 export interface AdminOrderItem {
@@ -159,6 +215,10 @@ const MESSAGES: Record<string, string> = {
   order_not_found: "Pedido não encontrado.",
   post_not_found: "Publicação não encontrada.",
   post_not_approved: "Só foto aprovada pode ir para os destaques.",
+  finance_invalid_amount: "Informe um valor maior que zero.",
+  invalid_category: "Escolha uma categoria.",
+  invalid_date: "Data inválida.",
+  not_editable: "Lançamento de pedido é automático — mexa no pedido, não aqui.",
   reason_required: "Informe o motivo da rejeição.",
   invalid_price: "Preço inválido.",
   invalid_total: "Total inválido.",
@@ -279,6 +339,34 @@ export const AdminService = {
     const res = await rpc<{ ok: boolean; reason?: string }>("admin_feature_post", { p_post_id: postId, p_featured: featured });
     if (res.ok && res.data && res.data.ok === false) return fail(res.data.reason === "not_approved" ? "post_not_approved" : "post_not_found");
     return res;
+  },
+
+  // ---------- financeiro (0106) ----------
+  // venda/estorno entram sozinhos pelo pedido; aqui só o resumo, a lista e
+  // os lançamentos manuais (erros de validação voltam como dado)
+  financeSummary(from: string | null, to: string | null, bucket: FinanceBucket): Promise<AdminResult<FinanceSummary>> {
+    return rpc<FinanceSummary>("admin_finance_summary", { p_from: from, p_to: to, p_bucket: bucket });
+  },
+
+  async listFinance(opts: { from: string | null; to: string | null; kind: FinanceKind | null; search: string; limit?: number }): Promise<AdminResult<{ total: number; items: FinanceEntry[] }>> {
+    return rpc<{ total: number; items: FinanceEntry[] }>("admin_list_finance", {
+      p_from: opts.from, p_to: opts.to, p_kind: opts.kind, p_search: opts.search.trim() || null, p_limit: opts.limit ?? 200, p_offset: 0,
+    });
+  },
+
+  async saveFinanceEntry(id: string | null, entry: FinanceEntryInput): Promise<AdminResult<{ id: string }>> {
+    const res = await rpc<{ ok?: boolean; id?: string; error?: string }>("admin_save_finance_entry", { p_id: id, p_entry: entry });
+    if (!res.ok) return res as AdminResult<{ id: string }>;
+    // invalid_amount já é a mensagem do XP; aqui é valor em dinheiro
+    if (res.data.error) return fail(res.data.error === "invalid_amount" ? "finance_invalid_amount" : res.data.error);
+    return { ok: true, data: { id: res.data.id as string } };
+  },
+
+  async deleteFinanceEntry(id: string): Promise<AdminResult<unknown>> {
+    const res = await rpc<{ ok?: boolean; error?: string }>("admin_delete_finance_entry", { p_id: id });
+    if (!res.ok) return res;
+    if (res.data.error) return fail(res.data.error);
+    return { ok: true, data: null };
   },
 
   // ---------- cupons ----------

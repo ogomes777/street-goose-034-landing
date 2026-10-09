@@ -102,3 +102,10 @@ Remover: `delete from public.admins where user_id = (select id from auth.users w
 
 ## Pagamentos
 - [x] SG Payment Terminal (home): aviso "Em breve direto no site: Pix, cartão, boleto, Apple Pay e Google Pay. Por enquanto, o pagamento é combinado com a gente pelo WhatsApp." (PT/EN/ES), texto estático abaixo do título — animação e chips intocados. PSP escolhido: PagBank (checkout hospedado), ainda não ligado.
+
+## Financeiro e painel premium (migration 0106)
+- [x] Livro-caixa `finance_entries`: venda entra sozinha quando o pedido vira pago; reembolso/cancelamento lança o estorno; mudança de valor ou volta para aguardando lança o ajuste (sempre a diferença — saldo nunca diverge do pedido). Pedidos pagos antigos importados na migration.
+- [x] Lançamento manual (entrada: aporte, outra; saída: mercadoria, frete, embalagem, marketing, taxas, retirada, outra) com editar/excluir; lançamento de pedido é automático e não se apaga.
+- [x] Topo do painel: saldo em caixa, entradas e saídas de 30 dias, a receber, pedidos aguardando, vendas, fotos, clientes, newsletter — números ao vivo (atualiza a cada 20 s e na hora de cada ação), contagem animada e mini-gráficos; cada cartão abre a seção dele.
+- [x] Aba Financeiro: período (hoje, 7/30 dias, mês, 12 meses, tudo), comparação com o período anterior, resultado, vendas e ticket médio, reembolsos, gráfico entradas × saídas com dica e teclado, categorias, peças que mais venderam e o livro-caixa com busca/filtro e "Ver pedido".
+- [x] Visual: painel sempre escuro com luz ambiente, cartões de vidro, abas com ícone e indicador deslizante, entrada em cascata, esqueletos, brilho nos botões; tudo desliga com prefers-reduced-motion.

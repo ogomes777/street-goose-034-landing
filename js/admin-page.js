@@ -4,11 +4,15 @@
    dados é o banco (migration 0100): não-admin que forçasse as chamadas
    recebe 'forbidden' / zero linhas. Todo texto vindo de cliente (nome,
    legenda, endereço) passa por esc() — o painel roda com a sessão do dono. */
+import { countUp, sparkSvg, reducedMotion } from "./admin-viz.js";
+import { mountFinance } from "./admin-finance.js";
+
 export function mountAdminPage(root, _params, onClose) {
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
 
   var TABS = [
     { id: "pedidos", label: "Pedidos" },
+    { id: "financeiro", label: "Financeiro" },
     { id: "produtos", label: "Produtos" },
     { id: "clientes", label: "Clientes" },
     { id: "comunidade", label: "Comunidade" },
@@ -26,6 +30,18 @@ export function mountAdminPage(root, _params, onClose) {
   var REWARD_KIND = { coupon: "Cupom", gift: "Brinde", discount: "Desconto" };
   var REJECT_REASONS = ["Foto sem peça Street Goose", "Imagem com baixa qualidade", "Conteúdo impróprio", "Foto de outra pessoa/marca"];
   var MAX_ROWS = 400;
+  var TAB_ICONS = {
+    pedidos: '<path d="M6 7h12l-1 13H7L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
+    financeiro: '<path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3.5-4 3 2.5L19 8"/>',
+    produtos: '<circle cx="7" cy="13" r="3.2"/><circle cx="17" cy="13" r="3.2"/><path d="M10.2 13h3.6M3.8 13 3 9M20.2 13 21 9"/>',
+    clientes: '<circle cx="9" cy="9" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M15.5 6.2a3 3 0 0 1 0 5.6M17 19a5.5 5.5 0 0 0-2-4.2"/>',
+    comunidade: '<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.4-2h5.8l1.4 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.2"/>',
+    cupons: '<path d="M4 8a2 2 0 0 0 0 4v4h16v-4a2 2 0 0 1 0-4V4H4z" transform="translate(0 2)"/><path d="M14 6v12" stroke-dasharray="2 2.2"/>',
+    newsletter: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6"/>',
+  };
+  var POLL_MS = 20000;
+  var pollTimer = null, liveTimer = null, lastSync = 0;
+  var finance = null;
 
   var svc = null, money = null, csv = null, imageLib = null;
   var destroyed = false;
@@ -51,8 +67,12 @@ export function mountAdminPage(root, _params, onClose) {
 
   root.innerHTML =
     '<div class="app-page-head admin-head">' +
-      '<div class="admin-head-title"><p class="admin-eyebrow">STREET GOOSE 034</p><h1>Painel</h1></div>' +
-      '<button class="app-page-close" type="button" data-app-close aria-label="' + t("common.close") + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+      '<div class="admin-head-title"><span class="admin-mark" aria-hidden="true">034</span>' +
+        '<div><p class="admin-eyebrow">STREET GOOSE 034 · PAINEL DA LOJA</p><h1>Painel</h1><p class="admin-greeting" data-admin-greeting></p></div></div>' +
+      '<div class="admin-head-actions">' +
+        '<span class="admin-live" data-admin-live hidden><i aria-hidden="true"></i><span data-admin-live-text>Ao vivo</span></span>' +
+        '<button class="app-page-close" type="button" data-app-close aria-label="' + t("common.close") + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+      "</div>" +
     "</div>" +
     '<div class="app-page-body admin-body" data-admin-body><div class="app-page-loading">' + t("common.loading") + "</div></div>";
 
@@ -68,7 +88,9 @@ export function mountAdminPage(root, _params, onClose) {
   function toast(msg) { if (window.SG.toast) window.SG.toast(msg); }
   function nextSeq(key) { seq[key] = (seq[key] || 0) + 1; return seq[key]; }
   function stale(key, n) { return destroyed || seq[key] !== n; }
-  function loading() { return '<div class="admin-state">' + t("common.loading") + "</div>"; }
+  function loading() {
+    return '<div class="admin-skeleton" role="status" aria-label="' + t("common.loading") + '"><span></span><span></span><span></span></div>';
+  }
   function errorState(message, retry) {
     return '<div class="admin-state admin-state--error"><p>' + esc(message) + '</p><button class="btn btn-ghost" type="button" data-action="retry" data-retry="' + retry + '">Tentar de novo</button></div>';
   }
@@ -166,40 +188,151 @@ export function mountAdminPage(root, _params, onClose) {
   // ---------- shell ----------
   function renderShell() {
     bodyEl.innerHTML =
-      '<div class="admin-kpis" data-admin-kpis aria-live="polite"></div>' +
+      '<div class="admin-kpis" data-admin-kpis aria-live="polite">' + kpiSkeleton() + "</div>" +
       '<div class="admin-tabs" role="tablist" aria-label="Seções do painel">' +
+        '<span class="admin-tab-ink" data-tab-ink aria-hidden="true"></span>' +
         TABS.map(function (tab) {
           var active = tab.id === state.tab;
           return '<button class="admin-tab' + (active ? " is-active" : "") + '" type="button" role="tab" id="admin-tab-' + tab.id + '" aria-controls="admin-panel" aria-selected="' + active + '" tabindex="' + (active ? 0 : -1) + '" data-admin-tab="' + tab.id + '">' +
+            '<svg class="admin-tab-icon" viewBox="0 0 24 24" aria-hidden="true">' + TAB_ICONS[tab.id] + "</svg>" +
             esc(tab.label) + '<span class="admin-tab-badge" data-tab-badge="' + tab.id + '" hidden></span></button>';
         }).join("") +
       "</div>" +
       '<section class="admin-panel" id="admin-panel" role="tabpanel" aria-labelledby="admin-tab-' + state.tab + '" data-admin-panel></section>';
+    greet();
     loadOverview();
     renderPanel();
+    requestAnimationFrame(moveInk);
+    startLive();
   }
+
+  function greet() {
+    var el = root.querySelector("[data-admin-greeting]");
+    if (!el) return;
+    var now = new Date();
+    var h = now.getHours();
+    var hello = h < 5 ? "Boa noite" : h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+    var day = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+    el.textContent = hello + " · " + day.charAt(0).toUpperCase() + day.slice(1);
+  }
+
+  function kpiSkeleton() {
+    var out = '<div class="admin-kpi-row admin-kpi-row--money">';
+    for (var i = 0; i < 4; i++) out += '<div class="admin-kpi-skel' + (i === 0 ? " is-hero" : "") + '"></div>';
+    out += '</div><div class="admin-kpi-row admin-kpi-row--ops">';
+    for (var j = 0; j < 5; j++) out += '<div class="admin-kpi-skel is-small"></div>';
+    return out + "</div>";
+  }
+
+  function kpiCard(key, label, cls, sub, href) {
+    return '<article class="admin-kpi ' + cls + '" data-kpi="' + key + '"' + (href ? ' data-kpi-tab="' + href + '" role="button" tabindex="0"' : "") + ">" +
+      '<span class="admin-kpi-label">' + esc(label) + "</span>" +
+      '<b class="admin-kpi-value" data-kpi-value="' + key + '">—</b>' +
+      (sub !== null ? '<span class="admin-kpi-sub" data-kpi-sub="' + key + '">' + esc(sub || "") + "</span>" : "") +
+      '<span class="admin-kpi-spark" data-kpi-spark="' + key + '"></span>' +
+    "</article>";
+  }
+
+  function signed(v) { return (v < 0 ? "−" : "") + brl(Math.abs(v)); }
+  function plain(v) { return String(v); }
 
   async function loadOverview() {
     var n = nextSeq("overview");
     var res = await svc.overview();
     if (stale("overview", n) || !res.ok) return;
     var o = res.data;
+    var first = !state.overview;
     state.overview = o;
     var kpis = bodyEl.querySelector("[data-admin-kpis]");
     if (!kpis) return;
-    kpis.innerHTML = [
-      ["Pedidos aguardando", o.orders_pending, o.orders_pending > 0],
-      ["Pagos · 30 dias", o.orders_paid_30d],
-      ["Faturado · 30 dias", brl(o.revenue_30d_cents)],
-      ["Fotos para moderar", o.posts_pending, o.posts_pending > 0],
-      ["Clientes", o.customers],
-      ["Newsletter ativa", o.newsletter_active],
-    ].map(function (k) {
-      return '<div class="admin-kpi' + (k[2] ? " is-hot" : "") + '"><span>' + esc(k[0]) + "</span><b>" + esc(k[1]) + "</b></div>";
-    }).join("");
+    if (!kpis.querySelector("[data-kpi]")) {
+      kpis.innerHTML =
+        '<div class="admin-kpi-row admin-kpi-row--money">' +
+          kpiCard("balance", "Saldo em caixa", "admin-kpi--money admin-kpi--hero", "Entradas − saídas desde o início", "financeiro") +
+          kpiCard("in", "Entradas · 30 dias", "admin-kpi--money admin-kpi--in", "", "financeiro") +
+          kpiCard("out", "Saídas · 30 dias", "admin-kpi--money admin-kpi--out", "", "financeiro") +
+          kpiCard("receivable", "A receber", "admin-kpi--money", "", "pedidos") +
+        "</div>" +
+        '<div class="admin-kpi-row admin-kpi-row--ops">' +
+          kpiCard("orders_pending", "Pedidos aguardando", "admin-kpi--ops", null, "pedidos") +
+          kpiCard("orders_paid_30d", "Vendas · 30 dias", "admin-kpi--ops", null, "financeiro") +
+          kpiCard("posts_pending", "Fotos para moderar", "admin-kpi--ops", null, "comunidade") +
+          kpiCard("customers", "Clientes", "admin-kpi--ops", null, "clientes") +
+          kpiCard("newsletter_active", "Newsletter ativa", "admin-kpi--ops", null, "newsletter") +
+        "</div>";
+    }
+    function val(key, v, fmt) { countUp(kpis.querySelector('[data-kpi-value="' + key + '"]'), v, fmt); }
+    function sub(key, text) { var el = kpis.querySelector('[data-kpi-sub="' + key + '"]'); if (el) el.textContent = text; }
+    val("balance", o.balance_cents || 0, signed);
+    val("in", o.in_30d_cents || 0, brl);
+    val("out", o.out_30d_cents || 0, brl);
+    val("receivable", o.receivable_cents || 0, brl);
+    val("orders_pending", o.orders_pending, plain);
+    val("orders_paid_30d", o.orders_paid_30d, plain);
+    val("posts_pending", o.posts_pending, plain);
+    val("customers", o.customers, plain);
+    val("newsletter_active", o.newsletter_active, plain);
+    var net30 = (o.in_30d_cents || 0) - (o.out_30d_cents || 0);
+    sub("in", "Resultado 30 dias: " + signed(net30));
+    sub("out", o.out_30d_cents ? "Frete, mercadoria, estornos…" : "Nenhuma saída no período");
+    sub("receivable", o.orders_pending ? o.orders_pending + (o.orders_pending === 1 ? " pedido aguardando pagamento" : " pedidos aguardando pagamento") : "Nada pendente");
+    kpis.querySelector('[data-kpi="balance"]').classList.toggle("is-negative", (o.balance_cents || 0) < 0);
+    kpis.querySelector('[data-kpi="orders_pending"]').classList.toggle("is-hot", o.orders_pending > 0);
+    kpis.querySelector('[data-kpi="posts_pending"]').classList.toggle("is-hot", o.posts_pending > 0);
+    // mini-gráficos: saldo acumulado, entradas e saídas por dia (30 dias)
+    var spark = o.spark || [];
+    var sig = JSON.stringify(spark);
+    if (sig !== kpis.getAttribute("data-spark-sig")) {
+      kpis.setAttribute("data-spark-sig", sig);
+      var running = (o.balance_cents || 0) - net30;
+      var cumulative = spark.map(function (pt) { running += pt.in - pt.out; return running; });
+      kpis.querySelector('[data-kpi-spark="balance"]').innerHTML = sparkSvg(cumulative, "#ff6a1a");
+      kpis.querySelector('[data-kpi-spark="in"]').innerHTML = sparkSvg(spark.map(function (pt) { return pt.in; }), "#3987e5");
+      kpis.querySelector('[data-kpi-spark="out"]').innerHTML = sparkSvg(spark.map(function (pt) { return pt.out; }), "#e66767");
+    }
+    if (first) kpis.classList.add("is-ready");
     setBadge("pedidos", o.orders_pending);
     setBadge("comunidade", o.posts_pending);
+    lastSync = Date.now();
+    updateLive();
   }
+
+  // ---------- ao vivo: números acompanham o que acontece na loja ----------
+  function updateLive() {
+    var el = root.querySelector("[data-admin-live]");
+    if (!el || !lastSync) return;
+    el.hidden = false;
+    var secs = Math.round((Date.now() - lastSync) / 1000);
+    el.querySelector("[data-admin-live-text]").textContent = secs < 8 ? "Ao vivo · atualizado agora" : "Ao vivo · há " + (secs < 60 ? secs + " s" : Math.round(secs / 60) + " min");
+  }
+  function tick() {
+    if (destroyed || document.hidden) return;
+    loadOverview();
+    if (finance && state.tab === "financeiro") finance.refresh();
+  }
+  function onVisibility() { if (!document.hidden) tick(); }
+  function startLive() {
+    stopLive();
+    pollTimer = setInterval(tick, POLL_MS);
+    liveTimer = setInterval(updateLive, 5000);
+    document.addEventListener("visibilitychange", onVisibility);
+  }
+  function stopLive() {
+    clearInterval(pollTimer);
+    clearInterval(liveTimer);
+    document.removeEventListener("visibilitychange", onVisibility);
+  }
+
+  function moveInk() {
+    var ink = bodyEl.querySelector("[data-tab-ink]");
+    var active = bodyEl.querySelector(".admin-tab.is-active");
+    if (!ink || !active) return;
+    ink.style.width = active.offsetWidth + "px";
+    ink.style.transform = "translateX(" + active.offsetLeft + "px)";
+    ink.classList.add("is-on");
+  }
+  function onResize() { requestAnimationFrame(moveInk); }
+  window.addEventListener("resize", onResize);
 
   function setBadge(tab, count) {
     var el = bodyEl.querySelector('[data-tab-badge="' + tab + '"]');
@@ -221,12 +354,35 @@ export function mountAdminPage(root, _params, onClose) {
     var panel = bodyEl.querySelector("[data-admin-panel]");
     panel.setAttribute("aria-labelledby", "admin-tab-" + id);
     try { history.replaceState(history.state, "", "/admin" + (id === "pedidos" ? "" : "?tab=" + id)); } catch (e) {}
+    moveInk();
+    var activeTab = bodyEl.querySelector(".admin-tab.is-active");
+    if (activeTab && activeTab.scrollIntoView) activeTab.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reducedMotion() ? "auto" : "smooth" });
     renderPanel();
   }
 
   function renderPanel() {
     var panel = bodyEl.querySelector("[data-admin-panel]");
     if (!panel) return;
+    if (finance) { finance.destroy(); finance = null; }
+    // entrada da aba: o conteúdo sobe e as primeiras linhas chegam em cascata
+    panel.classList.remove("is-fresh");
+    void panel.offsetWidth;
+    panel.classList.add("is-fresh");
+    clearTimeout(panel.__fresh);
+    panel.__fresh = setTimeout(function () { panel.classList.remove("is-fresh"); }, 1600);
+    if (state.tab === "financeiro") {
+      finance = mountFinance(panel, {
+        svc: svc, money: money, esc: esc, brl: brl, toast: toast, reduced: reducedMotion(),
+        onChange: loadOverview,
+        openOrder: function (orderId) {
+          state.orderStatus = "all";
+          state.orderSearch = String(orderId).slice(0, 8);
+          state.openOrderId = null;
+          selectTab("pedidos");
+        },
+      });
+      return;
+    }
     if (state.tab === "pedidos") {
       panel.innerHTML = ordersToolbar() + '<div class="admin-list" data-list="orders"></div>';
       loadOrders();
@@ -1533,9 +1689,21 @@ export function mountAdminPage(root, _params, onClose) {
   }
 
   // ---------- eventos (delegados — re-render não duplica listener) ----------
+  function openFromKpi(card) {
+    var key = card.getAttribute("data-kpi");
+    if (key === "orders_pending" || key === "receivable") { state.orderStatus = "pending_payment"; state.orderSearch = ""; }
+    if (key === "posts_pending") state.postStatus = "pending";
+    var target = card.getAttribute("data-kpi-tab");
+    if (target === state.tab) renderPanel(); else selectTab(target);
+    var panel = bodyEl.querySelector("[data-admin-panel]");
+    if (panel && panel.scrollIntoView) panel.scrollIntoView({ block: "start", behavior: reducedMotion() ? "auto" : "smooth" });
+  }
+
   async function onClick(e) {
     var tabBtn = e.target.closest("[data-admin-tab]");
     if (tabBtn) { selectTab(tabBtn.getAttribute("data-admin-tab")); return; }
+    var kpiCardEl = e.target.closest("[data-kpi-tab]");
+    if (kpiCardEl) { openFromKpi(kpiCardEl); return; }
     var btn = e.target.closest("[data-action]");
     if (!btn || !root.contains(btn)) return;
     var action = btn.getAttribute("data-action");
@@ -1733,6 +1901,8 @@ export function mountAdminPage(root, _params, onClose) {
   }
 
   function onKeydown(e) {
+    var kpiKey = e.target.closest && e.target.closest("[data-kpi-tab]");
+    if (kpiKey && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openFromKpi(kpiKey); return; }
     var tab = e.target.closest && e.target.closest("[data-admin-tab]");
     if (tab && ["ArrowLeft", "ArrowRight", "Home", "End"].indexOf(e.key) !== -1) {
       e.preventDefault();
@@ -1741,6 +1911,7 @@ export function mountAdminPage(root, _params, onClose) {
       selectTab(TABS[next].id, true);
       return;
     }
+    if (e.key === "Escape" && finance && finance.handleEscape(e)) { e.preventDefault(); e.stopPropagation(); return; }
     if (zoomEl) {
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closePostZoom(); }
       else if (e.key === "ArrowLeft") { e.preventDefault(); stepPostZoom(-1); }
@@ -1777,6 +1948,9 @@ export function mountAdminPage(root, _params, onClose) {
     root.removeEventListener("change", onChange);
     state.newPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
     if (zoomEl) { zoomEl.remove(); zoomEl = null; }
+    if (finance) { finance.destroy(); finance = null; }
+    stopLive();
+    window.removeEventListener("resize", onResize);
     robots.remove();
   };
 }
