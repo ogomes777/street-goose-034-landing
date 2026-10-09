@@ -169,28 +169,46 @@
     });
   }
 
-  // Feature Film banner (Future Vision) — reveal por wipe, scale sutil ligado ao scroll,
-  // light sweep uma vez. Composição do banner nunca é alterada, só o container/camada.
+  // Feature Film banner (Future Vision) — reveal por wipe + light sweep a cada entrada
+  // na tela (descendo e voltando), scale sutil ligado ao scroll. Composição do banner
+  // nunca é alterada, só o container/camada.
   var filmBanner = document.querySelector("[data-film-banner]");
   if (filmBanner && window.SG.hasGSAP && window.ScrollTrigger && !window.SG.prefersReducedMotion()) {
     var filmImg = filmBanner.querySelector(".banner-img");
     var filmSweep = filmBanner.querySelector(".film-sweep");
     var lightTier = window.SG.perfTier !== "low";
 
-    window.gsap.fromTo(filmBanner, { clipPath: "inset(0 0 0 100%)" }, {
-      clipPath: "inset(0 0 0 0%)", duration: 1.2, ease: "power3.out",
-      scrollTrigger: { trigger: filmBanner, start: "top 88%" }
+    // reveal toca toda vez que o banner entra na tela — descendo E voltando
+    // (subindo). Só é "rebobinado" quando já saiu totalmente da tela, então
+    // nunca some na frente de quem está olhando.
+    var filmReveal = window.gsap.fromTo(filmBanner, { clipPath: "inset(0 0 0 100%)" }, {
+      clipPath: "inset(0 0 0 0%)", duration: 1.2, ease: "power3.out", paused: true
+    });
+    var filmSweepTween = filmSweep && lightTier
+      ? window.gsap.fromTo(filmSweep, { xPercent: -130 }, {
+          xPercent: 230, duration: 1.6, ease: "power2.inOut", delay: 0.15, paused: true
+        })
+      : null;
+    var playFilm = function () {
+      filmReveal.restart();
+      if (filmSweepTween) filmSweepTween.restart(true);
+    };
+    var rewindFilm = function () {
+      filmReveal.pause(0);
+      if (filmSweepTween) filmSweepTween.pause(0);
+    };
+    window.ScrollTrigger.create({
+      trigger: filmBanner, start: "top 88%", end: "bottom 12%",
+      onEnter: playFilm, onEnterBack: playFilm
+    });
+    window.ScrollTrigger.create({
+      trigger: filmBanner, start: "top bottom", end: "bottom top",
+      onLeave: rewindFilm, onLeaveBack: rewindFilm
     });
     window.gsap.fromTo(filmImg, { scale: 1 }, {
       scale: lightTier ? 1.05 : 1.02, ease: "none",
       scrollTrigger: { trigger: filmBanner, start: "top bottom", end: "bottom top", scrub: 0.6 }
     });
-    if (filmSweep && lightTier) {
-      window.gsap.fromTo(filmSweep, { xPercent: -130 }, {
-        xPercent: 230, duration: 1.6, ease: "power2.inOut", delay: 0.15,
-        scrollTrigger: { trigger: filmBanner, start: "top 80%" }
-      });
-    }
   }
 })();
 
