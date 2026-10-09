@@ -208,7 +208,17 @@ export interface AdminPrice {
 
 export type AdminResult<T> = { ok: true; data: T } | { ok: false; reason: string; message: string };
 
+/** fuso de quem abre o painel — dias do financeiro agrupados no calendário local (0107) */
+function localTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo";
+  } catch {
+    return "America/Sao_Paulo";
+  }
+}
+
 const MESSAGES: Record<string, string> = {
+  amount_too_large: "Valor acima do limite de R$ 20 milhões por lançamento.",
   not_configured: "Backend não configurado.",
   forbidden: "Acesso restrito à equipe Street Goose.",
   total_required: "Defina o total do pedido antes de marcar como pago.",
@@ -268,7 +278,7 @@ export const AdminService = {
   },
 
   overview(): Promise<AdminResult<AdminOverview>> {
-    return rpc<AdminOverview>("admin_overview");
+    return rpc<AdminOverview>("admin_overview", { p_tz: localTimeZone() });
   },
 
   // ---------- pedidos ----------
@@ -345,7 +355,7 @@ export const AdminService = {
   // venda/estorno entram sozinhos pelo pedido; aqui só o resumo, a lista e
   // os lançamentos manuais (erros de validação voltam como dado)
   financeSummary(from: string | null, to: string | null, bucket: FinanceBucket): Promise<AdminResult<FinanceSummary>> {
-    return rpc<FinanceSummary>("admin_finance_summary", { p_from: from, p_to: to, p_bucket: bucket });
+    return rpc<FinanceSummary>("admin_finance_summary", { p_from: from, p_to: to, p_bucket: bucket, p_tz: localTimeZone() });
   },
 
   async listFinance(opts: { from: string | null; to: string | null; kind: FinanceKind | null; search: string; limit?: number }): Promise<AdminResult<{ total: number; items: FinanceEntry[] }>> {
