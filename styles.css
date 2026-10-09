@@ -1615,3 +1615,28 @@ button.admin-post-media{position:relative;width:100%;padding:0;border:0;cursor:z
   .sgc-burst.is-on{animation-duration:.01ms}
   .sgc-tile img,.sgc-post-media img{transition:none}
 }
+
+/* seletor "Peça no visual" com foto pequena de cada peça */
+.sgc-picker{position:relative}
+.sgc-picker-trigger{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:8px 14px 8px 8px;border-radius:14px;border:1px solid var(--input-border);background:var(--input-bg);color:var(--input-text);font:inherit;font-size:15px;font-weight:400;letter-spacing:0;text-transform:none;text-align:left;cursor:pointer;transition:border-color var(--t-fast)}
+.sgc-picker-trigger:hover,.sgc-picker-trigger:focus-visible,.sgc-picker.is-open .sgc-picker-trigger{outline:none;border-color:var(--accent)}
+.sgc-picker-current{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.sgc-picker-chevron{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform var(--t-fast)}
+.sgc-picker.is-open .sgc-picker-chevron{transform:rotate(180deg)}
+.sgc-picker-thumb{width:40px;height:40px;flex:none;display:grid;place-items:center;overflow:hidden;border-radius:10px;background:radial-gradient(circle at 50% 40%,#232323,#0b0b0b 72%);border:1px solid rgba(255,255,255,.07)}
+.sgc-picker-thumb img{width:86%;height:86%;object-fit:contain}
+.sgc-picker-thumb--none{background:var(--surface-2);border:1px dashed var(--border-strong)}
+.sgc-picker-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sgc-picker-panel{margin-top:8px;border:1px solid var(--border);border-radius:16px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow)}
+.sgc-picker-search{display:block;width:100%;box-sizing:border-box;border:0;border-bottom:1px solid var(--border);background:transparent;color:var(--text);font:inherit;font-size:15px;font-weight:400;letter-spacing:0;text-transform:none;padding:14px 16px;outline:none}
+.sgc-picker-search::placeholder{color:var(--muted)}
+.sgc-picker-list{position:relative;list-style:none;margin:0;padding:6px;max-height:min(330px,42dvh);overflow-y:auto;overscroll-behavior:contain}
+.sgc-picker-group{padding:12px 10px 6px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.sgc-picker-option{display:flex;align-items:center;gap:12px;min-height:48px;padding:4px 12px 4px 4px;border-radius:12px;cursor:pointer;font-size:14px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text)}
+.sgc-picker-option .sgc-picker-thumb{width:38px;height:38px;border-radius:9px}
+.sgc-picker-option.is-active{background:var(--surface-2)}
+.sgc-picker-option[aria-selected="true"]{color:var(--accent);font-weight:700}
+.sgc-picker-empty{padding:18px 12px;font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted)}
+
+/* aviso "em breve" na seção de pagamentos (texto estático, fora da animação) */
+.payment-terminal-head .payment-terminal-soon{display:inline-block;margin:18px auto 0;padding:10px 18px;max-width:520px;border:1px solid color-mix(in srgb,var(--accent) 38%,transparent);border-radius:14px;background:color-mix(in srgb,var(--accent) 7%,transparent);color:var(--text);font-size:13.5px;line-height:1.55}

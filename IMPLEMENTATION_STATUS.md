@@ -95,6 +95,10 @@ Remover: `delete from public.admins where user_id = (select id from auth.users w
 - [x] /comunidade: feed em duas colunas de fotos grandes (uma coluna de ponta a ponta no celular), abas Recentes / Em alta / Meus posts, números da comunidade, carregar mais automático.
 - [x] Curtir de verdade (uma por pessoa, contada no servidor, toque duplo na foto curte), compartilhar (link /comunidade?post=ID), peça marcada abre o produto.
 - [x] Visualizador em tela cheia: setas/arrastar, ESC/X/voltar do navegador fecham sem perder a posição da página, link direto abre o post.
+- [x] Seletor "Peça no visual" com a foto pequena de cada peça (miniaturas 160px WebP em `assets/thumbs/`, geradas por `node scripts/make-thumbs.mjs` — rodar de novo quando entrar foto nova de fábrica), busca, grupos por categoria e teclado.
 - [x] Publicar: arrastar ou escolher foto, prévia grande, legenda (500), peça no visual, mostra como a pessoa aparece (@apelido ou primeiro nome). A foto é reduzida no aparelho (máx. 1800px, WebP) — sobe mais rápido e sem dados de localização da câmera. Meus posts mostra Em análise / No ar / Não aprovado (com motivo) e permite excluir.
 - [x] Painel → Comunidade: fotos grandes com zoom (setas, ESC), peça pelo nome, curtidas, filtro Destaques e botão "Destacar na home".
 - [x] Servidor: legenda saneada, destaque e curtidas fora do alcance do cliente, destaque cai se o post sai do ar, curtir só em post aprovado e com limite de taxa.
+
+## Pagamentos
+- [x] SG Payment Terminal (home): aviso "Em breve direto no site: Pix, cartão, boleto, Apple Pay e Google Pay. Por enquanto, o pagamento é combinado com a gente pelo WhatsApp." (PT/EN/ES), texto estático abaixo do título — animação e chips intocados. PSP escolhido: PagBank (checkout hospedado), ainda não ligado.

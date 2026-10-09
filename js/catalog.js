@@ -55,6 +55,20 @@ var processedGlobs = {
   trajes: import.meta.glob("../assets/products-processed/products-moletons/*.png", { eager: true, query: "?url", import: "default" }),
   acessorios: import.meta.glob("../assets/products-processed/products-outros/*.png", { eager: true, query: "?url", import: "default" })
 };
+
+// miniaturas 160px (scripts/make-thumbs.mjs) — onde a peça aparece pequena,
+// ex.: seletor "Peça no visual" da comunidade. ?no-inline: viram arquivos
+// (carregados só quando aparecem), não base64 dentro deste JS de boot.
+var thumbGlobs = {
+  lupa: import.meta.glob("../assets/thumbs/products-lupas/*.webp", { eager: true, query: "?no-inline", import: "default" }),
+  relogios: import.meta.glob("../assets/thumbs/products-relogios/*.webp", { eager: true, query: "?no-inline", import: "default" }),
+  perfumes: import.meta.glob("../assets/thumbs/products-perfumes/*.webp", { eager: true, query: "?no-inline", import: "default" }),
+  trajes: import.meta.glob("../assets/thumbs/products-moletons/*.webp", { eager: true, query: "?no-inline", import: "default" }),
+  acessorios: import.meta.glob("../assets/thumbs/products-outros/*.webp", { eager: true, query: "?no-inline", import: "default" })
+};
+var THUMB_BY_URL = {};
+/** miniatura de uma foto do catálogo (URL da foto cheia → URL da miniatura); null se não houver */
+window.SG.thumbFor = function (url) { return THUMB_BY_URL[url] || null; };
 function stem(key) { return key.replace(/^.*\//, "").replace(/\.[^.]+$/, ""); }
 
 // Preços (centavos) — referência de mercado levantada em 08/10/2026:
@@ -115,6 +129,10 @@ window.SG_CATALOG = Object.keys(CATEGORY_META).map(function (categoryId) {
   var keys = Object.keys(globs[categoryId]).sort();
   var urlByStem = {};
   keys.forEach(function (key) { urlByStem[stem(key)] = processedByStem[stem(key)] || globs[categoryId][key]; });
+  Object.keys(thumbGlobs[categoryId]).forEach(function (key) {
+    var full = urlByStem[stem(key)];
+    if (full) THUMB_BY_URL[full] = thumbGlobs[categoryId][key];
+  });
   var shown = 0;
   var items = keys.map(function (key, i) {
     if (GROUPED_EXTRA[stem(key)]) return null;

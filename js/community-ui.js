@@ -100,7 +100,7 @@ export function productChipHtml(post) {
   var p = productFor(post.productId);
   if (!p) return "";
   return '<button class="sgc-product-chip" type="button" data-product="' + esc(p.id) + '">' +
-    (p.images && p.images[0] ? '<img src="' + esc(p.images[0]) + '" alt="" loading="lazy" decoding="async">' : "") +
+    (p.images && p.images[0] ? '<img src="' + esc(thumbOf(p)) + '" alt="" loading="lazy" decoding="async">' : "") +
     "<span><small>Usando</small><b>" + esc(p.name) + "</b></span></button>";
 }
 
@@ -247,7 +247,7 @@ export function openViewer(opts) {
     var p = productFor(post.productId);
     if (!p) return "";
     return '<div class="sgc-viewer-product">' +
-      (p.images && p.images[0] ? '<img src="' + esc(p.images[0]) + '" alt="" loading="lazy" decoding="async">' : "") +
+      (p.images && p.images[0] ? '<img src="' + esc(thumbOf(p)) + '" alt="" loading="lazy" decoding="async">' : "") +
       "<div><small>Peça no visual</small><b>" + esc(p.name) + '</b><span data-price-for="' + esc(p.id) + '">' + esc(p.priceLabel || "") + "</span></div>" +
       '<button class="btn btn-ghost" type="button" data-product="' + esc(p.id) + '">Ver peça</button>' +
     "</div>";
@@ -339,22 +339,160 @@ export function openViewer(opts) {
   };
 }
 
-// ---------- publicar visual ----------
-function productOptionsHtml() {
-  var byCat = {};
-  var order = [];
-  (window.SG_PRODUCTS || []).forEach(function (p) {
-    if (p.gone || p.hidden) return;
-    var label = p.categoryLabel || "Outros";
-    if (!byCat[label]) { byCat[label] = []; order.push(label); }
-    byCat[label].push(p);
-  });
-  return '<option value="">Nenhuma — só o visual</option>' + order.map(function (label) {
-    return '<optgroup label="' + esc(label) + '">' + byCat[label].map(function (p) {
-      return '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>";
-    }).join("") + "</optgroup>";
-  }).join("");
+// ---------- seletor "Peça no visual" ----------
+/* <select> nativo não mostra imagem: lista própria com a foto pequena de cada
+   peça (miniatura de 160px do catálogo, só carrega quando aparece na lista),
+   busca, grupos por categoria e teclado (↑ ↓ Enter Esc). O valor escolhido
+   fica num input hidden name="product". */
+function pickerProducts() {
+  return (window.SG_PRODUCTS || []).filter(function (p) { return !p.gone && !p.hidden && p.images && p.images.length; });
 }
+function thumbOf(p) { return (window.SG.thumbFor && window.SG.thumbFor(p.images[0])) || p.images[0]; }
+function norm(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+
+function noneRowHtml() {
+  return '<span class="sgc-picker-thumb sgc-picker-thumb--none" aria-hidden="true"></span><span class="sgc-picker-name">Nenhuma — só o visual</span>';
+}
+function productRowHtml(p, lazy) {
+  var t = thumbOf(p);
+  return '<span class="sgc-picker-thumb" aria-hidden="true">' + (t ? "<img " + (lazy ? "data-src" : "src") + '="' + esc(t) + '" alt="" decoding="async">' : "") + "</span>" +
+    '<span class="sgc-picker-name">' + esc(p.name) + "</span>";
+}
+function productPickerHtml() {
+  return '<div class="sgc-field sgc-picker" data-picker>' +
+    '<span id="sgc-picker-label">Peça no visual</span>' +
+    '<input type="hidden" name="product" value="">' +
+    '<button type="button" class="sgc-picker-trigger" data-picker-trigger aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sgc-picker-label sgc-picker-current">' +
+      '<span class="sgc-picker-current" id="sgc-picker-current" data-picker-current>' + noneRowHtml() + "</span>" +
+      '<svg class="sgc-picker-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+    "</button>" +
+    '<div class="sgc-picker-panel" data-picker-panel hidden>' +
+      '<input type="search" class="sgc-picker-search" data-picker-search placeholder="Buscar peça (ex.: lupa 07)" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="sgc-picker-list" aria-autocomplete="list" aria-label="Buscar peça">' +
+      '<ul class="sgc-picker-list" id="sgc-picker-list" role="listbox" aria-label="Peças Street Goose" data-picker-list></ul>' +
+    "</div>" +
+  "</div>";
+}
+
+function mountProductPicker(root) {
+  var wrap = root.querySelector("[data-picker]");
+  var hiddenInput = wrap.querySelector('input[name="product"]');
+  var trigger = wrap.querySelector("[data-picker-trigger]");
+  var current = wrap.querySelector("[data-picker-current]");
+  var panel = wrap.querySelector("[data-picker-panel]");
+  var search = wrap.querySelector("[data-picker-search]");
+  var list = wrap.querySelector("[data-picker-list]");
+  var products = pickerProducts();
+  var options = []; // valores visíveis, na ordem da lista ("" = nenhuma)
+  var active = -1;
+  var thumbObs = null;
+
+  function optionHtml(value, inner, i) {
+    return '<li class="sgc-picker-option" role="option" id="sgc-opt-' + i + '" data-index="' + i + '" aria-selected="' + (value === hiddenInput.value) + '">' + inner + "</li>";
+  }
+  function render(q) {
+    var words = norm(q).split(/\s+/).filter(Boolean);
+    var html = "", lastCat = null;
+    options = [];
+    if (!words.length) { html += optionHtml("", noneRowHtml(), 0); options.push(""); }
+    products.forEach(function (p) {
+      var hay = norm(p.name + " " + p.categoryLabel);
+      if (!words.every(function (w) { return hay.indexOf(w) !== -1; })) return;
+      if (p.categoryLabel !== lastCat) { lastCat = p.categoryLabel; html += '<li class="sgc-picker-group" role="presentation">' + esc(lastCat) + "</li>"; }
+      html += optionHtml(p.id, productRowHtml(p, true), options.length);
+      options.push(p.id);
+    });
+    list.innerHTML = options.length ? html : '<li class="sgc-picker-empty" role="presentation">Nenhuma peça com esse nome.</li>';
+    var sel = options.indexOf(hiddenInput.value);
+    setActive(sel >= 0 ? sel : (options.length ? 0 : -1), true);
+    watchThumbs();
+  }
+  function scrollToOption(el, center) {
+    var top = el.offsetTop, bottom = top + el.offsetHeight;
+    if (center) list.scrollTop = top - list.clientHeight / 2 + el.offsetHeight / 2;
+    else if (top < list.scrollTop) list.scrollTop = top;
+    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+  }
+  function setActive(i, center) {
+    var prev = list.querySelector(".is-active");
+    if (prev) prev.classList.remove("is-active");
+    active = i;
+    var el = i >= 0 ? list.querySelector('[data-index="' + i + '"]') : null;
+    if (!el) { search.removeAttribute("aria-activedescendant"); return; }
+    el.classList.add("is-active");
+    search.setAttribute("aria-activedescendant", el.id);
+    scrollToOption(el, center);
+  }
+  function loadThumb(img) { img.src = img.getAttribute("data-src"); img.removeAttribute("data-src"); }
+  function watchThumbs() {
+    if (thumbObs) thumbObs.disconnect();
+    var imgs = list.querySelectorAll("img[data-src]");
+    if (!("IntersectionObserver" in window)) { imgs.forEach(loadThumb); return; }
+    thumbObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { loadThumb(en.target); thumbObs.unobserve(en.target); } });
+    }, { root: list, rootMargin: "160px 0px" });
+    imgs.forEach(function (img) { thumbObs.observe(img); });
+  }
+  function open() {
+    if (!panel.hidden) return;
+    panel.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    wrap.classList.add("is-open");
+    search.value = "";
+    render("");
+    search.focus({ preventScroll: true });
+  }
+  function close(focusTrigger) {
+    if (panel.hidden) return;
+    panel.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+    wrap.classList.remove("is-open");
+    if (thumbObs) { thumbObs.disconnect(); thumbObs = null; }
+    if (focusTrigger) trigger.focus({ preventScroll: true });
+  }
+  function choose(i) {
+    var value = options[i];
+    if (value === undefined) return;
+    hiddenInput.value = value;
+    var p = value ? products.find(function (x) { return x.id === value; }) : null;
+    current.innerHTML = p ? productRowHtml(p, false) : noneRowHtml();
+    wrap.classList.toggle("has-value", !!p);
+    close(true);
+  }
+  function onOutside(e) { if (!panel.hidden && !wrap.contains(e.target)) close(false); }
+
+  trigger.addEventListener("click", function () { if (panel.hidden) open(); else close(true); });
+  trigger.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); open(); }
+  });
+  search.addEventListener("input", function () { render(search.value); });
+  search.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown") { e.preventDefault(); if (options.length) setActive(Math.min(options.length - 1, active + 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); if (options.length) setActive(Math.max(0, active - 1)); }
+    else if (e.key === "Enter") { e.preventDefault(); if (active >= 0) choose(active); }
+    else if (e.key === "Tab") close(false);
+  });
+  list.addEventListener("mousedown", function (e) { e.preventDefault(); }); // foco fica na busca
+  list.addEventListener("click", function (e) {
+    var li = e.target.closest("[data-index]");
+    if (li) choose(Number(li.getAttribute("data-index")));
+  });
+  list.addEventListener("mousemove", function (e) {
+    var li = e.target.closest("[data-index]");
+    if (li && Number(li.getAttribute("data-index")) !== active) setActive(Number(li.getAttribute("data-index")), false);
+  });
+  document.addEventListener("pointerdown", onOutside, true);
+
+  return {
+    isOpen: function () { return !panel.hidden; },
+    close: close,
+    destroy: function () {
+      document.removeEventListener("pointerdown", onOutside, true);
+      if (thumbObs) thumbObs.disconnect();
+    },
+  };
+}
+
+// ---------- publicar visual ----------
 
 /* opts: onPublished() — chamado depois do envio dar certo (ex.: abrir "Meus
    posts"). O chamador garante que há sessão. */
@@ -383,7 +521,7 @@ export function openPublisher(opts) {
           '<h2 id="sgc-publisher-title">Postar meu visual</h2>' +
           '<p class="sgc-publisher-as" data-publish-as>Você aparece como…</p>' +
           '<label class="sgc-field">Legenda<textarea name="caption" rows="3" maxlength="500" placeholder="Onde foi, qual o rolê, o que a peça fez pelo visual…"></textarea><small data-caption-count>0/500</small></label>' +
-          '<label class="sgc-field">Peça no visual<select name="product">' + productOptionsHtml() + "</select></label>" +
+          productPickerHtml() +
           '<ul class="sgc-publisher-rules">' +
             "<li>Foto sua (ou da sua turma) usando Street Goose.</li>" +
             "<li>A equipe aprova antes de entrar no feed — sem nudez, ódio ou marca de terceiros.</li>" +
@@ -409,6 +547,7 @@ export function openPublisher(opts) {
   var submitBtn = overlay.querySelector("[data-publish-submit]");
   var caption = overlay.querySelector('[name="caption"]');
   var count = overlay.querySelector("[data-caption-count]");
+  var picker = mountProductPicker(overlay);
   var file = null;
   var previewUrl = null;
   var busy = false;
@@ -481,12 +620,15 @@ export function openPublisher(opts) {
     if (closed) return;
     closed = true;
     document.removeEventListener("keydown", onKeydown, true);
+    picker.destroy();
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     overlay.remove();
     if (opener && opener.focus && document.contains(opener)) opener.focus({ preventScroll: true });
   }
   function onKeydown(e) {
-    if (e.key === "Escape" && !busy) { e.stopPropagation(); e.preventDefault(); close(); }
+    // ESC com a lista de peças aberta fecha só a lista
+    if (e.key === "Escape" && picker.isOpen()) { e.stopPropagation(); e.preventDefault(); picker.close(true); }
+    else if (e.key === "Escape" && !busy) { e.stopPropagation(); e.preventDefault(); close(); }
     else if (e.key === "Tab") {
       var f = Array.prototype.filter.call(overlay.querySelectorAll("button, a[href], input, select, textarea"), function (n) { return n.offsetParent !== null || n === input; });
       if (!f.length) return;
