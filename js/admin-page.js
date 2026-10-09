@@ -1140,7 +1140,7 @@ export function mountAdminPage(root, _params, onClose) {
   // ---------- comunidade ----------
   function postsToolbar() {
     return '<div class="admin-toolbar"><div class="admin-chips" role="group" aria-label="Filtrar publicações">' +
-      [["pending", "Pendentes"], ["approved", "Aprovadas"], ["rejected", "Rejeitadas"], ["all", "Todas"]].map(function (s) {
+      [["pending", "Pendentes"], ["approved", "Aprovadas"], ["featured", "Destaques"], ["rejected", "Rejeitadas"], ["all", "Todas"]].map(function (s) {
         return chip("post-filter", s[0], s[1], state.postStatus === s[0]);
       }).join("") + "</div></div>";
   }
@@ -1154,22 +1154,95 @@ export function mountAdminPage(root, _params, onClose) {
     if (stale("posts", n)) return;
     if (!res.ok) { el.innerHTML = errorState(res.message, "posts"); return; }
     state.posts = res.data;
-    if (!state.posts.length) { el.innerHTML = emptyState(state.postStatus === "pending" ? "Nenhuma foto esperando moderação." : "Nada por aqui."); return; }
+    if (!state.posts.length) {
+      el.innerHTML = emptyState(state.postStatus === "pending" ? "Nenhuma foto esperando moderação."
+        : state.postStatus === "featured" ? "Nenhum destaque. Em Aprovadas, toque em “Destacar na home” — o destaque abre o mural da página inicial."
+        : "Nada por aqui.");
+      return;
+    }
     el.innerHTML = '<div class="admin-posts">' + state.posts.map(postHtml).join("") + "</div>";
+  }
+
+  function postRatio(p) {
+    var r = p.image_width && p.image_height ? p.image_width / p.image_height : 0.8;
+    return Math.min(1.6, Math.max(0.66, r)).toFixed(4);
+  }
+
+  function productLabel(id) {
+    var prod = (window.SG_PRODUCTS || []).find(function (x) { return x.id === id; });
+    return prod ? prod.name : id;
+  }
+
+  // foto grande por cima do painel (setas trocam, ESC/clique fecham)
+  var zoomEl = null, zoomIndex = -1;
+  function openPostZoom(id) {
+    zoomIndex = state.posts.findIndex(function (p) { return p.id === id; });
+    if (zoomIndex === -1) return;
+    if (!zoomEl) {
+      zoomEl = document.createElement("div");
+      zoomEl.className = "admin-zoom";
+      zoomEl.setAttribute("role", "dialog");
+      zoomEl.setAttribute("aria-modal", "true");
+      zoomEl.setAttribute("aria-label", "Foto em tamanho grande");
+      zoomEl.addEventListener("click", function (e) {
+        if (e.target.closest("[data-zoom-prev]")) stepPostZoom(-1);
+        else if (e.target.closest("[data-zoom-next]")) stepPostZoom(1);
+        else closePostZoom();
+      });
+      document.body.appendChild(zoomEl);
+    }
+    renderPostZoom();
+  }
+  function renderPostZoom() {
+    var p = state.posts[zoomIndex];
+    if (!p || !zoomEl) return;
+    var author = p.author.display_name || (p.author.public_handle ? "@" + p.author.public_handle : "") || "Cliente";
+    zoomEl.innerHTML = '<img src="' + esc(p.image_url) + '" alt="Foto enviada por ' + esc(author) + '">' +
+      '<p class="admin-zoom-caption"><b>' + esc(author) + "</b>" + (p.caption ? " — " + esc(p.caption) : "") + " · " + (zoomIndex + 1) + " de " + state.posts.length + "</p>" +
+      '<button class="admin-zoom-btn admin-zoom-close" type="button" aria-label="Fechar">×</button>' +
+      (state.posts.length > 1 ? '<button class="admin-zoom-btn admin-zoom-prev" type="button" data-zoom-prev aria-label="Foto anterior">‹</button><button class="admin-zoom-btn admin-zoom-next" type="button" data-zoom-next aria-label="Próxima foto">›</button>' : "");
+    zoomEl.querySelector(".admin-zoom-close").focus({ preventScroll: true });
+  }
+  function stepPostZoom(d) {
+    if (!state.posts.length) return;
+    zoomIndex = (zoomIndex + d + state.posts.length) % state.posts.length;
+    renderPostZoom();
+  }
+  function closePostZoom() {
+    if (!zoomEl) return;
+    var id = state.posts[zoomIndex] && state.posts[zoomIndex].id;
+    zoomEl.remove();
+    zoomEl = null;
+    var back = id && list("posts") && list("posts").querySelector('[data-post-id="' + id + '"] [data-action="post-zoom"]');
+    if (back) back.focus({ preventScroll: true });
+  }
+
+  async function toggleFeatured(id, btn) {
+    var post = state.posts.find(function (p) { return p.id === id; });
+    if (!post) return;
+    btn.disabled = true;
+    var res = await svc.featurePost(id, !post.featured);
+    if (destroyed) return;
+    btn.disabled = false;
+    if (!res.ok) { toast(res.message.toUpperCase()); return; }
+    toast(post.featured ? "DESTAQUE REMOVIDO" : "FOTO EM DESTAQUE NA HOME");
+    loadPosts();
   }
 
   function postHtml(p) {
     var author = p.author.display_name || (p.author.public_handle ? "@" + p.author.public_handle : "") || "Cliente";
     var rejecting = state.rejectingPostId === p.id;
-    return '<article class="admin-post" data-post-id="' + p.id + '">' +
+    return '<article class="admin-post' + (p.featured ? " is-featured" : "") + '" data-post-id="' + p.id + '">' +
       (p.image_url
-        ? '<a class="admin-post-media" href="' + esc(p.image_url) + '" target="_blank" rel="noopener" aria-label="Abrir foto em tamanho real"><img src="' + esc(p.image_url) + '" alt="Foto enviada por ' + esc(author) + '" loading="lazy"></a>'
+        ? '<button class="admin-post-media" type="button" data-action="post-zoom" data-id="' + p.id + '" style="aspect-ratio:' + postRatio(p) + '" aria-label="Ver foto de ' + esc(author) + ' em tamanho grande"><img src="' + esc(p.image_url) + '" alt="Foto enviada por ' + esc(author) + '" loading="lazy" decoding="async">' +
+            (p.featured ? '<span class="admin-post-flag">★ Destaque na home</span>' : "") + "</button>"
         : '<div class="admin-post-media admin-post-media--empty">Imagem indisponível</div>') +
       '<div class="admin-post-body">' +
         '<div class="admin-post-head"><p><b>' + esc(author) + "</b><small>" + esc(p.author.email || "") + "</small></p>" +
           '<span class="admin-status admin-status--' + p.status + '">' + POST_STATUS[p.status] + "</span></div>" +
         (p.caption ? '<p class="admin-post-caption">' + esc(p.caption) + "</p>" : "") +
-        '<p class="admin-post-meta">' + fmtDateTime(p.created_at) + (p.rating ? " · " + p.rating + "/5" : "") + (p.product_id ? " · " + esc(p.product_id) : "") + "</p>" +
+        '<p class="admin-post-meta">' + fmtDateTime(p.created_at) + (p.rating ? " · " + p.rating + "/5" : "") + (p.product_id ? " · Peça: " + esc(productLabel(p.product_id)) : "") +
+          (p.status === "approved" ? " · ♥ " + (p.like_count || 0) + (p.like_count === 1 ? " curtida" : " curtidas") : "") + "</p>" +
         (p.status === "rejected" && p.rejection_reason ? '<p class="admin-post-reason">Motivo: ' + esc(p.rejection_reason) + "</p>" : "") +
         (rejecting
           ? '<form class="admin-reject" data-form="reject" data-id="' + p.id + '" novalidate>' +
@@ -1182,6 +1255,7 @@ export function mountAdminPage(root, _params, onClose) {
             "</form>"
           : '<div class="admin-form-actions">' +
               (p.status !== "approved" ? '<button class="btn btn-primary" type="button" data-action="post-approve" data-id="' + p.id + '">Aprovar</button>' : "") +
+              (p.status === "approved" ? '<button class="btn ' + (p.featured ? "btn-ghost" : "btn-primary") + '" type="button" data-action="post-feature" data-id="' + p.id + '" aria-pressed="' + (p.featured ? "true" : "false") + '">' + (p.featured ? "Tirar do destaque" : "Destacar na home") + "</button>" : "") +
               (p.status !== "rejected" ? '<button class="btn btn-ghost" type="button" data-action="post-reject" data-id="' + p.id + '">' + (p.status === "approved" ? "Tirar do ar" : "Rejeitar") + "</button>" : "") +
             "</div>") +
       "</div>" +
@@ -1515,6 +1589,8 @@ export function mountAdminPage(root, _params, onClose) {
     else if (action === "export-customers") { exportCustomers(); }
     else if (action === "post-filter") { state.postStatus = value; state.rejectingPostId = null; markChip(btn); loadPosts(); }
     else if (action === "post-approve") { btn.disabled = true; moderate(id, "approved"); }
+    else if (action === "post-feature") { toggleFeatured(id, btn); }
+    else if (action === "post-zoom") { openPostZoom(id); }
     else if (action === "post-reject") { state.rejectingPostId = id; rerenderPost(id, true); }
     else if (action === "reject-cancel") { var pid = state.rejectingPostId; state.rejectingPostId = null; rerenderPost(pid); }
     else if (action === "reject-reason") {
@@ -1665,6 +1741,12 @@ export function mountAdminPage(root, _params, onClose) {
       selectTab(TABS[next].id, true);
       return;
     }
+    if (zoomEl) {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closePostZoom(); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); stepPostZoom(-1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); stepPostZoom(1); }
+      return;
+    }
     if (e.key !== "Escape") return;
     if (document.querySelector("[data-auth-modal]:not([hidden])")) return; // ESC fecha o login primeiro
     // ESC dentro de campo não fecha o painel inteiro (perderia o que foi digitado)
@@ -1694,6 +1776,7 @@ export function mountAdminPage(root, _params, onClose) {
     root.removeEventListener("input", onInput);
     root.removeEventListener("change", onChange);
     state.newPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
+    if (zoomEl) { zoomEl.remove(); zoomEl = null; }
     robots.remove();
   };
 }

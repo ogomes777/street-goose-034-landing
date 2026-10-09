@@ -287,17 +287,21 @@
     <!-- AUTH MODAL — login/cadastro, aberto por window.SG.auth.open() -->
     <div class="auth-modal" data-auth-modal hidden role="dialog" aria-modal="true" aria-label="Entrar na Street Goose"></div>
 
-    <!-- CAPÍTULO 07 — SG COMMUNITY -->
-    <section class="section reviews-section reveal-up" aria-label="Comunidade Street Goose" id="comunidade">
-      <div class="section-head">
+    <!-- CAPÍTULO 07 — SG COMMUNITY (visuais reais aprovados, js/community-home.js) -->
+    <section class="section sgc-home reveal-up" aria-labelledby="sgc-home-title" id="comunidade" data-community-home>
+      <div class="section-head sgc-home-head">
         <div>
           <p class="kicker">SG COMMUNITY</p>
-          <h2>Na rua, com a Street Goose.</h2>
-          <p>Visuais da comunidade — sem filtro de marketplace.</p>
+          <h2 id="sgc-home-title">Na rua, com a Street Goose.</h2>
+          <p>Visuais reais de quem usa — aprovados pela equipe, sem filtro de marketplace.</p>
+          <p class="sgc-home-stats" data-community-stats hidden></p>
         </div>
-        <button class="btn btn-ghost" type="button" data-open-review-modal>Mostrar meu visual</button>
+        <div class="sgc-home-actions">
+          <a class="btn btn-primary" href="/comunidade?postar=1">Postar meu visual</a>
+          <a class="btn btn-ghost" href="/comunidade">Ver a comunidade</a>
+        </div>
       </div>
-      <div class="review-rail" data-review-rail></div>
+      <div class="sgc-mosaic" data-community-mosaic></div>
     </section>
 
     <!-- FINAL ACT — o filme acaba aqui -->
@@ -453,18 +457,6 @@
         <button class="popup-close" aria-label="Fechar checkout" data-close-checkout>×</button>
       </div>
       <div class="drawer-body" data-checkout-body></div>
-    </aside>
-  </div>
-
-  <!-- SHARE YOUR LOOK -->
-  <div class="drawer drawer--checkout" data-review-modal aria-hidden="true" role="dialog" aria-modal="true" aria-label="Mostrar meu visual">
-    <div class="popup-backdrop" data-close-review></div>
-    <aside class="drawer-panel">
-      <div class="drawer-head">
-        <h2>Mostrar meu visual</h2>
-        <button class="popup-close" type="button" data-close-review aria-label="Fechar"></button>
-      </div>
-      <div class="drawer-body" data-review-body></div>
     </aside>
   </div>
 

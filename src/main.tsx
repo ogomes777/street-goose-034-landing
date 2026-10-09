@@ -49,7 +49,6 @@ async function bootstrap() {
   await import("../js/category-portals.js");
   await import("../js/router.js");
   await import("../js/nav-routes.js");
-  await import("../js/reviews-data.js");
   await import("../js/hero.js");
   await import("../js/products.js");
   await import("../js/scroll-film.js");
@@ -58,7 +57,7 @@ async function bootstrap() {
   await import("../js/drift-product.js");
   await import("../js/popup.js");
   await import("../js/checkout.js");
-  await import("../js/reviews.js");
+  await import("../js/community-home.js");
   await import("../js/main.js");
   await import("../js/final-act-motion.js");
   await import("../js/payment-terminal.js");

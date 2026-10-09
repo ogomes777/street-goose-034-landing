@@ -95,6 +95,10 @@ export interface AdminPost {
   product_id: string | null;
   rating: number | null;
   status: PostStatus;
+  featured: boolean;
+  like_count: number;
+  image_width: number | null;
+  image_height: number | null;
   rejection_reason: string | null;
   created_at: string;
   moderated_at: string | null;
@@ -154,6 +158,7 @@ const MESSAGES: Record<string, string> = {
   total_required: "Defina o total do pedido antes de marcar como pago.",
   order_not_found: "Pedido não encontrado.",
   post_not_found: "Publicação não encontrada.",
+  post_not_approved: "Só foto aprovada pode ir para os destaques.",
   reason_required: "Informe o motivo da rejeição.",
   invalid_price: "Preço inválido.",
   invalid_total: "Total inválido.",
@@ -251,7 +256,8 @@ export const AdminService = {
   },
 
   // ---------- comunidade ----------
-  async listPosts(status: PostStatus | null): Promise<AdminResult<AdminPost[]>> {
+  // status "featured" = só os destaques da home (0105)
+  async listPosts(status: PostStatus | "featured" | null): Promise<AdminResult<AdminPost[]>> {
     const res = await rpc<Omit<AdminPost, "image_url">[]>("admin_list_community_posts", { p_status: status, p_limit: 120, p_offset: 0 });
     if (!res.ok || !supabase) return res as AdminResult<AdminPost[]>;
     const paths = res.data.map((p) => p.image_path);
@@ -266,6 +272,13 @@ export const AdminService = {
 
   moderatePost(postId: string, status: PostStatus, reason?: string): Promise<AdminResult<unknown>> {
     return rpc("admin_moderate_post", { p_post_id: postId, p_status: status, p_reason: reason?.trim() || null });
+  },
+
+  // destaque abre o mural da home; só post aprovado (0105)
+  async featurePost(postId: string, featured: boolean): Promise<AdminResult<unknown>> {
+    const res = await rpc<{ ok: boolean; reason?: string }>("admin_feature_post", { p_post_id: postId, p_featured: featured });
+    if (res.ok && res.data && res.data.ok === false) return fail(res.data.reason === "not_approved" ? "post_not_approved" : "post_not_found");
+    return res;
   },
 
   // ---------- cupons ----------

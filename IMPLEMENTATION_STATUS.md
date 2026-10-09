@@ -64,7 +64,7 @@ Marcado como feito só depois de: editar → rodar localmente → abrir no naveg
 - [ ] Favoritos/sacola premium (redesign visual, já funcionais estruturalmente)
 - [ ] Checkout completo
 - [x] Ranking/XP/níveis/cupons — ver "Fidelidade" abaixo
-- [ ] Comunidade/avaliações com foto grande/lightbox (já existe versão básica, falta redesign)
+- [x] Comunidade com foto grande/visualizador — ver "SG Community" abaixo (as avaliações demo da home saíram)
 - [ ] Busca
 - [ ] Newsletter com estados reais
 
@@ -89,3 +89,12 @@ Remover: `delete from public.admins where user_id = (select id from auth.users w
 - [x] Ranking com opt-in: o cliente escolhe aparecer e o apelido em /conta (apelido único, 3–24 caracteres); sem apelido aparece só o primeiro nome. /ranking mostra a posição de quem está logado.
 - [x] Recompensas publicadas pelo lojista (aba Cupons & Recompensas): ativas aparecem em /recompensas, bloqueadas até o nível pedido; resgate grava no banco e entrega o cupom ligado à recompensa (também em /conta → Meus cupons).
 - [x] Cupom de verdade no checkout: campo na revisão (cliente logado), validação no servidor (`validate_coupon`) e desconto calculado e gravado no pedido por `create_whatsapp_order` — ativo, validade, limite total, limite por cliente (novo) e cupom de recompensa só para quem resgatou. Uso contado de forma atômica; a mensagem do WhatsApp e o pedido mostram o desconto.
+
+## SG Community — rede social da marca (migration 0105)
+- [x] Home (Capítulo 07): mural editorial com os visuais reais aprovados — destaque do lojista abre grande, até 5 fotos + "Seu visual aqui"; sem post aprovado, convite "Seja o primeiro visual" com fotos de campanha da marca (marcadas como campanha). No celular, trilho de arrastar com cards grandes. As avaliações de demonstração (localStorage) foram removidas.
+- [x] /comunidade: feed em duas colunas de fotos grandes (uma coluna de ponta a ponta no celular), abas Recentes / Em alta / Meus posts, números da comunidade, carregar mais automático.
+- [x] Curtir de verdade (uma por pessoa, contada no servidor, toque duplo na foto curte), compartilhar (link /comunidade?post=ID), peça marcada abre o produto.
+- [x] Visualizador em tela cheia: setas/arrastar, ESC/X/voltar do navegador fecham sem perder a posição da página, link direto abre o post.
+- [x] Publicar: arrastar ou escolher foto, prévia grande, legenda (500), peça no visual, mostra como a pessoa aparece (@apelido ou primeiro nome). A foto é reduzida no aparelho (máx. 1800px, WebP) — sobe mais rápido e sem dados de localização da câmera. Meus posts mostra Em análise / No ar / Não aprovado (com motivo) e permite excluir.
+- [x] Painel → Comunidade: fotos grandes com zoom (setas, ESC), peça pelo nome, curtidas, filtro Destaques e botão "Destacar na home".
+- [x] Servidor: legenda saneada, destaque e curtidas fora do alcance do cliente, destaque cai se o post sai do ar, curtir só em post aprovado e com limite de taxa.
