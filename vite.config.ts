@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 import react from "@vitejs/plugin-react";
+import JavaScriptObfuscator from "javascript-obfuscator";
 import { defineConfig, type Plugin } from "vite";
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
@@ -63,13 +64,74 @@ function verifyCspInlineHashes(): Plugin {
   };
 }
 
+// Embaralha (ofusca) o JavaScript da loja no build de produção, para não
+// ficar legível no F12. Só chunks 100% nossos (js/ e src/); bibliotecas
+// (React, Three.js, GSAP, Supabase) ficam como estão — ofuscá-las só
+// pesaria o site. Roda em generateBundle, depois do Vite resolver preload,
+// import.meta.env e minificação, então não interfere em nada disso.
+// Opções leves de propósito: sem controlFlowFlattening/deadCode/
+// selfDefending/debugProtection (deixam as cenas 3D lentas ou quebram).
+const toPosix = (p: string) => p.split("\\").join("/");
+const projectDir = toPosix(fileURLToPath(new URL(".", import.meta.url)));
+function obfuscateAppChunks(): Plugin {
+  return {
+    name: "street-goose-obfuscate",
+    apply: "build",
+    enforce: "post",
+    generateBundle(_options, bundle) {
+      for (const file of Object.values(bundle)) {
+        if (file.type !== "chunk") continue;
+        const ids = (file.moduleIds ?? []).map(toPosix);
+        const real = ids.filter((id) => !id.startsWith(String.fromCharCode(0)) /* módulos virtuais do Vite/Rolldown */);
+        const ours = real.length > 0 && real.every((id) => id.startsWith(projectDir) && !id.includes("/node_modules/"));
+        if (!ours) continue;
+        file.code = JavaScriptObfuscator.obfuscate(file.code, {
+          target: "browser",
+          seed: 34,
+          compact: true,
+          simplify: true,
+          identifierNamesGenerator: "mangled-shuffled",
+          renameGlobals: false,
+          ignoreImports: true,
+          stringArray: true,
+          stringArrayThreshold: 1,
+          stringArrayEncoding: ["base64"],
+          stringArrayRotate: true,
+          stringArrayShuffle: true,
+          splitStrings: false,
+          controlFlowFlattening: false,
+          deadCodeInjection: false,
+          numbersToExpressions: false,
+          selfDefending: false,
+          debugProtection: false,
+          disableConsoleOutput: false,
+          sourceMap: false,
+        }).getObfuscatedCode();
+      }
+    },
+  };
+}
+
 export default defineConfig({
   root: projectRoot,
-  plugins: [react(), copyLegacyWebAssets(), verifyCspInlineHashes()],
+  plugins: [react(), copyLegacyWebAssets(), verifyCspInlineHashes(), obfuscateAppChunks()],
   build: {
     target: "es2020",
     // sem source map em produção: não publica o código-fonte original
     sourcemap: false,
+    rolldownOptions: {
+      output: {
+        // React num chunk próprio: assim o chunk de entrada fica só com
+        // código nosso e pode ser embaralhado (ver obfuscateAppChunks)
+        manualChunks(id: string) {
+          if (/node_modules[\/](react|react-dom|scheduler)[\/]/.test(id)) return "react-vendor";
+          // idem para o supabase-js: sem isso src/lib/supabase.ts (URL e
+          // chave pública) ia junto com a biblioteca e ficava sem embaralhar
+          if (/node_modules[\/]@supabase[\/]/.test(id)) return "supabase-vendor";
+          return undefined;
+        },
+      },
+    },
   },
   preview: {
     headers: securityHeaders,
