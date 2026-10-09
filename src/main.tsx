@@ -31,6 +31,7 @@ async function bootstrap() {
   await import("../js/settings-menu.js");
   await import("../js/auth-modal.js");
   await import("../js/account-menu.js");
+  await import("../js/header-nav.js");
   await import("../js/toast.js");
   await import("../js/data.js");
   await import("../js/catalog.js");

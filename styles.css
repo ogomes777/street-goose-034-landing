@@ -111,6 +111,134 @@ img{max-width:100%;display:block}
 .menu-btn:hover{border-color:var(--hdr-beak)}
 .menu-btn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7}
 
+/* ===== HEADER v2 — barra de vidro flutuante (inspirada no vidro da Apple)
+   Pílula arredondada solta do topo, blur+saturação, reflexo especular no
+   topo, brilho laranja discreto atrás da marca. Ao rolar encolhe e estreita.
+   Links: pílula de vidro que desliza (js/header-nav.js) + ponto na seção
+   atual. Ações: ícones sem borda que acendem no hover. Sempre escura. */
+.site-header{
+  top:14px;left:max(16px,calc((100vw - 1240px)/2));right:max(16px,calc((100vw - 1240px)/2));
+  height:64px;padding:0 8px 0 20px;gap:18px;isolation:isolate;
+  border:1px solid rgba(255,255,255,.09);border-radius:22px;
+  background:linear-gradient(180deg,rgba(46,48,53,.62),rgba(15,16,18,.72));
+  -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 -1px 0 rgba(0,0,0,.35),0 22px 50px -22px rgba(0,0,0,.85),0 2px 10px -4px rgba(0,0,0,.5);
+  transition:top .5s cubic-bezier(.2,.75,.2,1),left .5s cubic-bezier(.2,.75,.2,1),right .5s cubic-bezier(.2,.75,.2,1),height .5s cubic-bezier(.2,.75,.2,1),border-radius .5s,background .4s,box-shadow .4s
+}
+.site-header::before{content:"";position:absolute;left:14%;right:14%;top:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);pointer-events:none}
+.site-header::after{content:"";position:absolute;left:0;top:0;bottom:0;width:280px;border-radius:inherit;background:radial-gradient(70% 95% at 14% 50%,rgba(240,100,35,.17),transparent 70%);pointer-events:none;z-index:-1}
+.site-header.scrolled{
+  top:10px;height:56px;border-radius:18px;
+  left:max(16px,calc((100vw - 1120px)/2));right:max(16px,calc((100vw - 1120px)/2));
+  background:linear-gradient(180deg,rgba(40,42,46,.80),rgba(13,14,16,.88));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -1px 0 rgba(0,0,0,.4),0 26px 60px -24px rgba(0,0,0,.9),0 2px 10px -4px rgba(0,0,0,.55)
+}
+.site-header .brand-mark{width:150px;transition:width .5s cubic-bezier(.2,.75,.2,1),filter .3s}
+.site-header.scrolled .brand-mark{width:134px}
+.site-header .brand:hover .brand-mark{filter:drop-shadow(0 0 16px rgba(240,100,35,.32))}
+
+/* links */
+.desktop-nav{position:relative;gap:2px;font-size:13px;font-weight:500;text-transform:none;letter-spacing:.01em;color:rgba(242,239,230,.7)}
+.desktop-nav a{position:relative;z-index:1;padding:8px 15px;border-radius:999px;transition:color .25s}
+.desktop-nav a::after,.desktop-nav a:hover::after,.desktop-nav a:focus-visible::after{left:50%;right:auto;bottom:1px;width:4px;height:4px;border-radius:50%;background:var(--hdr-beak);transform:translateX(-50%) scale(0);transition:transform .35s cubic-bezier(.2,.75,.2,1)}
+.desktop-nav a:hover,.desktop-nav a:focus-visible,.desktop-nav a.is-current{color:var(--hdr-bone);outline:none}
+.desktop-nav a.is-current::after{transform:translateX(-50%) scale(1);box-shadow:0 0 8px var(--hdr-beak)}
+.nav-glider{position:absolute;top:50%;left:0;z-index:0;width:var(--gw,0);height:34px;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.10);transform:translate(var(--gx,0),-50%);opacity:0;pointer-events:none;transition:transform .38s cubic-bezier(.2,.75,.2,1),width .38s cubic-bezier(.2,.75,.2,1),opacity .25s}
+.desktop-nav.is-gliding .nav-glider{opacity:1}
+
+/* ações */
+.site-header .header-actions{gap:2px}
+.site-header .icon-btn,.site-header .menu-btn{width:40px;height:40px;border:0;background:transparent;box-shadow:none;color:rgba(242,239,230,.86);transition:background .2s,color .2s,transform .2s}
+.site-header .icon-btn:hover,.site-header .icon-btn:focus-visible,.site-header .menu-btn:hover{background:rgba(255,255,255,.09);color:#fff;box-shadow:none;border:0}
+.site-header .icon-btn:active,.site-header .menu-btn:active{transform:scale(.94)}
+.site-header .icon-btn[aria-expanded="true"]{background:rgba(255,255,255,.13);color:#fff}
+.site-header .icon-btn svg,.site-header .menu-btn svg{width:18px;height:18px;stroke-width:1.6}
+.site-header .account-btn{width:auto;height:40px;margin:0 4px;padding:0 15px 0 12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.06);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.site-header .account-btn:hover,.site-header .account-btn:focus-visible,.site-header .account-btn[aria-expanded="true"]{background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.16)}
+.site-header .account-btn[data-signed-in]{padding-left:5px}
+.site-header .account-btn[data-signed-in] span[data-account-avatar]{width:30px;height:30px;font-size:12px;color:#1a0a02;background:linear-gradient(140deg,#ffb27a,var(--hdr-beak) 55%,#c2410f);box-shadow:0 0 0 2px rgba(17,18,20,.95),0 0 0 3px rgba(240,100,35,.55)}
+.site-header .account-btn span[data-account-label]{font-size:12.5px;font-weight:600;letter-spacing:.01em}
+.site-header .icon-btn-badge{top:3px;right:2px;min-width:16px;height:16px;font-size:9.5px;box-shadow:0 0 0 2px rgba(17,18,20,.95)}
+/* menus abrem com respiro abaixo da barra flutuante (não colados nela) */
+.site-header .account-dropdown,.site-header .settings-dropdown{top:calc(100% + 22px)}
+/* separador fino entre busca/conta e o resto */
+.site-header .settings-menu-wrap::before{content:"";position:absolute;left:-3px;top:11px;bottom:11px;width:1px;background:rgba(255,255,255,.10)}
+
+@media(max-width:640px){
+  :root .site-header{top:10px;left:10px;right:10px;height:58px;padding:0 6px 0 14px;border-radius:20px}
+  :root .site-header.scrolled{top:8px;left:10px;right:10px;height:54px;border-radius:18px}
+  :root .site-header .brand-mark{width:118px}
+  :root .site-header::after{width:180px}
+  .site-header .icon-btn,.site-header .menu-btn{width:38px;height:38px}
+}
+@media(prefers-reduced-motion:reduce){
+  .site-header,.site-header .brand-mark,.nav-glider,.desktop-nav a::after{transition:none}
+}
+
+/* ===== HEADER v2 — cor viva + entrada "Dynamic Island" =====
+   --hdr-tint vem de js/header-nav.js (cor da seção sob a barra). Registrada
+   com @property para a troca de cor ser animada de verdade (não um salto).
+   --hdr-progress (0–1) desenha a linha de progresso dentro da pílula. */
+@property --hdr-tint{syntax:"<color>";inherits:true;initial-value:#f06423}
+@property --hdr-progress{syntax:"<number>";inherits:true;initial-value:0}
+.site-header{
+  --hdr-tint:#f06423;
+  border-color:color-mix(in srgb,var(--hdr-tint) 24%,rgba(255,255,255,.08));
+  background:
+    linear-gradient(90deg,color-mix(in srgb,var(--hdr-tint) 70%,#fff),var(--hdr-tint)) left bottom/calc(var(--hdr-progress,0) * 100%) 1.5px no-repeat,
+    linear-gradient(180deg,color-mix(in srgb,var(--hdr-tint) 14%,rgba(46,48,53,.62)),color-mix(in srgb,var(--hdr-tint) 7%,rgba(15,16,18,.72)));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 -1px 0 rgba(0,0,0,.35),0 22px 50px -22px rgba(0,0,0,.85),0 18px 46px -30px color-mix(in srgb,var(--hdr-tint) 70%,transparent),0 2px 10px -4px rgba(0,0,0,.5);
+  transition:--hdr-tint .9s cubic-bezier(.4,0,.2,1),top .5s cubic-bezier(.2,.75,.2,1),left .5s cubic-bezier(.2,.75,.2,1),right .5s cubic-bezier(.2,.75,.2,1),height .5s cubic-bezier(.2,.75,.2,1),border-radius .5s,box-shadow .4s;
+  animation:hdr-island 1.15s cubic-bezier(.16,1,.3,1) .15s backwards
+}
+.site-header.scrolled{
+  background:
+    linear-gradient(90deg,color-mix(in srgb,var(--hdr-tint) 70%,#fff),var(--hdr-tint)) left bottom/calc(var(--hdr-progress,0) * 100%) 1.5px no-repeat,
+    linear-gradient(180deg,color-mix(in srgb,var(--hdr-tint) 16%,rgba(40,42,46,.80)),color-mix(in srgb,var(--hdr-tint) 8%,rgba(13,14,16,.88)));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -1px 0 rgba(0,0,0,.4),0 26px 60px -24px rgba(0,0,0,.9),0 20px 50px -30px color-mix(in srgb,var(--hdr-tint) 75%,transparent),0 2px 10px -4px rgba(0,0,0,.55)
+}
+.site-header::before{background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--hdr-tint) 35%,#fff),transparent);animation:hdr-spec .9s cubic-bezier(.16,1,.3,1) .8s backwards}
+.site-header::after{background:radial-gradient(70% 95% at 14% 50%,color-mix(in srgb,var(--hdr-tint) 24%,transparent),transparent 70%)}
+.desktop-nav a::after,.desktop-nav a:hover::after,.desktop-nav a:focus-visible::after{background:var(--hdr-tint)}
+.desktop-nav a.is-current::after{box-shadow:0 0 8px var(--hdr-tint),0 0 2px var(--hdr-tint)}
+.nav-glider{border-color:color-mix(in srgb,var(--hdr-tint) 30%,rgba(255,255,255,.09));background:linear-gradient(180deg,color-mix(in srgb,var(--hdr-tint) 14%,rgba(255,255,255,.10)),rgba(255,255,255,.04))}
+.site-header .icon-btn:hover,.site-header .icon-btn:focus-visible,.site-header .menu-btn:hover{background:color-mix(in srgb,var(--hdr-tint) 16%,rgba(255,255,255,.07))}
+.site-header .icon-btn[aria-expanded="true"]{background:color-mix(in srgb,var(--hdr-tint) 22%,rgba(255,255,255,.08))}
+.site-header .account-btn[data-signed-in] span[data-account-avatar]{background:linear-gradient(140deg,color-mix(in srgb,var(--hdr-tint) 45%,#fff),var(--hdr-tint) 55%,color-mix(in srgb,var(--hdr-tint) 70%,#000));box-shadow:0 0 0 2px rgba(17,18,20,.95),0 0 0 3px color-mix(in srgb,var(--hdr-tint) 60%,transparent)}
+.site-header .icon-btn-badge{background:var(--hdr-tint)}
+.site-header .brand:hover .brand-mark{filter:drop-shadow(0 0 16px color-mix(in srgb,var(--hdr-tint) 55%,transparent))}
+/* a linha de progresso agora mora dentro da pílula */
+.page-progress{display:none}
+
+/* entrada: nasce como ilha pequena no centro, expande com mola, reflexo se
+   desenha do centro e o conteúdo chega em cascata. backwards (não forwards):
+   terminado, o clip-path some e não corta os menus que abrem abaixo. */
+@keyframes hdr-island{
+  0%{opacity:0;transform:translateY(-18px) scale(.9);clip-path:inset(0 calc(50% - 70px) round 999px);filter:blur(10px)}
+  32%{opacity:1;transform:none;clip-path:inset(0 calc(50% - 70px) round 999px);filter:blur(0)}
+  100%{opacity:1;transform:none;clip-path:inset(0 0 round 22px);filter:none}
+}
+@keyframes hdr-spec{from{opacity:0;transform:scaleX(0)}to{opacity:1;transform:scaleX(1)}}
+@keyframes hdr-item{from{opacity:0;transform:translateY(8px);filter:blur(5px)}to{opacity:1;transform:none;filter:none}}
+.site-header .brand,.desktop-nav a,.site-header .header-actions>:not(.settings-backdrop){animation:hdr-item .7s cubic-bezier(.16,1,.3,1) backwards}
+.site-header .brand{animation-delay:.55s}
+.desktop-nav a:nth-of-type(1){animation-delay:.62s}
+.desktop-nav a:nth-of-type(2){animation-delay:.67s}
+.desktop-nav a:nth-of-type(3){animation-delay:.72s}
+.desktop-nav a:nth-of-type(4){animation-delay:.77s}
+.desktop-nav a:nth-of-type(5){animation-delay:.82s}
+.site-header .header-actions>:nth-child(1){animation-delay:.70s}
+.site-header .header-actions>:nth-child(2){animation-delay:.75s}
+.site-header .header-actions>:nth-child(3){animation-delay:.80s}
+.site-header .header-actions>:nth-child(5){animation-delay:.85s}
+.site-header .header-actions>:nth-child(6){animation-delay:.90s}
+.site-header .header-actions>:nth-child(7){animation-delay:.95s}
+
+@media(prefers-reduced-motion:reduce){
+  .site-header,.site-header::before,.site-header .brand,.desktop-nav a,.site-header .header-actions>*{animation:none}
+  .site-header{transition:none}
+}
+
 /* ===== MOBILE MENU ===== */
 .mobile-menu{position:fixed;inset:0;z-index:150;background:rgba(5,5,5,.98);backdrop-filter:blur(14px);display:flex;flex-direction:column;padding:22px 26px;transform:translateX(100%);transition:transform var(--t-base) var(--ease);visibility:hidden}
 .mobile-menu.is-open{transform:translateX(0);visibility:visible}
