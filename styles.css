@@ -1010,6 +1010,40 @@ footer>small{grid-column:1/-1;border-top:1px solid var(--line);padding-top:24px;
 .admin-text-btn--danger:hover{color:var(--admin-danger);text-decoration:underline}
 .admin-editor .admin-photo-grid{margin-top:14px}
 
+/* pedidos como CRM */
+.admin-order-form{padding-top:16px}
+.admin-order-form>h3{margin:0 0 14px;font-size:14px;color:var(--text)}
+.admin-order-moves{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.admin-order-moves .admin-status{margin-right:6px}
+.admin-order-moves .btn{min-height:40px;padding:0 16px}
+.admin-order-edit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.admin-fieldset{min-width:0;margin:0 0 16px;padding:14px 16px 16px;border:1px solid var(--border);border-radius:14px}
+.admin-fieldset legend{padding:0 6px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.admin-fieldset>small{display:block;margin-top:10px;font-size:11px;color:var(--muted)}
+.admin-item--edit{grid-template-columns:minmax(0,1fr) 92px 150px 104px 36px;padding:8px 10px}
+.admin-item--edit .admin-item-name{gap:4px}
+.admin-item--edit .admin-item-name input{min-height:40px;padding:0 10px;border:1px solid var(--input-border);border-radius:10px;background:var(--input-bg);color:var(--input-text);font:inherit;font-size:14px;letter-spacing:0;outline:none}
+.admin-item--edit .admin-item-name input:focus{border-color:var(--accent)}
+.admin-item-qty-input{display:flex;align-items:center;gap:6px;min-height:40px;padding:0 10px;border:1px solid var(--input-border);border-radius:10px;background:var(--input-bg)}
+.admin-item-qty-input:focus-within{border-color:var(--accent)}
+.admin-item-qty-input em{font-style:normal;font-size:12px;color:var(--muted)}
+.admin-item-qty-input input{width:100%;min-width:0;padding:0;border:0;background:none;color:var(--input-text);font:inherit;font-size:14px;outline:none;text-align:right}
+.admin-item-line{font-size:13px;font-weight:700;text-align:right;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap}
+.admin-item-remove{width:32px;height:32px;border:1px solid var(--border);border-radius:50%;background:none;color:var(--text-2);font-size:16px;line-height:1;cursor:pointer;transition:border-color var(--t-fast),color var(--t-fast)}
+.admin-item-remove:hover,.admin-item-remove:focus-visible{border-color:var(--admin-danger);color:var(--admin-danger)}
+.admin-fieldset [data-items]:empty{display:none}
+.admin-fieldset [data-action="item-add"]{margin-top:10px}
+.admin-order-sums{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:flex-end;gap:16px;margin:0 0 16px}
+.admin-order-sums p{margin:0 0 12px;font-size:13px;color:var(--muted)}
+.admin-order-sums p b{margin-left:8px;color:var(--text);font-size:15px;font-variant-numeric:tabular-nums}
+.admin-order-sums .admin-field{width:170px;min-width:0}
+.admin-order-sums .admin-order-grand b{font-size:20px;color:var(--accent)}
+.admin-order-new{margin-bottom:16px}
+.admin-order-new .admin-order-form{padding-top:0}
+.admin-cust-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px 12px}
+.admin-xp-row td{background:var(--surface-2)}
+.admin-xp-form p{margin:0 0 10px;font-size:13px;color:var(--text-2)}
+
 @media(max-width:1100px){
   .admin-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
   .admin-split{grid-template-columns:1fr}
@@ -1065,6 +1099,17 @@ footer>small{grid-column:1/-1;border-top:1px solid var(--line);padding-top:24px;
   .admin-prod-grid{grid-template-columns:1fr}
   .admin-photo-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .admin-photo-cover{opacity:1}
+  .admin-order-edit{grid-template-columns:1fr;gap:0}
+  .admin-item--edit{grid-template-columns:84px minmax(0,1fr) 36px;grid-template-areas:"name name remove" "qty price price" "line line line";row-gap:8px}
+  .admin-item--edit .admin-item-name{grid-area:name}
+  .admin-item--edit .admin-item-remove{grid-area:remove}
+  .admin-item--edit .admin-item-qty-input{grid-area:qty}
+  .admin-item--edit .admin-money{grid-area:price}
+  .admin-item--edit .admin-item-line{grid-area:line}
+  .admin-order-sums{justify-content:stretch}
+  .admin-order-sums .admin-field{width:100%}
+  .admin-order-moves .btn{flex:1}
+  .admin-cust-actions{justify-content:flex-start}
 }
 
 /* ===== CHECKOUT PAGE ===== */

@@ -39,7 +39,7 @@ export function mountAccountPage(root, _params, onClose) {
       }
       bodyEl.innerHTML = orders.length
         ? '<div class="orders-list">' + orders.map(function (o) {
-            return '<a class="order-row" href="/pedido/' + encodeURIComponent(o.id) + '"><span>#' + window.SG.esc(o.id.slice(0, 8)) + "</span><span>" + window.SG.esc(o.status) + "</span><span>" + (o.total_cents ? window.SG.formatPrice(o.total_cents) : t("common.consultAvailability")) + "</span></a>";
+            return '<a class="order-row" href="/pedido/' + encodeURIComponent(o.id) + '"><span>#' + window.SG.esc(o.id.slice(0, 8)) + "</span><span>" + window.SG.esc(window.SG.orderStatusLabel(o.status)) + "</span><span>" + (o.total_cents ? window.SG.formatPrice(o.total_cents) : t("common.consultAvailability")) + "</span></a>";
           }).join("") + "</div>"
         : '<div class="app-page-empty"><h2>' + t("account.orders.empty") + "</h2></div>";
       return;

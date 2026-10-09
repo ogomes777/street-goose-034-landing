@@ -47,6 +47,11 @@ window.SG.subtotalLabel = function (rows) {
 // mesma função de src/lib/html.ts (coberta por teste), exposta pro código legado
 window.SG.esc = escapeHtml;
 
+// status do pedido como o cliente lê (mesmos nomes do painel /admin)
+window.SG.orderStatusLabel = function (status) {
+  return ({ pending_payment: "Aguardando pagamento", paid: "Pago", fulfilled: "Enviado", cancelled: "Cancelado", refunded: "Reembolsado" })[status] || status;
+};
+
 // link de WhatsApp perguntando preço/disponibilidade de uma peça específica
 window.SG.waProductLink = function (product) {
   return window.SG.waLink("Olá! Quero saber o preço e a disponibilidade de " + product.name + " (" + (product.sku || product.id) + ") que vi no site da Street Goose 034.");

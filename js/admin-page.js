@@ -36,7 +36,7 @@ export function mountAdminPage(root, _params, onClose) {
   var state = {
     tab: tabFromUrl(),
     overview: null,
-    orderStatus: "pending_payment", orderSearch: "", orders: [], openOrderId: null,
+    orderStatus: "pending_payment", orderSearch: "", orders: [], openOrderId: null, orderCounts: null, newOrderPrefill: null,
     customerSearch: "", customers: [],
     postStatus: "pending", posts: [], rejectingPostId: null,
     coupons: [], rewards: [], levels: [], editingCoupon: null, editingReward: null,
@@ -227,7 +227,11 @@ export function mountAdminPage(root, _params, onClose) {
   function renderPanel() {
     var panel = bodyEl.querySelector("[data-admin-panel]");
     if (!panel) return;
-    if (state.tab === "pedidos") { panel.innerHTML = ordersToolbar() + '<div class="admin-list" data-list="orders"></div>'; loadOrders(); }
+    if (state.tab === "pedidos") {
+      panel.innerHTML = ordersToolbar() + '<div class="admin-list" data-list="orders"></div>';
+      loadOrders();
+      if (state.newOrderPrefill) { var pre = state.newOrderPrefill; state.newOrderPrefill = null; openNewOrder(pre); }
+    }
     else if (state.tab === "produtos") { panel.innerHTML = productsShell(); renderProdCategory(); loadProducts(); }
     else if (state.tab === "clientes") { panel.innerHTML = customersToolbar() + '<div data-list="customers"></div>'; loadCustomers(); }
     else if (state.tab === "comunidade") { panel.innerHTML = postsToolbar() + '<div data-list="posts"></div>'; loadPosts(); }
@@ -238,14 +242,50 @@ export function mountAdminPage(root, _params, onClose) {
   function list(name) { return bodyEl.querySelector('[data-list="' + name + '"]'); }
 
   // ---------- pedidos ----------
+  // CRM de pedidos (migration 0103): lista por status com contagem real,
+  // pedido manual, edição completa e movimentação com um clique. Tudo passa
+  // por admin_save_order (servidor recalcula total e acerta o XP).
+  var ORDER_FILTERS = [["pending_payment", "Aguardando"], ["paid", "Pagos"], ["fulfilled", "Enviados"], ["cancelled", "Cancelados"], ["refunded", "Reembolsados"], ["all", "Todos"]];
+  var ORDER_MOVES = {
+    pending_payment: [["paid", "Marcar como pago", true], ["cancelled", "Cancelar pedido"]],
+    paid: [["fulfilled", "Marcar como enviado", true], ["refunded", "Reembolsar"], ["pending_payment", "Voltar para aguardando"]],
+    fulfilled: [["paid", "Voltar para pago"], ["refunded", "Reembolsar"]],
+    cancelled: [["pending_payment", "Reabrir pedido", true]],
+    refunded: [["pending_payment", "Reabrir pedido"]],
+  };
+  var PAYMENT_LABELS = { whatsapp: "WhatsApp", pix: "Pix", cartao: "Cartão", dinheiro: "Dinheiro", outro: "Outro" };
+  var SHIP_FIELDS = [
+    ["cep", "CEP", ""], ["street", "Rua", "admin-field--wide"], ["number", "Número", ""], ["complement", "Complemento", ""],
+    ["neighborhood", "Bairro", ""], ["city", "Cidade", ""], ["state", "UF", ""],
+  ];
+
   function ordersToolbar() {
-    var statuses = [["pending_payment", "Aguardando"], ["paid", "Pagos"], ["fulfilled", "Enviados"], ["cancelled", "Cancelados"], ["refunded", "Reembolsados"], ["all", "Todos"]];
+    var counts = state.orderCounts || {};
     return '<div class="admin-toolbar">' +
-      '<div class="admin-chips" role="group" aria-label="Filtrar pedidos por status">' +
-        statuses.map(function (s) { return chip("order-filter", s[0], s[1], state.orderStatus === s[0]); }).join("") +
+      '<div class="admin-chips" role="group" aria-label="Filtrar pedidos por status" data-order-chips>' +
+        ORDER_FILTERS.map(function (s) { return chip("order-filter", s[0], s[1], state.orderStatus === s[0], state.orderCounts ? counts[s[0]] || 0 : null); }).join("") +
       "</div>" +
-      '<label class="admin-search"><span class="sr-only">Buscar pedidos</span><input type="search" data-search="orders" placeholder="#pedido, e-mail, nome ou telefone" value="' + esc(state.orderSearch) + '" autocomplete="off"></label>' +
-    "</div>";
+      '<label class="admin-search"><span class="sr-only">Buscar pedidos</span><input type="search" data-search="orders" placeholder="#pedido, e-mail, nome, telefone ou rastreio" value="' + esc(state.orderSearch) + '" autocomplete="off"></label>' +
+      '<button class="btn btn-primary" type="button" data-action="order-new">Novo pedido</button>' +
+    "</div>" +
+    "<div data-order-new></div>" +
+    productsDatalist();
+  }
+
+  // busca de produto nos itens: nome · código (catálogo visível do site)
+  function productsDatalist() {
+    return '<datalist id="admin-products-list">' + (window.SG_PRODUCTS || []).map(function (p) {
+      return '<option value="' + esc(p.name + " · " + p.id) + '">';
+    }).join("") + "</datalist>";
+  }
+
+  async function loadOrderCounts() {
+    var res = await svc.orderCounts();
+    if (destroyed || !res.ok) return;
+    state.orderCounts = res.data;
+    var box = bodyEl.querySelector("[data-order-chips]");
+    if (!box) return;
+    box.innerHTML = ORDER_FILTERS.map(function (s) { return chip("order-filter", s[0], s[1], state.orderStatus === s[0], res.data[s[0]] || 0); }).join("");
   }
 
   async function loadOrders() {
@@ -253,6 +293,7 @@ export function mountAdminPage(root, _params, onClose) {
     if (!el) return;
     var n = nextSeq("orders");
     el.innerHTML = loading();
+    loadOrderCounts();
     var res = await svc.listOrders({ status: state.orderStatus === "all" ? null : state.orderStatus, search: state.orderSearch });
     if (stale("orders", n)) return;
     if (!res.ok) { el.innerHTML = errorState(res.message, "orders"); return; }
@@ -264,112 +305,250 @@ export function mountAdminPage(root, _params, onClose) {
     el.innerHTML = state.orders.map(orderHtml).join("");
   }
 
+  function orderCustomerName(o) {
+    var ship = o.shipping_address || {};
+    return ship.name || (o.customer && o.customer.display_name) || (o.customer && o.customer.email) || "Cliente sem nome";
+  }
+
   function orderHtml(o) {
     var ship = o.shipping_address || {};
-    var name = ship.name || o.customer.display_name || "Cliente";
     var itemCount = o.items.reduce(function (sum, i) { return sum + i.qty; }, 0);
     var open = state.openOrderId === o.id;
-    var wa = waLink(ship.phone);
+    var tags = [];
+    if (o.source === "admin") tags.push('<span class="admin-tag">Manual</span>');
+    if (!o.customer) tags.push('<span class="admin-tag">Sem conta</span>');
+    if (o.tracking_code) tags.push('<span class="admin-tag admin-tag--accent">Rastreio</span>');
     return '<article class="admin-order' + (open ? " is-open" : "") + '" data-order-id="' + o.id + '">' +
       '<button class="admin-order-summary" type="button" data-action="order-toggle" data-id="' + o.id + '" aria-expanded="' + open + '" aria-controls="order-' + o.id + '">' +
         '<span class="admin-order-id">#' + esc(o.short_id) + "</span>" +
-        '<span class="admin-order-customer"><b>' + esc(name) + "</b><small>" + esc(o.customer.email || ship.email || "") + "</small></span>" +
-        '<span class="admin-order-meta">' + itemCount + (itemCount === 1 ? " item" : " itens") + " · " + fmtDateTime(o.created_at) + "</span>" +
+        '<span class="admin-order-customer"><b>' + esc(orderCustomerName(o)) + "</b><small>" + esc((o.customer && o.customer.email) || ship.email || ship.phone || "") + "</small></span>" +
+        '<span class="admin-order-meta">' + itemCount + (itemCount === 1 ? " item" : " itens") + " · " + fmtDateTime(o.created_at) + (tags.length ? " " + tags.join("") : "") + "</span>" +
         '<span class="admin-order-total">' + (o.total_cents ? brl(o.total_cents) : "A confirmar") + "</span>" +
         '<span class="admin-status admin-status--' + o.status + '">' + ORDER_STATUS[o.status] + "</span>" +
       "</button>" +
-      '<div class="admin-order-detail" id="order-' + o.id + '"' + (open ? "" : " hidden") + ">" +
-        '<div class="admin-order-info">' +
-          '<div><h3>Cliente</h3><p>' + esc(name) + "<br>" + esc(ship.email || o.customer.email || "") + "<br>" + esc(ship.phone || "—") + "</p>" +
-            (wa ? '<a class="admin-link" href="' + esc(wa) + '" target="_blank" rel="noopener">Abrir WhatsApp</a>' : "") + "</div>" +
-          '<div><h3>Entrega</h3><p>' + (ship.street
-            ? esc(ship.street) + ", " + esc(ship.number) + (ship.complement ? " — " + esc(ship.complement) : "") + "<br>" +
-              esc(ship.neighborhood) + " · " + esc(ship.city) + "/" + esc(ship.state) + "<br>CEP " + esc(ship.cep)
-            : "Sem endereço informado") + "</p></div>" +
-          '<div><h3>Pagamento</h3><p>' + esc(o.payment_method === "whatsapp" ? "Fechado pelo WhatsApp" : o.payment_method || "—") +
-            (o.coupon_code ? "<br>Cupom " + esc(o.coupon_code) : "") + "<br>Atualizado " + fmtDateTime(o.updated_at) + "</p></div>" +
-        "</div>" +
-        '<form class="admin-order-form" data-form="order" data-id="' + o.id + '" novalidate>' +
-          '<div class="admin-items" role="table" aria-label="Itens do pedido">' +
-            o.items.map(function (i) {
-              return '<div class="admin-item" role="row">' +
-                '<span class="admin-item-name" role="cell">' + esc(i.product_name) + "<small>" + esc(i.product_id) + "</small></span>" +
-                '<span class="admin-item-qty" role="cell">× ' + i.qty + "</span>" +
-                '<label class="admin-money" role="cell"><span class="sr-only">Preço unitário de ' + esc(i.product_name) + '</span><em>R$</em><input inputmode="decimal" data-item-price="' + i.id + '" data-qty="' + i.qty + '" value="' + money.centsToInput(i.unit_price_cents) + '" placeholder="0,00"></label>' +
-              "</div>";
-            }).join("") +
-          "</div>" +
-          '<div class="admin-order-totals">' +
-            '<p>Subtotal <b data-subtotal>' + brl(o.subtotal_cents) + "</b></p>" +
-            '<label class="admin-field">Total cobrado<span class="admin-money"><em>R$</em><input inputmode="decimal" name="total" value="' + money.centsToInput(o.total_cents) + '" placeholder="0,00"' + (o.total_cents !== o.subtotal_cents ? " data-dirty" : "") + '></span><small>Inclua frete ou desconto, se houver.</small></label>' +
-          "</div>" +
-          '<div class="admin-form-row">' +
-            '<label class="admin-field">Status<select name="status">' +
-              Object.keys(ORDER_STATUS).map(function (s) { return '<option value="' + s + '"' + (s === o.status ? " selected" : "") + ">" + ORDER_STATUS[s] + "</option>"; }).join("") +
-            "</select></label>" +
-            '<label class="admin-field admin-field--grow">Nota interna<textarea name="note" rows="2" maxlength="1000" placeholder="Só a equipe vê">' + esc(o.staff_note || "") + "</textarea></label>" +
-          "</div>" +
-          '<p class="admin-form-error" data-form-error role="alert" hidden></p>' +
-          '<div class="admin-form-actions">' +
-            (o.status === "pending_payment" ? '<button class="btn btn-primary" type="button" data-action="order-mark-paid" data-id="' + o.id + '">Salvar e marcar pago</button>' : "") +
-            '<button class="btn ' + (o.status === "pending_payment" ? "btn-ghost" : "btn-primary") + '" type="submit">Salvar</button>' +
-          "</div>" +
-        "</form>" +
-      "</div>" +
+      '<div class="admin-order-detail" id="order-' + o.id + '"' + (open ? "" : " hidden") + ">" + (open ? orderEditorHtml(o) : "") + "</div>" +
     "</article>";
+  }
+
+  function orderItemRowHtml(it) {
+    var qty = it.qty || 1;
+    var price = typeof it.unit_price_cents === "number" ? it.unit_price_cents : null;
+    return '<div class="admin-item admin-item--edit" data-item-row>' +
+      '<label class="admin-item-name"><span class="sr-only">Produto</span>' +
+        '<input name="item_name" list="admin-products-list" value="' + esc(it.product_name || "") + '" placeholder="Produto (busque pelo nome ou digite)" autocomplete="off" maxlength="200">' +
+        '<input type="hidden" name="item_id" value="' + esc(it.product_id || "") + '">' +
+        "<small data-item-pid>" + esc(it.product_id && it.product_id !== "manual" ? it.product_id : "item avulso") + "</small>" +
+      "</label>" +
+      '<label class="admin-item-qty-input"><span class="sr-only">Quantidade</span><em>×</em><input name="item_qty" type="number" min="1" max="99" step="1" value="' + qty + '"></label>' +
+      '<label class="admin-money"><span class="sr-only">Preço unitário</span><em>R$</em><input name="item_price" inputmode="decimal" value="' + money.centsToInput(price) + '" placeholder="0,00" autocomplete="off"></label>' +
+      '<span class="admin-item-line" data-line-total>' + (price !== null ? brl(price * qty) : "—") + "</span>" +
+      '<button type="button" class="admin-item-remove" data-action="item-remove" aria-label="Remover item">×</button>' +
+    "</div>";
+  }
+
+  // mesmo formulário para editar (o) e para pedido novo (o = null)
+  function orderEditorHtml(o, prefill) {
+    var isNew = !o;
+    var ship = (o && o.shipping_address) || {};
+    var pre = prefill || {};
+    var status = o ? o.status : "pending_payment";
+    var items = o ? o.items : [];
+    var moves = o ? ORDER_MOVES[o.status] || [] : [];
+    var canDelete = o && (o.status === "pending_payment" || o.status === "cancelled");
+    var fieldHtml = function (name, label, value, extra, cls) {
+      return '<label class="admin-field' + (cls ? " " + cls : "") + '">' + label + '<input name="' + name + '" value="' + esc(value || "") + '"' + (extra || "") + "></label>";
+    };
+    return '<form class="admin-order-form" data-form="order" data-id="' + (o ? o.id : "") + '" novalidate>' +
+      (isNew ? "<h3>Novo pedido</h3>" : '<div class="admin-order-moves">' +
+        '<span class="admin-status admin-status--' + status + '">' + ORDER_STATUS[status] + "</span>" +
+        moves.map(function (m) {
+          return '<button type="button" class="btn ' + (m[2] ? "btn-primary" : "btn-ghost") + '" data-action="order-move" data-status="' + m[0] + '">' + m[1] + "</button>";
+        }).join("") +
+      "</div>") +
+      '<div class="admin-order-edit">' +
+        '<fieldset class="admin-fieldset"><legend>Cliente</legend><div class="admin-form-grid">' +
+          fieldHtml("ship_name", "Nome", ship.name || pre.name, ' maxlength="160" autocomplete="off"') +
+          fieldHtml("ship_phone", "Telefone / WhatsApp", ship.phone, ' maxlength="40" inputmode="tel" autocomplete="off"') +
+          fieldHtml("ship_email", "E-mail de contato", ship.email || pre.email, ' maxlength="160" inputmode="email" autocomplete="off"') +
+          fieldHtml("customer_email", "Conta no site (e-mail)", (o && o.customer && o.customer.email) || pre.account || "", ' maxlength="160" inputmode="email" autocomplete="off" placeholder="Vazio = sem conta"') +
+        "</div><small>Com conta vinculada, o pedido aparece em Meus pedidos do cliente e gera XP quando pago.</small></fieldset>" +
+        '<fieldset class="admin-fieldset"><legend>Entrega</legend><div class="admin-form-grid">' +
+          SHIP_FIELDS.map(function (f) { return fieldHtml("ship_" + f[0], f[1], ship[f[0]], ' maxlength="160" autocomplete="off"', f[2]); }).join("") +
+          fieldHtml("tracking_code", "Código de rastreio", o && o.tracking_code, ' maxlength="60" autocomplete="off" placeholder="Ex.: AA123456789BR"', "admin-field--wide") +
+        "</div></fieldset>" +
+      "</div>" +
+      '<fieldset class="admin-fieldset"><legend>Itens</legend>' +
+        '<div class="admin-items" data-items>' + items.map(orderItemRowHtml).join("") + "</div>" +
+        '<button type="button" class="admin-text-btn" data-action="item-add">+ Adicionar item</button>' +
+      "</fieldset>" +
+      '<div class="admin-order-sums">' +
+        '<p>Subtotal <b data-subtotal>' + brl(o ? o.subtotal_cents : 0) + "</b></p>" +
+        '<label class="admin-field">Frete<span class="admin-money"><em>R$</em><input name="shipping_cents" inputmode="decimal" value="' + money.centsToInput(o ? o.shipping_cents : 0) + '" placeholder="0,00"></span></label>' +
+        '<label class="admin-field">Desconto<span class="admin-money"><em>R$</em><input name="discount_cents" inputmode="decimal" value="' + money.centsToInput(o ? o.discount_cents : 0) + '" placeholder="0,00"></span></label>' +
+        '<p class="admin-order-grand">Total <b data-total>' + brl(o ? o.total_cents : 0) + "</b></p>" +
+      "</div>" +
+      '<div class="admin-form-row">' +
+        '<label class="admin-field">Pagamento<select name="payment_method">' + Object.keys(PAYMENT_LABELS).map(function (k) {
+          return '<option value="' + k + '"' + (k === ((o && o.payment_method) || (isNew ? "pix" : "whatsapp")) ? " selected" : "") + ">" + PAYMENT_LABELS[k] + "</option>";
+        }).join("") + "</select></label>" +
+        '<label class="admin-field">Status<select name="status">' + Object.keys(ORDER_STATUS).map(function (s) {
+          return '<option value="' + s + '"' + (s === status ? " selected" : "") + ">" + ORDER_STATUS[s] + "</option>";
+        }).join("") + "</select></label>" +
+        '<label class="admin-field admin-field--grow">Nota interna<textarea name="staff_note" rows="2" maxlength="1000" placeholder="Só a equipe vê">' + esc((o && o.staff_note) || "") + "</textarea></label>" +
+      "</div>" +
+      (o ? '<p class="admin-note">' + (o.source === "admin" ? "Criado no painel" : "Feito pelo site") + " em " + fmtDateTime(o.created_at) + " · atualizado " + fmtDateTime(o.updated_at) +
+        ((ship.phone && waLink(ship.phone)) ? ' · <a class="admin-link" href="' + esc(waLink(ship.phone)) + '" target="_blank" rel="noopener">Abrir WhatsApp</a>' : "") + "</p>" : "") +
+      '<p class="admin-form-error" data-form-error role="alert" hidden></p>' +
+      '<div class="admin-form-actions">' +
+        (isNew ? '<button class="btn btn-ghost" type="button" data-action="order-new-cancel">Cancelar</button>' : "") +
+        (canDelete ? '<button class="admin-text-btn admin-text-btn--danger" type="button" data-action="order-delete" data-id="' + o.id + '">Excluir pedido</button>' : "") +
+        '<button class="btn btn-primary" type="submit">' + (isNew ? "Criar pedido" : "Salvar pedido") + "</button>" +
+      "</div>" +
+    "</form>";
+  }
+
+  function openNewOrder(prefill) {
+    var box = bodyEl.querySelector("[data-order-new]");
+    if (!box) return;
+    box.innerHTML = '<div class="admin-editor admin-order-new">' + orderEditorHtml(null, prefill) + "</div>";
+    var form = box.querySelector("form");
+    addItemRow(form);
+    recalcOrderForm(form);
+    var focus = prefill && prefill.name ? form.querySelector('[name="item_name"]') : form.querySelector('[name="ship_name"]');
+    if (focus) focus.focus();
+  }
+
+  function addItemRow(form, item) {
+    var box = form.querySelector("[data-items]");
+    box.insertAdjacentHTML("beforeend", orderItemRowHtml(item || { qty: 1, unit_price_cents: null }));
+    var rows = box.querySelectorAll("[data-item-row]");
+    return rows[rows.length - 1];
+  }
+
+  // nome escolhido da lista "Nome · código": liga ao produto e sugere o preço do site
+  function onItemName(input) {
+    var rowEl = input.closest("[data-item-row]");
+    var m = / · ([a-z0-9-]+)$/.exec(input.value);
+    var idInput = rowEl.querySelector('[name="item_id"]');
+    var label = rowEl.querySelector("[data-item-pid]");
+    if (!m) {
+      if (idInput.value && idInput.value !== "manual") { idInput.value = ""; label.textContent = "item avulso"; }
+      return;
+    }
+    var p = (window.SG_PRODUCTS || []).find(function (x) { return x.id === m[1]; });
+    if (!p) return;
+    input.value = p.name;
+    idInput.value = p.id;
+    label.textContent = p.id;
+    var priceInput = rowEl.querySelector('[name="item_price"]');
+    if (typeof p.price === "number" && !money.parseMoneyToCents(priceInput.value || "")) priceInput.value = money.centsToInput(p.price);
+    recalcOrderForm(input.closest("form"));
+  }
+
+  function readMoney(input) {
+    var raw = input.value.trim();
+    return raw ? money.parseMoneyToCents(raw) : 0;
   }
 
   function recalcOrderForm(form) {
     var subtotal = 0, valid = true;
-    form.querySelectorAll("[data-item-price]").forEach(function (input) {
-      var cents = money.parseMoneyToCents(input.value);
-      input.classList.toggle("is-invalid", cents === null);
-      if (cents === null) valid = false;
-      else subtotal += cents * Number(input.getAttribute("data-qty"));
+    form.querySelectorAll("[data-item-row]").forEach(function (rowEl) {
+      var qty = Number(rowEl.querySelector('[name="item_qty"]').value);
+      var priceInput = rowEl.querySelector('[name="item_price"]');
+      var cents = readMoney(priceInput);
+      priceInput.classList.toggle("is-invalid", cents === null);
+      var line = rowEl.querySelector("[data-line-total]");
+      if (cents === null || !Number.isInteger(qty) || qty < 1) { valid = false; line.textContent = "—"; return; }
+      subtotal += cents * qty;
+      line.textContent = brl(cents * qty);
     });
+    var shipping = readMoney(field(form, "shipping_cents"));
+    var discount = readMoney(field(form, "discount_cents"));
     form.querySelector("[data-subtotal]").textContent = valid ? brl(subtotal) : "—";
-    var total = form.querySelector('[name="total"]');
-    if (valid && !total.hasAttribute("data-dirty")) total.value = money.centsToInput(subtotal);
+    form.querySelector("[data-total]").textContent = valid && shipping !== null && discount !== null ? brl(Math.max(0, subtotal + shipping - discount)) : "—";
   }
 
-  async function saveOrder(form, forceStatus) {
-    var id = form.getAttribute("data-id");
-    var order = state.orders.find(function (o) { return o.id === id; });
-    if (!order) return;
-    setFormError(form, "");
-    var patch = {};
-    var itemPrices = [];
-    var invalid = false;
-    form.querySelectorAll("[data-item-price]").forEach(function (input) {
-      var cents = money.parseMoneyToCents(input.value);
-      if (cents === null) { invalid = true; return; }
-      var item = order.items.find(function (i) { return i.id === input.getAttribute("data-item-price"); });
-      if (item && item.unit_price_cents !== cents) itemPrices.push({ id: item.id, unitPriceCents: cents });
+  function collectOrder(form, statusOverride) {
+    var items = [];
+    var problem = null;
+    form.querySelectorAll("[data-item-row]").forEach(function (rowEl) {
+      if (problem) return;
+      var name = rowEl.querySelector('[name="item_name"]').value.trim();
+      var qty = Number(rowEl.querySelector('[name="item_qty"]').value);
+      var cents = readMoney(rowEl.querySelector('[name="item_price"]'));
+      if (!name) { problem = "Todo item precisa de um nome."; return; }
+      if (!Number.isInteger(qty) || qty < 1 || qty > 99) { problem = "Quantidade de 1 a 99 por item."; return; }
+      if (cents === null) { problem = "Preço do item no formato 197,00."; return; }
+      items.push({ product_id: rowEl.querySelector('[name="item_id"]').value || "manual", product_name: name, qty: qty, unit_price_cents: cents });
     });
-    if (invalid) { setFormError(form, "Confira os preços — use o formato 197,00."); return; }
-    if (itemPrices.length) patch.itemPrices = itemPrices;
+    if (problem) return { error: problem };
+    if (!items.length) return { error: "Adicione pelo menos um item." };
+    var shipping = readMoney(field(form, "shipping_cents"));
+    var discount = readMoney(field(form, "discount_cents"));
+    if (shipping === null || discount === null) return { error: "Frete e desconto no formato 19,90 (ou vazio)." };
+    var subtotal = items.reduce(function (s, i) { return s + i.qty * i.unit_price_cents; }, 0);
+    var total = Math.max(0, subtotal + shipping - discount);
+    var status = statusOverride || field(form, "status").value;
+    if ((status === "paid" || status === "fulfilled") && total <= 0) return { error: "Defina os preços antes de marcar como pago ou enviado." };
+    var shipData = {};
+    ["name", "email", "phone", "cep", "street", "number", "complement", "neighborhood", "city", "state"].forEach(function (k) {
+      shipData[k] = field(form, "ship_" + k).value.trim();
+    });
+    return {
+      order: {
+        status: status,
+        customer_email: field(form, "customer_email").value.trim().toLowerCase(),
+        shipping: shipData,
+        items: items,
+        shipping_cents: shipping,
+        discount_cents: discount,
+        payment_method: field(form, "payment_method").value,
+        tracking_code: field(form, "tracking_code").value.trim(),
+        staff_note: field(form, "staff_note").value,
+      },
+      total: total,
+    };
+  }
 
-    var totalRaw = form.querySelector('[name="total"]').value;
-    var total = money.parseMoneyToCents(totalRaw);
-    if (total === null) { setFormError(form, "Total inválido — use o formato 197,00."); return; }
-    if (total !== order.total_cents || itemPrices.length) patch.totalCents = total;
-
-    var status = forceStatus || form.querySelector('[name="status"]').value;
-    if (status !== order.status) patch.status = status;
-    if ((status === "paid" || status === "fulfilled") && total <= 0) {
-      setFormError(form, "Defina o total do pedido antes de marcar como pago.");
-      return;
-    }
-    var note = form.querySelector('[name="note"]').value;
-    if (note.trim() !== (order.staff_note || "")) patch.staffNote = note;
-
-    if (!Object.keys(patch).length) { toast("NADA PARA SALVAR"); return; }
+  async function saveOrder(form, statusOverride) {
+    setFormError(form, "");
+    var id = form.getAttribute("data-id") || null;
+    var data = collectOrder(form, statusOverride);
+    if (data.error) { setFormError(form, data.error); return; }
+    var previous = id ? state.orders.find(function (o) { return o.id === id; }) : null;
     setBusy(form, true);
-    var res = await svc.updateOrder(id, patch);
+    var res = await svc.saveOrder(id, data.order);
     if (destroyed) return;
     setBusy(form, false);
     if (!res.ok) { setFormError(form, res.message); return; }
-    toast(patch.status ? "PEDIDO #" + order.short_id + " — " + ORDER_STATUS[patch.status].toUpperCase() : "PEDIDO #" + order.short_id + " SALVO");
+    var label = "PEDIDO #" + res.data.short_id;
+    if (!id) {
+      bodyEl.querySelector("[data-order-new]").innerHTML = "";
+      state.orderStatus = res.data.status;
+      state.orderSearch = "";
+      state.openOrderId = res.data.id;
+      toast(label + " CRIADO");
+      renderPanel();
+      loadOverview();
+      return;
+    }
+    toast(previous && previous.status !== res.data.status ? label + " — " + ORDER_STATUS[res.data.status].toUpperCase() : label + " SALVO");
+    loadOrders();
+    loadOverview();
+  }
+
+  async function deleteOrder(id, btn) {
+    if (btn.getAttribute("data-confirm") !== "1") {
+      btn.setAttribute("data-confirm", "1");
+      btn.textContent = "Confirmar: excluir de vez";
+      return;
+    }
+    btn.disabled = true;
+    var res = await svc.deleteOrder(id);
+    if (destroyed) return;
+    if (!res.ok) { btn.disabled = false; setFormError(btn.closest("form"), res.message); return; }
+    state.openOrderId = null;
+    toast("PEDIDO EXCLUÍDO");
     loadOrders();
     loadOverview();
   }
@@ -889,23 +1068,63 @@ export function mountAdminPage(root, _params, onClose) {
     if (!state.customers.length) { el.innerHTML = emptyState(state.customerSearch ? "Nenhum cliente encontrado." : "Nenhum cliente cadastrado ainda."); return; }
     var rows = state.customers.slice(0, MAX_ROWS);
     el.innerHTML =
-      '<table class="admin-table"><thead><tr><th scope="col">Cliente</th><th scope="col">Desde</th><th scope="col">Pedidos</th><th scope="col">Gasto</th><th scope="col">XP</th><th scope="col"><span class="sr-only">Marcas</span></th></tr></thead><tbody>' +
+      '<table class="admin-table"><thead><tr><th scope="col">Cliente</th><th scope="col">Desde</th><th scope="col">Pedidos</th><th scope="col">Gasto</th><th scope="col">XP</th><th scope="col"><span class="sr-only">Marcas</span></th><th scope="col"><span class="sr-only">Ações</span></th></tr></thead><tbody>' +
       rows.map(function (c) {
         var tags = [];
         if (c.is_admin) tags.push('<span class="admin-tag admin-tag--accent">Equipe</span>');
         if (c.newsletter) tags.push('<span class="admin-tag">Newsletter</span>');
         if (c.ranking_opt_in) tags.push('<span class="admin-tag">Ranking</span>');
-        return "<tr>" +
+        return '<tr data-cust-id="' + c.id + '">' +
           '<td data-label="Cliente"><span class="admin-cell"><b>' + esc(c.display_name || c.public_handle || "Sem nome") + "</b><small>" + esc(c.email) + "</small></span></td>" +
           '<td data-label="Desde"><span class="admin-cell">' + fmtDate(c.created_at) + "</span></td>" +
           '<td data-label="Pedidos"><span class="admin-cell">' + c.paid_order_count + " pagos <small>de " + c.order_count + "</small></span></td>" +
           '<td data-label="Gasto"><span class="admin-cell">' + brl(c.total_spent_cents) + "</span></td>" +
           '<td data-label="XP"><span class="admin-cell">' + c.total_xp + " <small>nível " + c.level + "</small></span></td>" +
           '<td data-label="Marcas" class="admin-table-tags"><span class="admin-cell">' + (tags.join("") || '<small>—</small>') + "</span></td>" +
+          '<td data-label="Ações"><span class="admin-cell admin-cust-actions">' +
+            '<button class="admin-text-btn" type="button" data-action="cust-orders" data-value="' + esc(c.email) + '">Pedidos</button>' +
+            '<button class="admin-text-btn" type="button" data-action="cust-new-order" data-id="' + c.id + '">Novo pedido</button>' +
+            '<button class="admin-text-btn" type="button" data-action="cust-xp" data-id="' + c.id + '">Ajustar XP</button>' +
+          "</span></td>" +
         "</tr>";
       }).join("") +
       "</tbody></table>" +
       (state.customers.length > MAX_ROWS ? '<p class="admin-note">Mostrando ' + MAX_ROWS + " de " + state.customers.length + " — use a busca ou exporte o CSV.</p>" : "");
+  }
+
+  function openXpForm(btn, id) {
+    var c = state.customers.find(function (x) { return x.id === id; });
+    if (!c) return;
+    var old = list("customers").querySelector(".admin-xp-row");
+    if (old) old.remove();
+    btn.closest("tr").insertAdjacentHTML("afterend",
+      '<tr class="admin-xp-row"><td colspan="7">' +
+        '<form class="admin-xp-form" data-form="xp" data-id="' + c.id + '" novalidate>' +
+          "<p><b>" + esc(c.display_name || c.email) + "</b> tem " + c.total_xp + " XP (nível " + c.level + ")</p>" +
+          '<div class="admin-form-row">' +
+            '<label class="admin-field">XP (+ ou −)<input name="amount" type="number" step="1" placeholder="Ex.: 100 ou -50"></label>' +
+            '<label class="admin-field admin-field--grow">Motivo<input name="note" maxlength="200" placeholder="Ex.: brinde do evento" autocomplete="off"></label>' +
+          "</div>" +
+          '<p class="admin-form-error" data-form-error role="alert" hidden></p>' +
+          '<div class="admin-form-actions"><button class="btn btn-ghost" type="button" data-action="xp-cancel">Cancelar</button><button class="btn btn-primary" type="submit">Aplicar</button></div>' +
+        "</form>" +
+      "</td></tr>");
+    list("customers").querySelector('.admin-xp-row [name="amount"]').focus();
+  }
+
+  async function adjustXp(form) {
+    setFormError(form, "");
+    var amount = Number(field(form, "amount").value);
+    if (!Number.isInteger(amount) || amount === 0) { setFormError(form, "Informe um número inteiro de XP, positivo ou negativo."); return; }
+    var cust = state.customers.find(function (x) { return x.id === form.getAttribute("data-id"); });
+    if (cust && cust.total_xp + amount < 0) { setFormError(form, "O XP do cliente não pode ficar negativo (tem " + cust.total_xp + " XP)."); return; }
+    setBusy(form, true);
+    var res = await svc.adjustXp(form.getAttribute("data-id"), amount, field(form, "note").value.trim());
+    if (destroyed) return;
+    setBusy(form, false);
+    if (!res.ok) { setFormError(form, res.message); return; }
+    toast("XP AJUSTADO — TOTAL " + res.data.total_xp + " XP");
+    loadCustomers();
   }
 
   function exportCustomers() {
@@ -1253,20 +1472,43 @@ export function mountAdminPage(root, _params, onClose) {
     }
     else if (action === "order-filter") { state.orderStatus = value; state.openOrderId = null; markChip(btn); loadOrders(); }
     else if (action === "order-toggle") {
-      state.openOrderId = state.openOrderId === id ? null : id;
-      var article = btn.closest(".admin-order");
-      var openNow = state.openOrderId === id;
-      article.classList.toggle("is-open", openNow);
-      btn.setAttribute("aria-expanded", String(openNow));
-      article.querySelector(".admin-order-detail").hidden = !openNow;
-      list("orders").querySelectorAll(".admin-order.is-open").forEach(function (other) {
-        if (other === article) return;
-        other.classList.remove("is-open");
-        other.querySelector(".admin-order-summary").setAttribute("aria-expanded", "false");
-        other.querySelector(".admin-order-detail").hidden = true;
+      var previousOrder = state.openOrderId;
+      state.openOrderId = previousOrder === id ? null : id;
+      [previousOrder, id].forEach(function (oid) {
+        if (!oid) return;
+        var o = state.orders.find(function (x) { return x.id === oid; });
+        var el = list("orders").querySelector('[data-order-id="' + oid + '"]');
+        if (o && el) el.outerHTML = orderHtml(o);
       });
     }
-    else if (action === "order-mark-paid") { saveOrder(btn.closest("form"), "paid"); }
+    else if (action === "order-move") { saveOrder(btn.closest("form"), btn.getAttribute("data-status")); }
+    else if (action === "order-new") { openNewOrder(null); }
+    else if (action === "order-new-cancel") { bodyEl.querySelector("[data-order-new]").innerHTML = ""; }
+    else if (action === "order-delete") { deleteOrder(id, btn); }
+    else if (action === "item-add") {
+      var itemForm = btn.closest("form");
+      var newRow = addItemRow(itemForm);
+      newRow.querySelector('[name="item_name"]').focus();
+      recalcOrderForm(itemForm);
+    }
+    else if (action === "item-remove") {
+      var removeForm = btn.closest("form");
+      btn.closest("[data-item-row]").remove();
+      recalcOrderForm(removeForm);
+    }
+    else if (action === "cust-orders") {
+      state.orderStatus = "all";
+      state.orderSearch = value || "";
+      state.openOrderId = null;
+      selectTab("pedidos");
+    }
+    else if (action === "cust-new-order") {
+      var cust = state.customers.find(function (c) { return c.id === id; });
+      state.newOrderPrefill = cust ? { name: cust.display_name || "", email: cust.email || "", account: cust.email || "" } : null;
+      selectTab("pedidos");
+    }
+    else if (action === "cust-xp") { openXpForm(btn, id); }
+    else if (action === "xp-cancel") { var xpRow = btn.closest(".admin-xp-row"); if (xpRow) xpRow.remove(); }
     else if (action === "export-customers") { exportCustomers(); }
     else if (action === "post-filter") { state.postStatus = value; state.rejectingPostId = null; markChip(btn); loadPosts(); }
     else if (action === "post-approve") { btn.disabled = true; moderate(id, "approved"); }
@@ -1368,6 +1610,7 @@ export function mountAdminPage(root, _params, onClose) {
     e.preventDefault();
     var kind = form.getAttribute("data-form");
     if (kind === "order") saveOrder(form);
+    else if (kind === "xp") adjustXp(form);
     else if (kind === "reject") {
       var reason = field(form, "reason").value.trim();
       if (!reason) { setFormError(form, "Informe o motivo da rejeição."); field(form, "reason").focus(); return; }
@@ -1398,8 +1641,11 @@ export function mountAdminPage(root, _params, onClose) {
       }, 300);
       return;
     }
-    if (e.target.matches("[data-item-price]")) recalcOrderForm(e.target.closest("form"));
-    else if (e.target.matches('[data-form="order"] [name="total"]')) e.target.setAttribute("data-dirty", "");
+    var orderForm = e.target.closest('[data-form="order"]');
+    if (orderForm) {
+      if (e.target.name === "item_name") onItemName(e.target);
+      recalcOrderForm(orderForm);
+    }
   }
 
   // escolha de fotos (produto aberto ou novo produto)

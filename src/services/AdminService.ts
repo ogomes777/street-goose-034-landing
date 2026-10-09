@@ -31,16 +31,36 @@ export interface AdminOrder {
   status: OrderStatus;
   currency: string;
   subtotal_cents: number;
+  shipping_cents: number;
+  discount_cents: number;
   total_cents: number;
   coupon_code: string | null;
   shipping_address: Record<string, string> | null;
   payment_method: string | null;
   payment_provider_ref: string | null;
+  tracking_code: string | null;
   staff_note: string | null;
+  source: "site" | "admin";
   created_at: string;
   updated_at: string;
-  customer: { id: string | null; email: string | null; display_name: string | null };
+  /** null = pedido sem conta no site (manual) */
+  customer: { id: string; email: string | null; display_name: string | null } | null;
   items: AdminOrderItem[];
+}
+
+export type OrderCounts = Record<OrderStatus | "all", number>;
+
+/** Pedido completo para criar/salvar (migration 0103: admin_save_order). */
+export interface AdminOrderInput {
+  status: OrderStatus;
+  customer_email: string;
+  shipping: Record<string, string>;
+  items: Array<{ product_id: string; product_name: string; qty: number; unit_price_cents: number }>;
+  shipping_cents: number;
+  discount_cents: number;
+  payment_method: "whatsapp" | "pix" | "cartao" | "dinheiro" | "outro";
+  tracking_code: string;
+  staff_note: string;
 }
 
 export interface AdminOrderUpdate {
@@ -136,6 +156,17 @@ const MESSAGES: Record<string, string> = {
   invalid_price: "Preço inválido.",
   invalid_total: "Total inválido.",
   duplicate: "Já existe um cupom com esse código.",
+  customer_not_found: "Nenhuma conta do site com esse e-mail. Deixe vazio para pedido sem conta.",
+  delete_not_allowed: "Só pedido aguardando ou cancelado pode ser excluído. Cancele antes, se for o caso.",
+  items_required: "Adicione pelo menos um item.",
+  too_many_items: "No máximo 50 itens por pedido.",
+  invalid_qty: "Quantidade de 1 a 99 por item.",
+  item_name_required: "Todo item precisa de um nome.",
+  invalid_payment: "Forma de pagamento inválida.",
+  invalid_amount: "Informe uma quantidade de XP diferente de zero.",
+  xp_negative: "O XP do cliente não pode ficar negativo.",
+  invalid_order: "Dados do pedido inválidos.",
+  upload_failed: "Falha no envio da foto.",
 };
 
 function fail<T>(reason: string, detail?: string): AdminResult<T> {
@@ -181,6 +212,25 @@ export const AdminService = {
       p_limit: 200,
       p_offset: 0,
     });
+  },
+
+  orderCounts(): Promise<AdminResult<OrderCounts>> {
+    return rpc<OrderCounts>("admin_order_counts");
+  },
+
+  /** orderId null = pedido novo (manual). Itens substituem os anteriores. */
+  async saveOrder(orderId: string | null, order: AdminOrderInput): Promise<AdminResult<{ id: string; short_id: string; total_cents: number; status: OrderStatus }>> {
+    const res = await rpc<{ id: string; short_id: string; total_cents: number; status: OrderStatus; error?: string }>("admin_save_order", { p_order_id: orderId, p_order: order });
+    if (res.ok && res.data.error) return fail(res.data.error);
+    return res;
+  },
+
+  deleteOrder(orderId: string): Promise<AdminResult<unknown>> {
+    return rpc("admin_delete_order", { p_order_id: orderId });
+  },
+
+  adjustXp(userId: string, amount: number, note: string): Promise<AdminResult<{ total_xp: number }>> {
+    return rpc("admin_adjust_xp", { p_user_id: userId, p_amount: amount, p_note: note || null });
   },
 
   updateOrder(orderId: string, patch: AdminOrderUpdate): Promise<AdminResult<AdminOrder>> {
