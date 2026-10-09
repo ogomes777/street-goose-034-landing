@@ -53,7 +53,10 @@ function verifyCspInlineHashes(): Plugin {
     name: "street-goose-verify-csp",
     closeBundle() {
       const csp = securityHeaders["Content-Security-Policy"] ?? "";
-      const html = readFileSync(fileURLToPath(new URL("./dist/index.html", import.meta.url)), "utf8");
+      const htmlPath = fileURLToPath(new URL("./dist/index.html", import.meta.url));
+      // build que falhou antes não gera index.html: não mascarar o erro real
+      if (!existsSync(htmlPath)) return;
+      const html = readFileSync(htmlPath, "utf8");
       for (const m of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) {
         const hash = "sha256-" + createHash("sha256").update(m[1], "utf8").digest("base64");
         if (!csp.includes(hash)) {
