@@ -1,15 +1,12 @@
-/* Street Goose 034 — dropdown de conta (visível só quando logado; deslogado
-   o clique no botão abre o modal de login direto, tratado em auth-modal.js).
-   Cabeçalho com identidade + cartão de nível (XP real do backend), itens com
-   ícone/descrição e selo de admin quando is_admin(). Só um menu do topo
-   abre por vez: avisa via "sg:menu-open" e fecha quando outro abre. */
+/* Street Goose 034 — painel de conta.
+   Um único componente (window.SG.accountPanel) usado em dois lugares com a
+   mesma marcação e estética: o dropdown do header no desktop e o menu
+   lateral no mobile (js/mobile-account.js). Cabeçalho com identidade +
+   cartão de nível (XP real do backend), itens com ícone/descrição e selo
+   de admin quando is_admin(). Só um menu do topo abre por vez: avisa via
+   "sg:menu-open" e fecha quando outro abre. */
 (function () {
   "use strict";
-
-  var wrap = document.querySelector("[data-account-menu-wrap]");
-  var btn = document.querySelector("[data-open-account]");
-  var dropdown = document.querySelector("[data-account-dropdown]");
-  if (!wrap || !btn || !dropdown) return;
 
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
   function esc(v) { return window.SG.esc ? window.SG.esc(v) : String(v == null ? "" : v); }
@@ -49,8 +46,7 @@
     );
   }
 
-  var session = null;
-  function identity() {
+  function identity(session) {
     var user = session && session.user;
     var meta = (user && user.user_metadata) || {};
     var name = meta.name || meta.full_name || (user && user.email) || t("nav.account.member");
@@ -58,9 +54,9 @@
     return { name: name, email: (user && user.email) || "", initial: name.charAt(0).toUpperCase(), avatar: avatar };
   }
 
-  function render() {
-    var id = identity();
-    dropdown.innerHTML =
+  function panelHtml(session) {
+    var id = identity(session);
+    return (
       '<div class="acct-head">' +
         '<span class="acct-avatar">' + (id.avatar ? '<img src="' + esc(id.avatar) + '" alt="" referrerpolicy="no-referrer">' : esc(id.initial)) + "</span>" +
         '<span class="acct-id"><span class="acct-name">' + esc(id.name) + "</span>" +
@@ -76,18 +72,19 @@
       '<div class="acct-foot">' +
         '<button class="acct-signout" type="button" role="menuitem" data-account-signout>' + icon("signout") + "<span>" + esc(t("nav.account.signOut")) + "</span></button>" +
         '<span class="acct-mark">STREET GOOSE <b>034</b></span>' +
-      "</div>";
+      "</div>"
+    );
   }
 
   // nível/XP reais (RewardsService lê xp_totals + levels); sem dado, o cartão some
-  function renderLevel() {
-    var card = dropdown.querySelector("[data-acct-level]");
+  function hydrateLevel(root, alive) {
+    var card = root.querySelector("[data-acct-level]");
     if (!card) return;
     import("../src/services/RewardsService.ts")
       .then(function (m) { return m.RewardsService.getMyXpStatus(); })
       .catch(function () { return null; })
       .then(function (xp) {
-        if (!open || !card.isConnected) return;
+        if (!alive() || !card.isConnected) return;
         if (!xp) { card.remove(); return; }
         card.classList.remove("is-loading");
         card.querySelector(".acct-level-name").textContent = t("account.level") + " " + xp.level.levelNumber + " · " + xp.level.name;
@@ -103,14 +100,13 @@
 
   // "Painel da loja" só aparece para quem o banco diz que é admin (is_admin(),
   // migration 0100). Esconder o link é conveniência — quem protege é o RLS.
-  // Checado a cada abertura: a conta logada pode ter mudado desde a última.
-  function renderAdminLink() {
+  function hydrateAdmin(root, alive) {
     import("../src/services/AdminService.ts")
       .then(function (m) { return m.AdminService.isAdmin(); })
       .catch(function () { return false; })
       .then(function (isAdmin) {
-        var list = dropdown.querySelector("[data-acct-list]");
-        if (!isAdmin || !open || !list || dropdown.querySelector("[data-account-admin]")) return;
+        var list = root.querySelector("[data-acct-list]");
+        if (!isAdmin || !alive() || !list || root.querySelector("[data-account-admin]")) return;
         list.insertAdjacentHTML("beforeend", itemHtml(
           { href: "/admin", icon: "admin", label: "nav.account.admin", hint: "nav.account.hint.admin", attr: " data-account-admin" },
           ITEMS.length, " acct-item--admin", '<span class="acct-badge">ADMIN</span>'
@@ -118,11 +114,40 @@
       });
   }
 
+  async function signOut() {
+    var mod = await import("../src/services/AuthService.ts");
+    await mod.AuthService.signOut();
+    if (window.SG.toast) window.SG.toast("SESSÃO ENCERRADA");
+  }
+
+  // API compartilhada: preenche `root` com o painel completo da sessão.
+  // `alive()` diz se o container ainda está visível (evita escrever em
+  // painel já fechado quando o XP/admin chega depois).
+  window.SG.accountPanel = {
+    fill: function (root, session, alive) {
+      alive = alive || function () { return true; };
+      root.innerHTML = panelHtml(session);
+      hydrateLevel(root, alive);
+      hydrateAdmin(root, alive);
+    },
+    signOut: signOut
+  };
+
+  /* ---------------- dropdown do header (desktop) ---------------- */
+  var wrap = document.querySelector("[data-account-menu-wrap]");
+  var btn = document.querySelector("[data-open-account]");
+  var dropdown = document.querySelector("[data-account-dropdown]");
+  if (!wrap || !btn || !dropdown) return;
+
+  var session = null;
+  var open = false;
+  function isOpen() { return open; }
+  function paint() { window.SG.accountPanel.fill(dropdown, session, isOpen); }
+
   function focusables() {
     return Array.prototype.slice.call(dropdown.querySelectorAll('[role="menuitem"]'));
   }
 
-  var open = false;
   function setOpen(v) {
     if (v === open) return;
     open = v;
@@ -130,14 +155,12 @@
     btn.setAttribute("aria-expanded", String(v));
     if (v) {
       document.dispatchEvent(new CustomEvent("sg:menu-open", { detail: "account" }));
-      render();
-      renderLevel();
-      renderAdminLink();
+      paint();
       (window.SG.auth ? window.SG.auth.getSession() : Promise.resolve(null)).then(function (s) {
         if (!open || !s) return;
         var before = session && session.user && session.user.id;
         session = s;
-        if (before !== s.user.id) { render(); renderLevel(); renderAdminLink(); }
+        if (before !== s.user.id) paint();
       });
     }
   }
@@ -151,11 +174,9 @@
 
   dropdown.addEventListener("click", async function (e) {
     if (e.target.closest("[data-account-signout]")) {
-      var mod = await import("../src/services/AuthService.ts");
-      await mod.AuthService.signOut();
+      await signOut();
       session = null;
       setOpen(false);
-      if (window.SG.toast) window.SG.toast("SESSÃO ENCERRADA");
       return;
     }
     if (e.target.closest("a[href]")) setOpen(false);
@@ -191,7 +212,7 @@
   document.addEventListener("keydown", function (e) {
     if (open && e.key === "Escape") { setOpen(false); btn.focus(); }
   });
-  document.addEventListener("sg:lang-change", function () { if (open) { render(); renderLevel(); renderAdminLink(); } });
+  document.addEventListener("sg:lang-change", function () { if (open) paint(); });
 })();
 
 export {};

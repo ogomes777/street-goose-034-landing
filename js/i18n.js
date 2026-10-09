@@ -37,6 +37,9 @@
     "prefs.title": { "pt-BR": "Preferências", en: "Preferences", es: "Preferencias" },
     "prefs.sub": { "pt-BR": "Tema e idioma da Street Goose", en: "Street Goose theme and language", es: "Tema e idioma de Street Goose" },
     "prefs.note": { "pt-BR": "Salvo neste dispositivo", en: "Saved on this device", es: "Guardado en este dispositivo" },
+    "nav.account.guestTitle": { "pt-BR": "Entre na Street Goose", en: "Sign in to Street Goose", es: "Entra en Street Goose" },
+    "nav.account.guestSub": { "pt-BR": "Pedidos, favoritos, XP e cupons num lugar só", en: "Orders, favorites, XP and coupons in one place", es: "Pedidos, favoritos, XP y cupones en un solo lugar" },
+    "nav.account.guestCta": { "pt-BR": "Entrar ou criar conta", en: "Sign in or create account", es: "Entrar o crear cuenta" },
     "nav.search": { "pt-BR": "Buscar", en: "Search", es: "Buscar" },
     "nav.bag": { "pt-BR": "Sacola", en: "Bag", es: "Bolsa" },
 

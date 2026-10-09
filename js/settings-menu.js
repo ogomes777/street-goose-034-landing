@@ -25,7 +25,9 @@
 
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
 
-  function render() {
+  // corpo das preferências (tema + idioma), compartilhado entre o popover
+  // do header e o menu lateral do mobile (js/mobile-account.js)
+  function prefsBodyHtml() {
     var currentTheme = window.SG.theme.get();
     var currentLang = window.SG.i18n ? window.SG.i18n.get() : "pt-BR";
     var CHECK = '<svg class="pref-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>';
@@ -52,15 +54,22 @@
       );
     }).join("");
 
+    return (
+      '<p class="pref-group-label">' + t("theme.label") + '</p><div class="pref-theme-grid">' + themeHtml + "</div>" +
+      '<p class="pref-group-label">' + t("lang.label") + '</p><div class="pref-lang-seg" role="group" aria-label="' + t("lang.label") + '">' + langHtml + "</div>" +
+      '<p class="pref-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>' + t("prefs.note") + "</p>"
+    );
+  }
+  window.SG.prefsPanel = { html: prefsBodyHtml };
+
+  function render() {
     dropdown.innerHTML =
       '<div class="pref-panel-head">' +
         '<span class="pref-panel-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></span>' +
         "<div><p class=\"pref-panel-title\">" + t("prefs.title") + "</p><p class=\"pref-panel-sub\">" + t("prefs.sub") + "</p></div>" +
         '<button class="pref-panel-close" type="button" data-pref-close aria-label="' + t("common.close") + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
       "</div>" +
-      '<p class="pref-group-label">' + t("theme.label") + '</p><div class="pref-theme-grid">' + themeHtml + "</div>" +
-      '<p class="pref-group-label">' + t("lang.label") + '</p><div class="pref-lang-seg" role="group" aria-label="' + t("lang.label") + '">' + langHtml + "</div>" +
-      '<p class="pref-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>' + t("prefs.note") + "</p>";
+      prefsBodyHtml();
 
     dropdown.querySelector("[data-pref-close]").addEventListener("click", function () { setOpen(false); });
   }
@@ -97,9 +106,9 @@
 
   document.addEventListener("click", function (e) {
     var themeBtn = e.target.closest("[data-set-theme]");
-    if (themeBtn) { window.SG.theme.set(themeBtn.getAttribute("data-set-theme")); if (open) render(); syncFixedControls(); return; }
+    if (themeBtn) { window.SG.theme.set(themeBtn.getAttribute("data-set-theme")); if (open) render(); syncFixedControls(); document.dispatchEvent(new CustomEvent("sg:prefs-change")); return; }
     var langBtn = e.target.closest("[data-set-lang]");
-    if (langBtn && window.SG.i18n) { window.SG.i18n.set(langBtn.getAttribute("data-set-lang")); if (open) render(); syncFixedControls(); return; }
+    if (langBtn && window.SG.i18n) { window.SG.i18n.set(langBtn.getAttribute("data-set-lang")); if (open) render(); syncFixedControls(); document.dispatchEvent(new CustomEvent("sg:prefs-change")); return; }
     if (open && !wrap.contains(e.target)) setOpen(false, true);
   });
   document.addEventListener("keydown", function (e) {
