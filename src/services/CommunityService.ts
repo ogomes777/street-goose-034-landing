@@ -1,9 +1,11 @@
 /* Street Goose 034 — CommunityService: a rede social da marca.
    Upload vai para o bucket privado 'community'; o post nasce 'pending' e só
    fica público quando a equipe aprova (painel). O feed público vem de
-   community_feed (0105): autor como @apelido ou primeiro nome, nível, peça
-   marcada, curtidas. Fotos aprovadas são servidas por URL assinada (uma
-   chamada para o lote inteiro). */
+   community_feed (0105/0108): autor como @apelido ou primeiro nome, nível,
+   peça marcada, curtidas, comentários. Fotos aprovadas são servidas por URL
+   assinada (uma chamada para o lote inteiro). Comentários e perfil público
+   vêm da 0108 — sem ela no banco, essas chamadas só respondem "indisponível"
+   e o resto do feed segue igual. */
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 export type PostStatus = "pending" | "approved" | "rejected";
@@ -27,9 +29,35 @@ export interface FeedPost {
   createdAt: string;
   featured: boolean;
   likeCount: number;
+  commentCount: number;
   liked: boolean;
   mine: boolean;
   author: FeedAuthor;
+}
+
+export interface CommentItem {
+  id: string;
+  body: string;
+  createdAt: string;
+  mine: boolean;
+  canDelete: boolean;
+  author: FeedAuthor;
+}
+
+export interface CommunityProfile extends FeedAuthor {
+  posts: number;
+  likes: number;
+  since: string | null;
+  me: boolean;
+}
+
+/** Ajustes do compositor: recorte (proporção + ponto de foco, mesma lógica
+ *  do object-position da prévia) e filtro aplicados na foto antes do envio. */
+export interface PublishEdit {
+  aspect: number | null; // largura/altura; null = original
+  focusX: number; // 0..1
+  focusY: number; // 0..1
+  filter: string | null; // valor CSS de filter (ex.: "grayscale(1) contrast(1.15)")
 }
 
 export interface FeedStats {
@@ -73,9 +101,52 @@ interface FeedRow {
   created_at: string;
   featured: boolean;
   like_count: number;
+  comment_count?: number; // 0108
   liked: boolean;
   mine: boolean;
-  author: { id: string; name: string; avatar_url: string | null; level: number; level_name: string | null };
+  author: AuthorRow;
+}
+
+interface AuthorRow { id: string; name: string; avatar_url: string | null; level: number; level_name: string | null }
+
+function mapAuthor(a: AuthorRow): FeedAuthor {
+  return { id: a.id, name: a.name, avatarUrl: a.avatar_url, level: a.level, levelName: a.level_name };
+}
+
+interface CommentRow { id: string; body: string; created_at: string; mine: boolean; can_delete: boolean; author: AuthorRow }
+
+function mapComment(r: CommentRow): CommentItem {
+  return { id: r.id, body: r.body, createdAt: r.created_at, mine: !!r.mine, canDelete: !!r.can_delete, author: mapAuthor(r.author) };
+}
+
+const COMMENT_ERRORS: Record<string, string> = {
+  auth_required: "Entre na sua conta para comentar.",
+  rate_limited: "Muitos comentários seguidos. Respira e tenta já já.",
+  empty: "Escreve alguma coisa antes de enviar.",
+  too_long: "Comentário com no máximo 400 caracteres.",
+  not_found: "Esse visual não está mais no ar.",
+  forbidden: "Você não pode apagar esse comentário.",
+};
+
+let filterSupport: boolean | null = null;
+/** ctx.filter existe e funciona de verdade (Safari antigo ignora calado):
+ *  pinta um pixel vermelho em tons de cinza e confere. */
+export function canvasFiltersWork(): boolean {
+  if (filterSupport !== null) return filterSupport;
+  try {
+    const c = document.createElement("canvas");
+    c.width = c.height = 1;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    if (!ctx || typeof ctx.filter !== "string") return (filterSupport = false);
+    ctx.filter = "grayscale(1)";
+    ctx.fillStyle = "#ff0000";
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    filterSupport = Math.abs(r - g) < 8 && Math.abs(g - b) < 8;
+  } catch {
+    filterSupport = false;
+  }
+  return filterSupport;
 }
 
 async function signUrls(paths: string[]): Promise<Map<string, string>> {
@@ -112,10 +183,10 @@ function toBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promi
   return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 }
 
-/** Reduz para no máximo MAX_EDGE, reencoda (some EXIF/GPS do celular) e
- *  devolve a proporção. Sem conseguir ler (HEIC fora do Safari), usa o
- *  arquivo original se couber no bucket. */
-async function prepareImage(file: File): Promise<Result<{ blob: Blob; ext: string; width: number | null; height: number | null }>> {
+/** Recorta (se pedido), aplica o filtro, reduz para no máximo MAX_EDGE,
+ *  reencoda (some EXIF/GPS do celular) e devolve a proporção. Sem conseguir
+ *  ler (HEIC fora do Safari), usa o arquivo original se couber no bucket. */
+async function prepareImage(file: File, edit?: PublishEdit | null): Promise<Result<{ blob: Blob; ext: string; width: number | null; height: number | null }>> {
   const decoded = await decode(file);
   if (!decoded) {
     if (file.size <= MAX_UPLOAD_BYTES) {
@@ -124,16 +195,31 @@ async function prepareImage(file: File): Promise<Result<{ blob: Blob; ext: strin
     }
     return { ok: false, reason: "unreadable", message: "Não deu para ler essa foto aqui. Envie em JPG ou PNG." };
   }
-  const scale = Math.min(1, MAX_EDGE / Math.max(decoded.width, decoded.height));
-  const width = Math.max(1, Math.round(decoded.width * scale));
-  const height = Math.max(1, Math.round(decoded.height * scale));
+  // recorte = mesma conta do object-fit:cover + object-position da prévia
+  let sx = 0, sy = 0, sw = decoded.width, sh = decoded.height;
+  if (edit && edit.aspect && edit.aspect > 0) {
+    const fx = Math.min(1, Math.max(0, edit.focusX));
+    const fy = Math.min(1, Math.max(0, edit.focusY));
+    if (sw / sh > edit.aspect) {
+      sw = Math.round(sh * edit.aspect);
+      sx = Math.round((decoded.width - sw) * fx);
+    } else {
+      sh = Math.round(sw / edit.aspect);
+      sy = Math.round((decoded.height - sh) * fy);
+    }
+  }
+  const scale = Math.min(1, MAX_EDGE / Math.max(sw, sh));
+  const width = Math.max(1, Math.round(sw * scale));
+  const height = Math.max(1, Math.round(sh * scale));
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) { decoded.release(); return { ok: false, reason: "unreadable", message: "Não deu para preparar a foto neste aparelho." }; }
   ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(decoded.source, 0, 0, width, height);
+  if (edit && edit.filter && canvasFiltersWork()) ctx.filter = edit.filter;
+  ctx.drawImage(decoded.source, sx, sy, sw, sh, 0, 0, width, height);
+  ctx.filter = "none";
   decoded.release();
   let blob = await toBlob(canvas, "image/webp", 0.86);
   let ext = "webp";
@@ -147,6 +233,11 @@ async function prepareImage(file: File): Promise<Result<{ blob: Blob; ext: strin
 export const CommunityService = {
   isConfigured(): boolean {
     return isSupabaseConfigured;
+  },
+
+  /** filtros do compositor só aparecem onde o envio consegue aplicá-los */
+  canFilter(): boolean {
+    return canvasFiltersWork();
   },
 
   validateFile(file: File): { ok: true } | { ok: false; message: string } {
@@ -179,17 +270,60 @@ export const CommunityService = {
         createdAt: r.created_at,
         featured: r.featured,
         likeCount: r.like_count,
+        commentCount: r.comment_count ?? 0,
         liked: r.liked,
         mine: r.mine,
-        author: {
-          id: r.author.id,
-          name: r.author.name,
-          avatarUrl: r.author.avatar_url,
-          level: r.author.level,
-          levelName: r.author.level_name,
-        },
+        author: mapAuthor(r.author),
       })),
     };
+  },
+
+  /** null = comentários indisponíveis (rede, ou 0108 ainda não aplicada) */
+  async getComments(postId: string, offset = 0, limit = 50): Promise<{ items: CommentItem[]; total: number } | null> {
+    if (!supabase) return null;
+    const { data, error } = await supabase.rpc("community_comments", { p_post_id: postId, p_limit: limit, p_offset: offset });
+    if (error || !data) return null;
+    const res = data as { ok: boolean; items?: CommentRow[]; total?: number };
+    if (!res.ok) return { items: [], total: 0 };
+    return { items: (res.items ?? []).map(mapComment), total: res.total ?? 0 };
+  },
+
+  async addComment(postId: string, body: string): Promise<Result<{ comment: CommentItem; commentCount: number }>> {
+    if (!supabase) return { ok: false, reason: "not_configured", message: "Comunidade indisponível agora." };
+    const { data, error } = await supabase.rpc("community_add_comment", { p_post_id: postId, p_body: body });
+    if (error || !data) return { ok: false, reason: "error", message: "Não foi possível comentar agora." };
+    const res = data as { ok: boolean; reason?: string; comment?: CommentRow; comment_count?: number };
+    if (!res.ok || !res.comment) {
+      return { ok: false, reason: res.reason, message: COMMENT_ERRORS[res.reason ?? ""] ?? "Não foi possível comentar agora." };
+    }
+    return { ok: true, comment: mapComment(res.comment), commentCount: res.comment_count ?? 0 };
+  },
+
+  async deleteComment(commentId: string): Promise<Result<{ commentCount: number }>> {
+    if (!supabase) return { ok: false, reason: "not_configured", message: "Comunidade indisponível agora." };
+    const { data, error } = await supabase.rpc("community_delete_comment", { p_comment_id: commentId });
+    if (error || !data) return { ok: false, reason: "error", message: "Não foi possível apagar agora." };
+    const res = data as { ok: boolean; reason?: string; comment_count?: number };
+    if (!res.ok) return { ok: false, reason: res.reason, message: COMMENT_ERRORS[res.reason ?? ""] ?? "Não foi possível apagar agora." };
+    return { ok: true, commentCount: res.comment_count ?? 0 };
+  },
+
+  /** perfil público; null = não existe (sem visual no ar) ou indisponível */
+  async getProfile(userId: string): Promise<CommunityProfile | null> {
+    if (!supabase) return null;
+    const { data, error } = await supabase.rpc("community_profile", { p_user: userId });
+    if (error || !data) return null;
+    const res = data as { ok: boolean; profile?: AuthorRow & { posts: number; likes: number; since: string | null; me: boolean } };
+    if (!res.ok || !res.profile) return null;
+    const p = res.profile;
+    return { ...mapAuthor(p), posts: p.posts, likes: p.likes, since: p.since, me: !!p.me };
+  },
+
+  /** id de quem está logado (null = visitante) */
+  async getMyId(): Promise<string | null> {
+    if (!supabase) return null;
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user.id ?? null;
   },
 
   async toggleLike(postId: string): Promise<Result<{ liked: boolean; likeCount: number }>> {
@@ -222,7 +356,8 @@ export const CommunityService = {
     caption: string,
     productId: string | null,
     onStage?: (stage: PublishStage) => void,
-  ): Promise<Result> {
+    edit?: PublishEdit | null,
+  ): Promise<Result<{ id?: string; width?: number | null; height?: number | null }>> {
     if (!supabase) return { ok: false, message: "Publicação ainda não configurada — falta backend Supabase." };
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return { ok: false, reason: "auth_required", message: "É preciso estar logado para publicar." };
@@ -231,7 +366,7 @@ export const CommunityService = {
     if (!valid.ok) return valid;
 
     onStage?.("optimizing");
-    const prepared = await prepareImage(file);
+    const prepared = await prepareImage(file, edit);
     if (!prepared.ok) return prepared;
 
     onStage?.("uploading");
@@ -242,19 +377,19 @@ export const CommunityService = {
 
     onStage?.("saving");
     // sem "status": o banco grava 'pending' e a policy da 0010 só aceita isso
-    const { error: insertError } = await supabase.from("community_posts").insert({
+    const { data: inserted, error: insertError } = await supabase.from("community_posts").insert({
       user_id: auth.user.id,
       image_path: path,
       caption: caption.trim() || null,
       product_id: productId,
       image_width: prepared.width,
       image_height: prepared.height,
-    });
+    }).select("id").maybeSingle();
     if (insertError) {
       await supabase.storage.from("community").remove([path]).catch(() => undefined);
       return { ok: false, message: "Falha ao registrar a publicação. Tente de novo." };
     }
-    return { ok: true };
+    return { ok: true, id: inserted?.id, width: prepared.width, height: prepared.height };
   },
 
   async getMine(): Promise<MyPost[]> {
