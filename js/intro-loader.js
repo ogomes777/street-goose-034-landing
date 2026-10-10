@@ -7,7 +7,7 @@
    no fim, que popup.js (gatilho do drop) e music-player.js escutam.
 
    Sincronização de áudio: o MP3 da intro toca baixo (10%) desde o início;
-   pouco antes de Kibão apertar o rádio (6.500s de vídeo —
+   pouco antes de Kibão apertar o rádio (9.500s de vídeo —
    INTRO_MUSIC_CUE_SECONDS), a trilha global (window.SG.music) dispara e o
    áudio da intro sofre ducking pra ~4-5%. O relógio do vídeo é a fonte de
    verdade (requestVideoFrameCallback/rAF lendo video.currentTime), nunca
@@ -26,10 +26,9 @@
   var introEl = document.querySelector("[data-intro-loader]");
   if (!introEl) return;
 
-  var INTRO_MUSIC_CUE_SECONDS = 6.5;
-  // O MP3 tem quase 3,7 s de silêncio no começo. Pular 2 s desse silêncio
-  // faz a trilha da intro aparecer antes, mantendo o início do áudio alinhado.
-  var INTRO_AUDIO_LEAD_SECONDS = 2.0;
+  var INTRO_MUSIC_CUE_SECONDS = 9.5;
+  // Arquivos completos, sincronizados desde o zero.
+  var INTRO_AUDIO_LEAD_SECONDS = 0;
   var MP4_VOLUME = 0.10;
   var MP4_DUCKED_VOLUME = 0.045;
   var DUCK_MS = 300;
@@ -234,7 +233,6 @@
   function fireCue() {
     if (cueFired) return;
     cueFired = true;
-    stopCueMonitor();
     duckVideoAudio();
     if (window.SG.music && window.SG.music.triggerCue) {
       window.SG.music.triggerCue();
@@ -244,18 +242,29 @@
     }
   }
 
+  function syncAudioClock(time) {
+    if (video.paused || video.readyState < 3) return;
+    if (introAudio && Math.abs(introAudio.currentTime - introAudioTimeFor(time)) > 0.15) {
+      try { introAudio.currentTime = introAudioTimeFor(time); } catch (e) {}
+    }
+    if (cueFired && window.SG.music) {
+      window.SG.music.resumeFromResync(Math.max(0, time - INTRO_MUSIC_CUE_SECONDS));
+    }
+  }
   function startCueMonitor() {
     if (typeof video.requestVideoFrameCallback === "function") {
       var rvfcTick = function (now, metadata) {
-        if (cueFired || finished) return;
-        if (metadata.mediaTime >= INTRO_MUSIC_CUE_SECONDS) { fireCue(); return; }
+        if (finished) return;
+        syncAudioClock(metadata.mediaTime);
+        if (metadata.mediaTime >= INTRO_MUSIC_CUE_SECONDS) fireCue();
         rvfcHandle = video.requestVideoFrameCallback(rvfcTick);
       };
       rvfcHandle = video.requestVideoFrameCallback(rvfcTick);
     } else {
       var rafTick = function () {
-        if (cueFired || finished) return;
-        if (video.currentTime >= INTRO_MUSIC_CUE_SECONDS) { fireCue(); return; }
+        if (finished) return;
+        syncAudioClock(video.currentTime);
+        if (video.currentTime >= INTRO_MUSIC_CUE_SECONDS) fireCue();
         rafCueHandle = requestAnimationFrame(rafTick);
       };
       rafCueHandle = requestAnimationFrame(rafTick);

@@ -12,7 +12,7 @@ function copyLegacyWebAssets(): Plugin {
   // fingerprint them through static analysis yet. Other assets are referenced by
   // HTML/React and are handled by Vite normally.
   const webAssetGroups = ["products"];
-  const runtimeHeroAssets = ["curadoria-01.webp", "performance-run.webp", "night-mode.webp"];
+  const runtimeHeroAssets = ["curadoria-01.webp", "performance-run.webp", "street-style.webp", "night-mode.webp"];
 
   return {
     name: "street-goose-copy-web-assets",

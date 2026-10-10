@@ -6,7 +6,7 @@
 
    O disparo da faixa NÃO é mais "quando a intro termina": js/intro-loader.js
    chama window.SG.music.triggerCue() pouco antes de Kibão apertar o rádio
-   (~6,5s de vídeo), sincronizado pelo relógio do próprio vídeo. Este
+   (~9,5s de vídeo), sincronizado pelo relógio do próprio vídeo. Este
    módulo só expõe essa API + o fallback de reexibir o player quando a intro
    acaba (afterIntro) — sem nunca chamar play()/resetar currentTime uma
    segunda vez se a faixa já estiver tocando. */
@@ -20,7 +20,7 @@
   if (!audio) return;
 
   // A intro dura menos de 19 s; começar a buscar a trilha enquanto o vídeo
-  // roda evita que o carregamento de 11 MB atrase o cue dos 6,5 s. Não baixa
+  // roda evita que o carregamento de 11 MB atrase o cue dos 9,5 s. Não baixa
   // a faixa em visitas nas quais a intro já foi dispensada.
   var introLoader = document.querySelector("[data-intro-loader]");
   if (introLoader && !introLoader.hidden && !window.__sgIntroSkipRequested) {
@@ -66,6 +66,8 @@
   var userWantsMuted = audio.muted;
   var autoplayBlocked = false;
   var cueTriggered = false;
+  var playPending = false;
+  var userPaused = false;
 
   function syncUI() {
     var isPaused = audio.paused;
@@ -88,13 +90,20 @@
   }
 
   function attemptPlay() {
-    var p = audio.play();
-    if (p && p.catch) {
-      p.catch(function () {
-        autoplayBlocked = true;
-        syncUI();
-      });
-    }
+    if (playPending) return;
+    playPending = true;
+    var p;
+    try { p = audio.play(); } catch (e) { playPending = false; autoplayBlocked = true; syncUI(); return; }
+    if (p && p.then) p.then(function () {
+      playPending = false;
+      autoplayBlocked = false;
+      syncUI();
+    }, function () {
+      playPending = false;
+      autoplayBlocked = true;
+      syncUI();
+    });
+    else playPending = false;
   }
 
   function play() {
@@ -107,6 +116,7 @@
   audio.addEventListener("volumechange", syncUI);
 
   playBtn && playBtn.addEventListener("click", function () {
+    userPaused = !audio.paused;
     if (audio.paused) play(); else audio.pause();
   });
 
@@ -127,6 +137,7 @@
   });
 
   minimizeBtn && minimizeBtn.addEventListener("click", function () {
+    userPaused = true;
     audio.pause(); // currentTime não é tocado — retomar preserva o ponto exato
     if (orb) { orb.hidden = false; orb.focus(); }
     if (panel) panel.hidden = true;
@@ -135,14 +146,15 @@
   orb && orb.addEventListener("click", function () {
     orb.hidden = true;
     if (panel) panel.hidden = false;
+    userPaused = false;
     if (!userWantsMuted) play();
     playBtn && playBtn.focus();
   });
 
-  // ---- API usada pelo intro-loader (cue nos 6,5s do vídeo) ----
+  // ---- API usada pelo intro-loader (cue nos 9,5s do vídeo) ----
 
   // Dispara a faixa do zero exatamente uma vez por ciclo de intro. Chamado
-  // no cue dos 6,5s (fluxo normal), ou como fallback quando a intro termina
+  // no cue dos 9,5s (fluxo normal), ou como fallback quando a intro termina
   // sem ter disparado o cue (reduced-motion, bypass de teste, pular antes
   // dos 8s, ou timeout/erro do vídeo).
   function triggerCue() {
@@ -167,15 +179,23 @@
       var diff = Math.abs(audio.currentTime - expectedTime);
       if (diff > 0.15) { try { audio.currentTime = expectedTime; } catch (e) {} }
     }
-    if (audio.paused && !userWantsMuted) play();
+    if (audio.paused && !userWantsMuted && !userPaused && !autoplayBlocked) play();
   }
 
   // Gesto real do usuário aconteceu depois (ex: "Ativar som" da intro) —
   // tenta tocar de novo sem reiniciar a posição.
   function retryIfBlocked() {
-    if (!cueTriggered || !audio.paused || userWantsMuted) return;
+    if (!cueTriggered || !audio.paused || userWantsMuted || userPaused) return;
     play();
   }
+
+  // Retry inside a real gesture, including after the intro has closed.
+  document.addEventListener("pointerdown", function (event) {
+    if (!root.contains(event.target) && autoplayBlocked) retryIfBlocked();
+  }, true);
+  document.addEventListener("keydown", function (event) {
+    if (!root.contains(event.target) && autoplayBlocked) retryIfBlocked();
+  }, true);
 
   window.SG.music = {
     audio: audio,

@@ -45,6 +45,14 @@ window.SG_HERO_SLIDES = [
     ctaPrimary: { label: "Ver performance", href: "#performance" }
   },
   {
+    id: "street-style", type: "image", accent: "#FF5A00", mobileFocus: "center",
+    image: "/assets/heroes/web/street-style.webp",
+    eyebrow: "STREET GOOSE 034 / STYLE",
+    heading: "Seu estilo.<br><em>Sua assinatura.</em>",
+    lead: "A curadoria que acompanha sua identidade.",
+    ctaPrimary: { label: "Explorar coleção", href: "#colecao" }
+  },
+  {
     id: "night-mode", type: "image", accent: "#8B5CF6",
     image: "/assets/heroes/web/night-mode.webp",
     focus: "70% center",

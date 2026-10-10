@@ -47,6 +47,7 @@
   var contentAnimation = null;
   var mediaTransitionToken = 0;
   var SLIDE_MS = 7000;
+  var introComplete = !!window.SG.introComplete;
 
   totalEl.textContent = String(slides.length).padStart(2, "0");
 
@@ -112,12 +113,14 @@
   }
 
   function syncHeroActivity() {
-    if (!heroVisible || document.hidden) {
+    if (!introComplete || !heroVisible || document.hidden) {
       clearTimeout(timer);
+      if (progressTween && progressTween.pause) progressTween.pause();
       pauseVideoOffscreen();
       return;
     }
     restartAutoplay();
+    runProgress();
     resumeVideoIfNeeded();
   }
 
@@ -145,6 +148,8 @@
     heroEl.dataset.slideType = slide.type;
     heroEl.dataset.slideId = slide.id;
     mediaTransitionToken += 1;
+    fallbackImg.onload = null;
+    fallbackImg.onerror = null;
     if (slide.type === "video") {
       fallbackImg.style.objectPosition = "center";
       if (fallbackImg.src !== filmPosterSrc) fallbackImg.src = filmPosterSrc;
@@ -172,8 +177,8 @@
         if (fallbackImg.complete && fallbackImg.naturalWidth > 0) {
           revealImage();
         } else {
-          fallbackImg.addEventListener("load", revealImage, { once: true });
-          fallbackImg.addEventListener("error", showPosterOnError, { once: true });
+          fallbackImg.onload = revealImage;
+          fallbackImg.onerror = showPosterOnError;
         }
       } else {
         fallbackImg.style.opacity = "1";
@@ -228,13 +233,16 @@
   }
 
   function runProgress() {
-    if (progressTween) progressTween.kill && progressTween.kill();
+    if (progressTween) {
+      if (progressTween.kill) progressTween.kill();
+      else if (progressTween.cancel) progressTween.cancel();
+    }
     if (reduced) { progressEl.style.width = "100%"; return; }
     progressEl.style.width = "0%";
     if (gsapReady) {
       progressTween = window.gsap.to(progressEl, { width: "100%", duration: SLIDE_MS / 1000, ease: "none" });
     } else if (progressEl.animate) {
-      progressEl.animate([{ width: "0%" }, { width: "100%" }], { duration: SLIDE_MS, fill: "forwards", easing: "linear" });
+      progressTween = progressEl.animate([{ width: "0%" }, { width: "100%" }], { duration: SLIDE_MS, fill: "forwards", easing: "linear" });
     }
   }
 
@@ -259,7 +267,7 @@
 
   function restartAutoplay() {
     clearTimeout(timer);
-    if (!heroVisible || document.hidden) return;
+    if (!introComplete || !heroVisible || document.hidden) return;
     timer = setTimeout(next, SLIDE_MS);
   }
 
@@ -312,6 +320,12 @@
   }, { passive: true });
 
   document.addEventListener("visibilitychange", syncHeroActivity);
+  document.addEventListener("sg:intro-complete", function () {
+    introComplete = true;
+    if (video) { try { video.currentTime = 0; } catch (e) {} }
+    goTo(0, { force: true, silent: true });
+    syncHeroActivity();
+  }, { once: true });
 
   goTo(0, { force: true, silent: true });
   restartAutoplay();

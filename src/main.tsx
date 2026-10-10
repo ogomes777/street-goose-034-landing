@@ -25,8 +25,10 @@ async function bootstrap() {
   legacyWindow.ScrollTrigger = ScrollTrigger;
 
   await import("../js/motion.js");
-  await import("../js/intro-loader.js");
   await import("../js/music-player.js");
+  await import("../js/intro-loader.js");
+  await import("../js/data.js");
+  await import("../js/hero.js");
   await import("../js/config.js");
   await import("../js/theme.js");
   await import("../js/i18n.js");
@@ -36,7 +38,6 @@ async function bootstrap() {
   await import("../js/header-nav.js");
   await import("../js/mobile-account.js");
   await import("../js/toast.js");
-  await import("../js/data.js");
   await import("../js/catalog.js");
   // produtos do banco (/admin → Produtos) antes de qualquer coisa que leia o
   // catálogo — ver js/catalog-sync.js (cache na hora, 1ª visita espera ≤1,5s)
@@ -53,7 +54,6 @@ async function bootstrap() {
   await import("../js/category-portals.js");
   await import("../js/router.js");
   await import("../js/nav-routes.js");
-  await import("../js/hero.js");
   await import("../js/products.js");
   await import("../js/scroll-film.js");
   await import("../js/hero3d-film.js");

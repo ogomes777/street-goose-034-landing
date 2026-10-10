@@ -2169,3 +2169,16 @@ button.admin-post-media{position:relative;width:100%;padding:0;border:0;cursor:z
 .sgc-steps li{transition:padding-left .35s var(--ease),color .3s}
 .sgc-steps li:hover{padding-left:6px;color:var(--text)}
 @media(prefers-reduced-motion:reduce){.sgc-empty::before{animation:none}}
+
+/* Complete mobile campaign artwork above copy. */
+@media (max-width:640px) {
+  .hero[data-slide-type="image"]{height:auto;min-height:0;padding-top:96px}
+  .hero[data-slide-type="image"] .hero-media{position:relative;inset:auto;aspect-ratio:1672/941;width:100%}
+  .hero[data-slide-type="image"] .hero-fallback-img{object-fit:contain;object-position:center!important}
+  .hero[data-slide-type="image"] .hero-video,
+  .hero[data-slide-type="image"] .hero-scrim,
+  .hero[data-slide-type="image"] .hero-canvas{visibility:hidden}
+  .hero[data-slide-type="image"] .hero-track{height:auto;min-height:350px;padding:24px 18px 100px;align-items:flex-start}
+  .hero[data-slide-type="image"] .hero-slide-content h1{font-size:clamp(36px,10vw,54px);line-height:.95}
+  .hero[data-slide-type="image"] .hero-slide-content .lead{margin:16px 0 20px}
+}
