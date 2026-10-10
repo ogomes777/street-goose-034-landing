@@ -460,6 +460,13 @@
 .sgc-discard-card h3{margin:0;font-size:20px;letter-spacing:-.02em}
 .sgc-discard-card p{margin:0 0 10px;font-size:14px;color:var(--muted)}
 
+/* convite do mural vazio dentro da coluna do feed: empilhado (o layout em
+   duas colunas é o da home, largo demais para 600px) */
+.sgc-app .sgc-empty{grid-template-columns:1fr;gap:26px;padding:18px 18px 26px}
+.sgc-app .sgc-empty-art{height:clamp(240px,42vw,380px)}
+.sgc-app .sgc-empty-copy{padding:0 8px}
+.sgc-app .sgc-empty-copy h3{font-size:clamp(28px,3.4vw,40px);margin-bottom:18px}
+
 /* ---------- celular ---------- */
 @media(max-width:760px){
   .app-page.is-community{--sgc-top:65px}
