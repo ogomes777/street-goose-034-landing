@@ -33,21 +33,33 @@
     if (!btn || !label || !avatar) return;
     var GUEST_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM4 21c1.5-4.2 5-6 8-6s6.5 1.8 8 6"/></svg>';
     if (currentSession && currentSession.user) {
-      var name = currentSession.user.user_metadata?.name || currentSession.user.email || "Conta";
+      var meta = currentSession.user.user_metadata || {};
+      var name = meta.name || currentSession.user.email || "Conta";
       var initial = name.charAt(0).toUpperCase();
       var first = name.split(" ")[0];
+      // foto escolhida no perfil (sg_avatar_url; "none" = tirou de propósito),
+      // senão a do login social, senão a inicial
+      var photo = meta.sg_avatar_url === "none" ? null
+        : [meta.sg_avatar_url, meta.avatar_url, meta.picture].filter(function (u) { return typeof u === "string" && /^https:\/\//.test(u); })[0] || null;
       label.textContent = first;
-      avatar.textContent = initial;
+      if (photo) {
+        avatar.innerHTML = '<img src="' + window.SG.esc(photo) + '" alt="" referrerpolicy="no-referrer">';
+        avatar.setAttribute("data-has-photo", "");
+      } else { avatar.textContent = initial; avatar.removeAttribute("data-has-photo"); }
       btn.setAttribute("data-signed-in", "");
       if (mobileLabel) mobileLabel.textContent = first;
-      if (mobileAvatar) mobileAvatar.textContent = initial;
+      if (mobileAvatar) {
+        if (photo) { mobileAvatar.innerHTML = '<img src="' + window.SG.esc(photo) + '" alt="" referrerpolicy="no-referrer">'; mobileAvatar.setAttribute("data-has-photo", ""); }
+        else { mobileAvatar.textContent = initial; mobileAvatar.removeAttribute("data-has-photo"); }
+      }
       if (mobileBtn) mobileBtn.setAttribute("data-signed-in", "");
     } else {
       label.textContent = i18nT("nav.account.signedOut");
       avatar.innerHTML = GUEST_ICON;
+      avatar.removeAttribute("data-has-photo");
       btn.removeAttribute("data-signed-in");
       if (mobileLabel) mobileLabel.textContent = i18nT("nav.account.signedOut");
-      if (mobileAvatar) mobileAvatar.innerHTML = GUEST_ICON;
+      if (mobileAvatar) { mobileAvatar.innerHTML = GUEST_ICON; mobileAvatar.removeAttribute("data-has-photo"); }
       if (mobileBtn) mobileBtn.removeAttribute("data-signed-in");
     }
   }

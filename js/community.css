@@ -532,3 +532,142 @@
   .sgc-sending-ring,.sgc-spinner,.sgc-timeline li.is-current > span{animation-duration:3s}
   .sgc-card-media img,.sgc-gridtile img{transition:none}
 }
+
+/* =========================================================
+   CAMADA PREMIUM — luz, movimento e acabamento
+   ========================================================= */
+/* atmosfera: luzes lentas + grão fino de filme */
+.sgc-app{position:relative;z-index:0}
+.sgc-app::before{content:"";position:fixed;inset:-10%;z-index:-1;pointer-events:none;background:
+  radial-gradient(36% 28% at 16% 10%,color-mix(in srgb,var(--accent) 15%,transparent),transparent 70%),
+  radial-gradient(32% 26% at 88% 18%,color-mix(in srgb,#bfc2c7 16%,transparent),transparent 70%),
+  radial-gradient(42% 30% at 58% 104%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 70%);
+  animation:sgc-ambient 26s ease-in-out infinite alternate}
+.sgc-app::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.045;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+@keyframes sgc-ambient{from{transform:translate3d(-2%,0,0) scale(1)}to{transform:translate3d(2%,3%,0) scale(1.06)}}
+
+/* marca com reflexo metálico passando */
+.sgc-brand-mark{position:relative;overflow:hidden}
+.sgc-brand-mark::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.9) 50%,transparent 65%);transform:translateX(-130%);animation:sgc-sheen 7s ease-in-out infinite 1.2s}
+@keyframes sgc-sheen{0%,74%{transform:translateX(-130%)}88%,100%{transform:translateX(130%)}}
+
+/* botões: pílula, gradiente quente, reflexo no hover, leve elevação */
+:is(.app-page.is-community,.sgc-lightbox,.sgc-sheet,.sgc-composer) .btn{position:relative;gap:8px;border-radius:999px;overflow:hidden;isolation:isolate;transition:transform .22s var(--ease),box-shadow .3s,background .3s,border-color .25s,color .25s}
+:is(.app-page.is-community,.sgc-lightbox,.sgc-sheet,.sgc-composer) .btn:active{transform:scale(.97)}
+:is(.app-page.is-community,.sgc-lightbox,.sgc-sheet,.sgc-composer) .btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+:is(.app-page.is-community,.sgc-lightbox,.sgc-sheet,.sgc-composer) .btn-primary,
+:is(.app-page.is-community,.sgc-lightbox,.sgc-sheet,.sgc-composer) .btn-primary:hover{border-color:transparent;color:#0a0a0a;background:linear-gradient(135deg,#ff6a14,var(--accent) 46%,#ff9150)}
+:is(.app-page.is-community,.sgc-lightbox,.sgc-sheet,.sgc-composer) .btn-primary{box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 14px 32px -16px color-mix(in srgb,var(--accent) 95%,transparent)}
+:is(.app-page.is-community,.sgc-lightbox,.sgc-sheet,.sgc-composer) .btn-primary:hover{transform:translateY(-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 20px 40px -14px color-mix(in srgb,var(--accent) 100%,transparent)}
+:is(.app-page.is-community,.sgc-lightbox,.sgc-sheet,.sgc-composer) .btn-primary::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.6) 48%,transparent 66%);transform:translateX(-120%);transition:transform .9s var(--ease)}
+:is(.app-page.is-community,.sgc-lightbox,.sgc-sheet,.sgc-composer) .btn-primary:hover::after{transform:translateX(120%)}
+:is(.app-page.is-community,.sgc-lightbox,.sgc-sheet,.sgc-composer) .btn-ghost{border-color:var(--border-strong);background:color-mix(in srgb,var(--surface) 55%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:var(--text)}
+:is(.app-page.is-community,.sgc-lightbox,.sgc-sheet,.sgc-composer) .btn-ghost:hover{border-color:var(--text);color:var(--text);transform:translateY(-1px)}
+
+/* abas: pílula que desliza */
+.sgc-nav-ind{position:absolute;left:0;top:5px;height:calc(100% - 10px);width:0;border-radius:999px;background:var(--text);box-shadow:0 10px 26px -12px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.18);opacity:0;pointer-events:none;z-index:0}
+.sgc-nav.is-ready .sgc-nav-ind{transition:transform .55s cubic-bezier(.2,.8,.2,1),width .55s cubic-bezier(.2,.8,.2,1),opacity .3s}
+.sgc-nav button{z-index:1}
+.sgc-nav button[aria-selected="true"]{background:transparent}
+
+/* destaques: entram em cascata; anel do destaque gira devagar */
+.sgc-story{animation:sgc-story-in .65s var(--ease) both;animation-delay:calc(var(--i,0) * 55ms)}
+@keyframes sgc-story-in{from{opacity:0;transform:translateY(10px) scale(.86)}to{opacity:1;transform:none}}
+.sgc-story-ring{isolation:isolate;background:none !important}
+.sgc-story-ring::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--sgc-metal);z-index:-1}
+.sgc-story.is-hot .sgc-story-ring::before{background:var(--sgc-hot);animation:sgc-spin 7s linear infinite}
+.sgc-story:hover .sgc-story-ring::before{animation:sgc-spin 2.6s linear infinite}
+.sgc-story--me .sgc-story-ring::before{background:color-mix(in srgb,var(--text) 16%,transparent);animation:none}
+
+/* cards e quadrados entram quando aparecem */
+.sgc-card.is-reveal{animation:none;opacity:0;transform:translateY(28px) scale(.985);transition:opacity .8s var(--ease),transform .95s var(--ease)}
+.sgc-card.is-reveal.is-in{opacity:1;transform:none}
+.sgc-gridtile.is-reveal{animation:none;opacity:0;transform:translateY(16px) scale(.97);transition:opacity .6s var(--ease),transform .75s var(--ease)}
+.sgc-gridtile.is-reveal.is-in{opacity:1;transform:none}
+.sgc-grid .sgc-gridtile:nth-child(3n+2){transition-delay:.07s}
+.sgc-grid .sgc-gridtile:nth-child(3n){transition-delay:.14s}
+
+/* borda que acende seguindo o cursor */
+.sgc-side-card{position:relative;overflow:hidden}
+.sgc-card::before,.sgc-side-card::before,.sgc-profile-card::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:radial-gradient(240px circle at var(--mx,50%) var(--my,-300px),color-mix(in srgb,var(--accent) 80%,transparent),transparent 70%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;z-index:5;opacity:0;transition:opacity .35s}
+@media(hover:hover) and (pointer:fine){
+  .sgc-card:hover::before,.sgc-side-card:hover::before,.sgc-profile-card:hover::before{opacity:1}
+}
+
+/* curtir: faíscas, ondinha no toque duplo, contador que pula */
+.sgc-act{position:relative}
+.sgc-sparks{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
+.sgc-sparks i{position:absolute;left:-2.5px;top:-2.5px;width:5px;height:5px;border-radius:50%;background:var(--accent);animation:sgc-spark .75s cubic-bezier(.15,.8,.25,1) both}
+.sgc-sparks i:nth-child(3n+1){background:#ffc08f}
+.sgc-sparks i:nth-child(4n){width:4px;height:4px;background:#d9dbde}
+@keyframes sgc-spark{0%{transform:translate(0,0) scale(.3);opacity:0}15%{opacity:1}100%{transform:translate(var(--x),var(--y)) scale(0);opacity:0}}
+.sgc-burst::after{content:"";position:absolute;inset:16%;border-radius:50%;border:2px solid rgba(255,255,255,.85);opacity:0}
+.sgc-burst.is-on::after{animation:sgc-ripple .8s var(--ease) both}
+@keyframes sgc-ripple{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(1.9)}}
+.sgc-card-likes{transform-origin:left center}
+.sgc-card-likes.is-bump{animation:sgc-bump .45s var(--ease)}
+@keyframes sgc-bump{0%{transform:none}35%{transform:translateY(-2px) scale(1.05)}100%{transform:none}}
+
+/* post aberto: foto "voa" do feed; comentários entram em cascata */
+.sgc-flip{position:fixed;z-index:225;object-fit:cover;pointer-events:none;box-shadow:0 40px 90px -30px rgba(0,0,0,.85)}
+.sgc-lightbox-frame{animation:sgc-fade .35s ease both}
+.sgc-comments .sgc-comment{animation:sgc-rise .5s var(--ease) both}
+.sgc-comments .sgc-comment:nth-child(2){animation-delay:.05s}
+.sgc-comments .sgc-comment:nth-child(3){animation-delay:.1s}
+.sgc-comments .sgc-comment:nth-child(4){animation-delay:.15s}
+.sgc-comments .sgc-comment:nth-child(n+5){animation-delay:.2s}
+
+/* perfil: capa com a foto mais recente, anel giratório, câmera */
+.sgc-profile-card{position:relative;margin:0 0 22px;border-radius:30px;overflow:hidden;border:1px solid var(--border);background:var(--surface);box-shadow:0 40px 80px -60px rgba(0,0,0,.85)}
+.sgc-profile-cover{position:relative;height:150px;overflow:hidden;background:radial-gradient(60% 140% at 18% 0%,color-mix(in srgb,var(--accent) 48%,transparent),transparent 70%),radial-gradient(50% 140% at 92% 10%,rgba(191,194,199,.4),transparent 70%),#0d0d0d}
+.sgc-profile-cover img{position:absolute;inset:-30px;width:calc(100% + 60px);height:calc(100% + 60px);object-fit:cover;filter:blur(24px) saturate(1.35) brightness(.72);transform:scale(1.08);animation:sgc-cover 18s ease-in-out infinite alternate}
+.sgc-profile-cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,color-mix(in srgb,var(--surface) 90%,transparent) 100%)}
+@keyframes sgc-cover{from{transform:scale(1.08) translate3d(-2%,0,0)}to{transform:scale(1.16) translate3d(2%,-3%,0)}}
+.sgc-profile-card .sgc-profile-top{position:relative;margin-top:-66px;padding:0 28px 26px;align-items:flex-start}
+.sgc-profile-card .sgc-profile-id{padding-top:74px}
+.sgc-ring--xl{background:none !important;isolation:isolate}
+.sgc-ring--xl::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--sgc-hot);z-index:-1;animation:sgc-spin 10s linear infinite}
+.sgc-ring--xl .sgc-avatar{box-shadow:0 0 0 4px var(--surface)}
+.sgc-ring-cam{position:absolute;right:4px;bottom:8px;z-index:2;display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:var(--text);color:var(--bg);box-shadow:0 0 0 4px var(--surface),0 10px 24px -8px rgba(0,0,0,.6);cursor:pointer;transition:transform .25s var(--ease)}
+.sgc-ring-cam:hover{transform:scale(1.1)}
+.sgc-ring-cam svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8}
+.sgc-profile-bio{margin:2px 0 0;max-width:46ch;font-size:14.5px;line-height:1.5;color:var(--text-2);white-space:pre-line;overflow-wrap:anywhere}
+button.sgc-profile-bio.is-empty{padding:0;border:0;background:none;color:var(--accent);font:inherit;font-size:13.5px;font-weight:800;cursor:pointer;text-align:left}
+.sgc-back{position:relative;z-index:1}
+
+/* lateral */
+.sgc-me-row{display:flex;align-items:center;gap:8px}
+.sgc-side-edit{flex:none;min-height:34px;padding:0 13px;border-radius:999px;border:1px solid var(--border-strong);background:none;color:var(--text);font:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:border-color .2s,color .2s}
+.sgc-side-edit:hover{border-color:var(--accent);color:var(--accent)}
+.sgc-xp-bar span{position:relative;overflow:hidden;transition:width 1.3s cubic-bezier(.2,.8,.2,1)}
+.sgc-xp-bar span::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);transform:translateX(-100%);animation:sgc-xp-shine 3s ease-in-out infinite 1.5s}
+@keyframes sgc-xp-shine{0%,60%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* compositor: etapas deslizam; ícone flutua; check se desenha; confete */
+.sgc-composer-panel[data-step="pick"] [data-pane="pick"],
+.sgc-composer-panel[data-step="edit"] [data-pane="edit"],
+.sgc-composer-panel[data-step="details"] [data-pane="details"],
+.sgc-composer-panel[data-step="sending"] [data-pane="sending"],
+.sgc-composer-panel[data-step="done"] [data-pane="done"]{animation:sgc-pane-in .45s var(--ease) both}
+@keyframes sgc-pane-in{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:none}}
+.sgc-drop-icon{animation:sgc-float 4.5s ease-in-out infinite}
+@keyframes sgc-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.sgc-timeline li.is-done > span svg path{stroke-dasharray:24;stroke-dashoffset:24;animation:sgc-draw .6s .35s var(--ease) forwards}
+@keyframes sgc-draw{to{stroke-dashoffset:0}}
+.sgc-confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6}
+
+@media(max-width:760px){
+  .sgc-profile-card{margin:0 0 18px;border-radius:24px}
+  .sgc-profile-cover{height:118px}
+  .sgc-profile-card .sgc-profile-top{margin-top:-48px;padding:0 16px 18px}
+  .sgc-profile-card .sgc-profile-id{padding-top:0}
+  .sgc-profile-card .sgc-profile-name{padding-top:50px}
+  .sgc-profile-bio{grid-column:1 / -1}
+  .sgc-ring-cam{width:32px;height:32px;right:0;bottom:4px}
+  .sgc-ring-cam svg{width:16px;height:16px}
+  .sgc-profile-actions .btn{white-space:nowrap;font-size:11px;letter-spacing:.08em;padding:0 12px}
+}
+@media(prefers-reduced-motion:reduce){
+  .sgc-app::before,.sgc-brand-mark::after,.sgc-story,.sgc-story-ring::before,.sgc-ring--xl::before,.sgc-profile-cover img,.sgc-xp-bar span::after,.sgc-drop-icon{animation:none !important}
+  .sgc-nav.is-ready .sgc-nav-ind{transition:none}
+}

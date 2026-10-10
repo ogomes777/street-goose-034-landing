@@ -132,7 +132,9 @@ export function mountAccountPage(root, _params, onClose) {
   function identity() {
     var u = session.user, meta = u.user_metadata || {};
     var name = (data.profile && data.profile.displayName) || meta.name || meta.full_name || u.email || "Membro Street Goose";
-    var avatar = typeof meta.avatar_url === "string" && /^https:\/\//.test(meta.avatar_url) ? meta.avatar_url : null;
+    // foto escolhida no perfil (sg_avatar_url; "none" = tirou de propósito), senão a do login social
+    var avatar = meta.sg_avatar_url === "none" ? null
+      : [meta.sg_avatar_url, meta.avatar_url, meta.picture].filter(function (v) { return typeof v === "string" && /^https:\/\//.test(v); })[0] || null;
     var provider = (u.app_metadata && u.app_metadata.provider) || "email";
     return { name: name, email: u.email || "", avatar: avatar, provider: provider, since: u.created_at };
   }
@@ -156,7 +158,8 @@ export function mountAccountPage(root, _params, onClose) {
     bodyEl.innerHTML =
       '<section class="acp-hero">' +
         '<div class="acp-hero-id">' +
-          '<span class="acp-avatar">' + (id.avatar ? '<img src="' + esc(id.avatar) + '" alt="" referrerpolicy="no-referrer">' : esc(id.name.charAt(0).toUpperCase())) + "</span>" +
+          '<span class="acp-avatar-wrap"><span class="acp-avatar">' + (id.avatar ? '<img src="' + esc(id.avatar) + '" alt="" referrerpolicy="no-referrer">' : esc(id.name.charAt(0).toUpperCase())) + "</span>" +
+            '<button class="acp-avatar-edit" type="button" data-acp-edit-public aria-label="Trocar foto do perfil"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.4-2h5.8l1.4 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.4"/></svg></button></span>' +
           '<div class="acp-hero-text">' +
             '<p class="acp-kicker">STREET GOOSE 034 · MEMBRO</p>' +
             '<h2 class="acp-name">' + esc(id.name) + "</h2>" +
@@ -406,8 +409,16 @@ export function mountAccountPage(root, _params, onClose) {
   function tabProfile(panel) {
     var id = identity();
     var current = (data.profile && data.profile.displayName) || (session.user.user_metadata || {}).name || "";
+    var handle = data.profile && data.profile.publicHandle;
     panel.innerHTML =
       '<div class="acp-grid">' +
+        card("Perfil público",
+          '<div class="acp-public">' +
+            '<span class="acp-avatar acp-avatar--lg">' + (id.avatar ? '<img src="' + esc(id.avatar) + '" alt="" referrerpolicy="no-referrer">' : esc(id.name.charAt(0).toUpperCase())) + "</span>" +
+            '<div class="acp-public-text"><b>' + esc(handle ? "@" + handle : id.name.split(" ")[0]) + "</b>" +
+              "<small>Foto, @ e bio que aparecem na SG Community, nos comentários e no ranking.</small></div>" +
+            '<button class="acp-btn acp-btn--primary" type="button" data-acp-edit-public>Editar perfil público</button>' +
+          "</div>") +
         card("Dados pessoais",
           '<form class="acp-form" data-profile-form novalidate>' +
             '<label class="acp-field"><span>Nome de exibição</span><input name="display_name" value="' + esc(current) + '" maxlength="80" autocomplete="name" required></label>' +
@@ -475,6 +486,21 @@ export function mountAccountPage(root, _params, onClose) {
     var tabBtn = e.target.closest("[data-acp-tab]");
     if (tabBtn) { e.preventDefault(); showTab(tabBtn.getAttribute("data-acp-tab")); var p = bodyEl.querySelector("[data-acp-panel]"); if (p && tabBtn.classList.contains("acp-tab") === false) p.scrollIntoView({ block: "start", behavior: "smooth" }); return; }
     if (e.target.closest("[data-acp-login]")) { if (window.SG.auth) window.SG.auth.open(); return; }
+    if (e.target.closest("[data-acp-edit-public]")) {
+      import("./profile-editor.js").then(function (m) {
+        return m.openProfileEditor({
+          onSaved: async function () {
+            // sessão nova traz a foto espelhada (sg_avatar_url); perfil traz o @
+            try { session = (await svc.auth.getSession()) || session; } catch (err) {}
+            try { data.profile = (await svc.profile.getMine()) || data.profile; } catch (err) {}
+            if (destroyed) return;
+            renderShell();
+            showTab(activeTab);
+          },
+        });
+      });
+      return;
+    }
     var go = e.target.closest("[data-acp-go]");
     if (go) { e.preventDefault(); e.stopPropagation(); onClose(); setTimeout(function () { var el = document.querySelector(go.getAttribute("data-acp-go").replace("/", "")); if (el) el.scrollIntoView({ behavior: "smooth" }); }, 80); return; }
     var filter = e.target.closest("[data-acp-order-filter]");
@@ -645,7 +671,8 @@ export function mountAccountPage(root, _params, onClose) {
   document.addEventListener("sg:prefs-change", onPrefs);
 
   root.querySelector("[data-app-close]").addEventListener("click", onClose);
-  function onKeydown(e) { if (e.key === "Escape" && !document.querySelector(".quickview.is-open")) onClose(); }
+  // ESC com o editor de perfil (ou a quick view) aberto fecha só ele
+  function onKeydown(e) { if (e.key === "Escape" && !document.querySelector(".quickview.is-open, [data-pfe]")) onClose(); }
   document.addEventListener("keydown", onKeydown, true);
 
   init();

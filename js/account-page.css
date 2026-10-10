@@ -273,3 +273,16 @@ input:focus-visible+.acp-switch-ui{outline:2px solid var(--accent);outline-offse
   .acp-card,.acp-hero,.acp-stat,.acp-order,.acp-fav,.acp-guest{animation:none}
   .acp-ring-fill{animation:none}
 }
+
+/* foto do perfil: câmera sobre o avatar + cartão "Perfil público" */
+.acp-avatar-wrap{position:relative;flex:none;display:inline-grid}
+.acp-avatar img{width:100%;height:100%;object-fit:cover}
+.acp-avatar-edit{position:absolute;right:-4px;bottom:-2px;display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:var(--text);color:var(--bg);box-shadow:0 0 0 3px var(--panel,var(--bg)),0 8px 18px -8px rgba(0,0,0,.6);cursor:pointer;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.acp-avatar-edit:hover{transform:scale(1.1)}
+.acp-avatar-edit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.acp-avatar-edit svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9}
+.acp-public{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.acp-avatar--lg{width:64px;height:64px;font-size:24px}
+.acp-public-text{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 180px}
+.acp-public-text b{font-size:17px;letter-spacing:-.01em;overflow-wrap:anywhere}
+.acp-public-text small{font-size:12.5px;color:var(--muted);line-height:1.45}

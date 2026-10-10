@@ -186,7 +186,12 @@ export function syncLike(post) {
     var c = btn.querySelector("[data-like-count]");
     if (c) c.textContent = countLabel(post.likeCount);
   });
-  document.querySelectorAll('[data-like-label="' + CSS.escape(post.id) + '"]').forEach(function (el) { el.textContent = likesText(post.likeCount); });
+  document.querySelectorAll('[data-like-label="' + CSS.escape(post.id) + '"]').forEach(function (el) {
+    var next = likesText(post.likeCount);
+    if (el.textContent === next) return;
+    el.textContent = next;
+    el.classList.remove("is-bump"); void el.offsetWidth; el.classList.add("is-bump");
+  });
 }
 
 export function syncComments(post) {
@@ -260,8 +265,66 @@ export function burst(el) {
   el.classList.add("is-on");
 }
 
+function reducedMotion() { return matchMedia("(prefers-reduced-motion: reduce)").matches; }
+
+/** faíscas finas saindo do botão de curtir (laranja, pêssego e prata) */
+export function sparkle(btn) {
+  if (!btn || reducedMotion()) return;
+  var host = document.createElement("span");
+  host.className = "sgc-sparks";
+  host.setAttribute("aria-hidden", "true");
+  for (var i = 0; i < 10; i++) {
+    var s = document.createElement("i");
+    var a = (i / 10) * Math.PI * 2 + 0.3;
+    var d = 22 + (i % 3) * 5;
+    s.style.setProperty("--x", (Math.cos(a) * d).toFixed(1) + "px");
+    s.style.setProperty("--y", (Math.sin(a) * d).toFixed(1) + "px");
+    s.style.animationDelay = (i % 2) * 35 + "ms";
+    host.appendChild(s);
+  }
+  btn.appendChild(host);
+  setTimeout(function () { host.remove(); }, 900);
+}
+
+/** confete curto nas cores da marca (fim da publicação) */
+function confetti(host) {
+  if (!host || reducedMotion()) return;
+  var c = document.createElement("canvas");
+  c.className = "sgc-confetti";
+  c.setAttribute("aria-hidden", "true");
+  host.appendChild(c);
+  var r = host.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  c.width = Math.round(r.width * dpr);
+  c.height = Math.round(r.height * dpr);
+  var ctx = c.getContext("2d");
+  if (!ctx) { c.remove(); return; }
+  ctx.scale(dpr, dpr);
+  var colors = ["#ff5a00", "#ffb37a", "#f4f4f2", "#bfc2c7", "#ff8a3d", "#ffd9b8"];
+  var parts = [];
+  for (var i = 0; i < 120; i++) {
+    parts.push({ x: r.width * (0.25 + Math.random() * 0.5), y: r.height * 0.42, vx: (Math.random() - 0.5) * 10, vy: -Math.random() * 10 - 4,
+      w: 4 + Math.random() * 5, h: 8 + Math.random() * 8, a: Math.random() * 6, va: (Math.random() - 0.5) * 0.32, c: colors[i % colors.length] });
+  }
+  var t0 = performance.now(), life = 2300;
+  (function tick(t) {
+    var k = (t - t0) / life;
+    ctx.clearRect(0, 0, r.width, r.height);
+    parts.forEach(function (p) {
+      p.vy += 0.24; p.vx *= 0.985; p.x += p.vx; p.y += p.vy; p.a += p.va;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.a);
+      ctx.globalAlpha = Math.max(0, 1 - k * k);
+      ctx.fillStyle = p.c;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, Math.max(1, p.h * Math.abs(Math.cos(p.a * 2))));
+      ctx.restore();
+    });
+    if (k < 1 && c.isConnected) requestAnimationFrame(tick); else c.remove();
+  })(t0);
+}
+
 function anyModalOnTop() {
-  return !!document.querySelector(".quickview.is-open, .zoom-viewer.is-open, .auth-modal:not([hidden]), [data-sgc-publisher]");
+  return !!document.querySelector(".quickview.is-open, .zoom-viewer.is-open, .auth-modal:not([hidden]), [data-sgc-publisher], [data-pfe]");
 }
 
 // ---------- menu "⋯" do post ----------
@@ -561,7 +624,7 @@ export function openViewer(opts) {
     if (t.closest("[data-viewer-close]")) { close(); return; }
     if (t.closest("[data-viewer-prev]")) { go(-1); return; }
     if (t.closest("[data-viewer-next]")) { go(1); return; }
-    if (t.closest("[data-like]")) { toggleLike(posts[index]); return; }
+    if (t.closest("[data-like]")) { if (!posts[index].liked) sparkle(t.closest("[data-like]")); toggleLike(posts[index]); return; }
     if (t.closest("[data-share]")) { sharePost(posts[index]); return; }
     if (t.closest("[data-focus-comment]")) { var inp = frame.querySelector("[data-comment-input]"); if (inp) inp.focus(); else if (window.SG.auth) window.SG.auth.open(); return; }
     if (t.closest("[data-login-comment]")) { if (window.SG.auth) window.SG.auth.open(); return; }
@@ -598,6 +661,7 @@ export function openViewer(opts) {
       if (now - lastTap < 320) {
         lastTap = 0;
         burst(frame.querySelector("[data-burst]"));
+        if (!posts[index].liked) sparkle(frame.querySelector("[data-like]"));
         toggleLike(posts[index], true);
       } else {
         lastTap = now;
@@ -624,7 +688,35 @@ export function openViewer(opts) {
     });
   });
 
+  // abre "crescendo" da foto clicada até o lugar dela no post aberto
+  function flipFrom(src) {
+    if (!src || !src.isConnected || reducedMotion() || !src.naturalWidth) return;
+    var target = frame.querySelector("[data-viewer-media] > img");
+    if (!target) return;
+    var o = src.getBoundingClientRect();
+    var box = target.getBoundingClientRect();
+    if (!o.width || !box.width) return;
+    var nr = src.naturalWidth / src.naturalHeight, br = box.width / box.height;
+    var w = nr > br ? box.width : box.height * nr, h = nr > br ? box.width / nr : box.height;
+    var fx = box.left + (box.width - w) / 2, fy = box.top + (box.height - h) / 2;
+    var clone = document.createElement("img");
+    clone.className = "sgc-flip";
+    clone.alt = "";
+    clone.src = src.currentSrc || src.src;
+    document.body.appendChild(clone);
+    target.style.animation = "none"; // a entrada normal da foto brigaria com o voo
+    target.style.opacity = "0";
+    var anim = clone.animate([
+      { left: o.left + "px", top: o.top + "px", width: o.width + "px", height: o.height + "px", borderRadius: "18px" },
+      { left: fx + "px", top: fy + "px", width: w + "px", height: h + "px", borderRadius: "4px" },
+    ], { duration: 520, easing: "cubic-bezier(.2,.8,.2,1)", fill: "forwards" });
+    function done() { target.style.opacity = ""; clone.remove(); }
+    anim.onfinish = done;
+    anim.oncancel = done;
+  }
+
   render();
+  flipFrom(opts.origin);
   el.querySelector("[data-viewer-close]").focus({ preventScroll: true });
 
   var api = {
@@ -1123,6 +1215,7 @@ export function openPublisher(opts) {
     setTimeout(function () {
       if (closed) return;
       setStep("done");
+      confetti(panel);
       overlay.querySelector("[data-done-title]").focus({ preventScroll: true });
     }, 380);
     if (opts.onPublished) opts.onPublished(res);

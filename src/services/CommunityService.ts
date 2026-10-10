@@ -49,7 +49,27 @@ export interface CommunityProfile extends FeedAuthor {
   likes: number;
   since: string | null;
   me: boolean;
+  handle: string | null; // 0109
+  firstName: string | null; // 0109
+  bio: string | null; // 0109
 }
+
+/** o que a própria pessoa edita (0109) */
+export interface EditableProfile {
+  name: string;
+  handle: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+}
+
+const PROFILE_ERRORS: Record<string, string> = {
+  auth_required: "Entre na sua conta para editar o perfil.",
+  name_required: "Coloca o seu nome.",
+  invalid_handle: "O @ precisa ter de 3 a 24 caracteres: letras, números, ponto ou _.",
+  handle_taken: "Esse @ já é de outra pessoa. Tenta outro.",
+  bio_too_long: "A bio tem no máximo 160 caracteres.",
+  invalid_avatar: "Essa foto não pode ser usada. Envie outra.",
+};
 
 /** Ajustes do compositor: recorte (proporção + ponto de foco, mesma lógica
  *  do object-position da prévia) e filtro aplicados na foto antes do envio. */
@@ -313,10 +333,69 @@ export const CommunityService = {
     if (!supabase) return null;
     const { data, error } = await supabase.rpc("community_profile", { p_user: userId });
     if (error || !data) return null;
-    const res = data as { ok: boolean; profile?: AuthorRow & { posts: number; likes: number; since: string | null; me: boolean } };
+    const res = data as { ok: boolean; profile?: AuthorRow & { posts: number; likes: number; since: string | null; me: boolean; handle?: string | null; first_name?: string | null; bio?: string | null } };
     if (!res.ok || !res.profile) return null;
     const p = res.profile;
-    return { ...mapAuthor(p), posts: p.posts, likes: p.likes, since: p.since, me: !!p.me };
+    return {
+      ...mapAuthor(p), posts: p.posts, likes: p.likes, since: p.since, me: !!p.me,
+      handle: p.handle ?? null, firstName: p.first_name ?? null, bio: p.bio ?? null,
+    };
+  },
+
+  /** dados atuais do próprio perfil para o formulário; null = indisponível */
+  async getEditableProfile(): Promise<EditableProfile | null> {
+    if (!supabase) return null;
+    const { data, error } = await supabase.rpc("community_my_profile");
+    if (error || !data) return null;
+    const res = data as { ok: boolean; profile?: { name: string | null; handle: string | null; bio: string | null; avatar_url: string | null } | null };
+    if (!res.ok) return null;
+    const p = res.profile ?? { name: null, handle: null, bio: null, avatar_url: null };
+    return { name: p.name ?? "", handle: p.handle, bio: p.bio, avatarUrl: p.avatar_url };
+  },
+
+  /** null = não deu para conferir (rede/0109); senão se o @ está livre */
+  async isHandleAvailable(handle: string): Promise<boolean | null> {
+    if (!supabase) return null;
+    const { data, error } = await supabase.rpc("community_handle_available", { p_handle: handle });
+    if (error || !data) return null;
+    const res = data as { ok: boolean; available?: boolean };
+    return res.ok ? !!res.available : null;
+  },
+
+  /** sobe a foto já recortada (quadrada) para avatars/<uid>/… e devolve a URL pública */
+  async uploadAvatar(blob: Blob): Promise<Result<{ url: string }>> {
+    if (!supabase) return { ok: false, message: "Indisponível agora." };
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return { ok: false, reason: "auth_required", message: PROFILE_ERRORS.auth_required };
+    const ext = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
+    const path = auth.user.id + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+    const { error } = await supabase.storage.from("avatars").upload(path, blob, { upsert: false, contentType: blob.type || "image/jpeg", cacheControl: "31536000" });
+    if (error) return { ok: false, message: "Não foi possível enviar a foto. Confira a conexão e tente de novo." };
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    return { ok: true, url: data.publicUrl };
+  },
+
+  async saveProfile(p: EditableProfile): Promise<Result<{ profile: EditableProfile }>> {
+    if (!supabase) return { ok: false, message: "Indisponível agora." };
+    const { data, error } = await supabase.rpc("community_save_profile", {
+      p_name: p.name, p_handle: p.handle, p_bio: p.bio, p_avatar_url: p.avatarUrl,
+    });
+    if (error || !data) return { ok: false, reason: "error", message: "Não foi possível salvar agora." };
+    const res = data as { ok: boolean; reason?: string; profile?: { name: string; handle: string | null; bio: string | null; avatar_url: string | null } };
+    if (!res.ok || !res.profile) return { ok: false, reason: res.reason, message: PROFILE_ERRORS[res.reason ?? ""] ?? "Não foi possível salvar agora." };
+    const saved = { name: res.profile.name, handle: res.profile.handle, bio: res.profile.bio, avatarUrl: res.profile.avatar_url };
+    // espelho na conta: topo do site e /conta mostram foto/nome sem consulta extra
+    // (sg_avatar_url "none" = a pessoa tirou a foto de propósito)
+    await supabase.auth.updateUser({ data: { name: saved.name, sg_avatar_url: saved.avatarUrl || "none" } }).catch(() => undefined);
+    // fotos antigas da pasta saem (só a atual fica)
+    const { data: auth } = await supabase.auth.getUser();
+    if (auth.user) {
+      const { data: files } = await supabase.storage.from("avatars").list(auth.user.id, { limit: 100 });
+      const keep = saved.avatarUrl ? saved.avatarUrl.split("/").pop() : null;
+      const old = (files ?? []).map((f) => f.name).filter((n) => n !== keep).map((n) => auth.user!.id + "/" + n);
+      if (old.length) await supabase.storage.from("avatars").remove(old).catch(() => undefined);
+    }
+    return { ok: true, profile: saved };
   },
 
   /** id de quem está logado (null = visitante) */

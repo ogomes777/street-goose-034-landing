@@ -50,7 +50,9 @@
     var user = session && session.user;
     var meta = (user && user.user_metadata) || {};
     var name = meta.name || meta.full_name || (user && user.email) || t("nav.account.member");
-    var avatar = typeof meta.avatar_url === "string" && /^https:\/\//.test(meta.avatar_url) ? meta.avatar_url : null;
+    // foto escolhida no perfil (sg_avatar_url; "none" = tirou de propósito), senão a do login social
+    var avatar = meta.sg_avatar_url === "none" ? null
+      : [meta.sg_avatar_url, meta.avatar_url, meta.picture].filter(function (u) { return typeof u === "string" && /^https:\/\//.test(u); })[0] || null;
     return { name: name, email: (user && user.email) || "", initial: name.charAt(0).toUpperCase(), avatar: avatar };
   }
 

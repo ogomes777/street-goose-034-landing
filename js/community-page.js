@@ -8,7 +8,7 @@
 import "./community.css";
 import {
   service, postCardHtml, gridTileHtml, toggleLike, sharePost, shareLink, profileUrl, openProduct, openViewer,
-  startPublish, openMenu, burst, syncLike, timeAgo, avatarHtml, ringHtml, levelChipHtml, countLabel,
+  startPublish, openMenu, burst, sparkle, syncLike, timeAgo, avatarHtml, ringHtml, levelChipHtml, countLabel,
   emptyStateHtml, productFor, ICONS,
 } from "./community-ui.js";
 
@@ -36,6 +36,7 @@ export function mountCommunityPage(root, _params, onClose) {
           '<div class="sgc-notice-slot" data-notice></div>' +
           '<section class="sgc-stories" data-stories aria-label="Destaques da comunidade"></section>' +
           '<nav class="sgc-nav" role="tablist" aria-label="Seções da comunidade">' +
+            '<span class="sgc-nav-ind" aria-hidden="true"></span>' +
             '<button type="button" role="tab" data-view="feed" aria-selected="true">' + ICONS.home + "<span>Feed</span></button>" +
             '<button type="button" role="tab" data-view="top" aria-selected="false">' + ICONS.flame + "<span>Em alta</span></button>" +
             '<button type="button" role="tab" data-view="me" aria-selected="false">' + ICONS.user + '<span>Meu perfil</span><i class="sgc-dot" data-pending-dot hidden></i></button>' +
@@ -90,12 +91,69 @@ export function mountCommunityPage(root, _params, onClose) {
     return out + "</div>";
   }
 
+  // ---------- movimento ----------
+  var reduced = window.SG.prefersReducedMotion ? window.SG.prefersReducedMotion() : false;
+  // cards e quadrados entram quando aparecem na tela (não todos de uma vez no load)
+  var revealObs = !reduced && "IntersectionObserver" in window ? new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add("is-in"); revealObs.unobserve(en.target); } });
+  }, { root: root, rootMargin: "0px 0px -4% 0px", threshold: 0.06 }) : null;
+  function observeReveal() {
+    viewEl.querySelectorAll(".sgc-card:not(.is-in):not(.sgc-card--skeleton), .sgc-gridtile:not(.is-in):not(.is-skeleton)").forEach(function (n) {
+      if (revealObs) { n.classList.add("is-reveal"); revealObs.observe(n); } else n.classList.add("is-in");
+    });
+  }
+  // números sobem de 0 até o valor (perfil, lateral)
+  function countUp(scope) {
+    (scope || root).querySelectorAll("[data-count-to]").forEach(function (el) {
+      var to = Number(el.getAttribute("data-count-to")) || 0;
+      el.removeAttribute("data-count-to");
+      if (reduced || to < 2) { el.textContent = countLabel(to); return; }
+      var t0 = performance.now(), dur = Math.min(1400, 600 + to * 8);
+      (function tick(t) {
+        if (destroyed || !el.isConnected) return;
+        var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+        el.textContent = k < 1 ? String(Math.round(to * e)) : countLabel(to);
+        if (k < 1) requestAnimationFrame(tick);
+      })(t0);
+    });
+  }
+  // brilho da borda segue o cursor (desktop)
+  var spotRaf = 0, spotEv = null;
+  function onSpot(e) {
+    spotEv = e;
+    if (spotRaf) return;
+    spotRaf = requestAnimationFrame(function () {
+      spotRaf = 0;
+      var t = spotEv.target, c = t && t.closest ? t.closest(".sgc-card, .sgc-side-card, .sgc-profile-card") : null;
+      if (!c) return;
+      var r = c.getBoundingClientRect();
+      c.style.setProperty("--mx", (spotEv.clientX - r.left).toFixed(0) + "px");
+      c.style.setProperty("--my", (spotEv.clientY - r.top).toFixed(0) + "px");
+    });
+  }
+  if (!reduced && matchMedia("(hover:hover) and (pointer:fine)").matches) root.addEventListener("pointermove", onSpot, { passive: true });
+
   // ---------- abas ----------
   function setTab(name) {
     root.querySelectorAll(".sgc-nav [data-view]").forEach(function (b) {
       b.setAttribute("aria-selected", b.getAttribute("data-view") === name ? "true" : "false");
     });
+    moveIndicator();
   }
+  // pílula que desliza até a aba ativa
+  function moveIndicator() {
+    var ind = root.querySelector(".sgc-nav-ind");
+    if (!ind) return;
+    var sel = root.querySelector('.sgc-nav [data-view][aria-selected="true"]');
+    if (!sel) { ind.style.opacity = "0"; return; }
+    ind.style.opacity = "1";
+    ind.style.width = sel.offsetWidth + "px";
+    ind.style.transform = "translateX(" + sel.offsetLeft + "px)";
+  }
+  var navResizeTimer = null;
+  function onResize() { clearTimeout(navResizeTimer); navResizeTimer = setTimeout(moveIndicator, 120); }
+  window.addEventListener("resize", onResize);
+  requestAnimationFrame(function () { moveIndicator(); root.querySelector(".sgc-nav").classList.add("is-ready"); });
 
   function selectView(next, opts) {
     opts = opts || {};
@@ -117,6 +175,7 @@ export function mountCommunityPage(root, _params, onClose) {
   // ---------- feed ----------
   function renderFeedList() {
     viewEl.innerHTML = '<div class="sgc-feed" data-list="feed">' + lists.feed.map(function (p, i) { return postCardHtml(p, i); }).join("") + "</div>" + moreHtml(more.feed);
+    observeReveal();
     watchSentinel();
   }
   function moreHtml(has) {
@@ -154,6 +213,7 @@ export function mountCommunityPage(root, _params, onClose) {
       listEl.insertAdjacentHTML("beforeend", res.items.map(function (p, k) { return postCardHtml(p, k % 4); }).join(""));
       var s = viewEl.querySelector("[data-sentinel]");
       if (s && !more.feed) s.remove();
+      observeReveal();
       watchSentinel();
     }
     if (viewer) viewer.refresh();
@@ -184,6 +244,7 @@ export function mountCommunityPage(root, _params, onClose) {
       var s = viewEl.querySelector("[data-sentinel]");
       if (s && !more.top) s.remove();
     }
+    observeReveal();
     watchSentinel();
     if (viewer) viewer.refresh();
     return res.items.length > 0;
@@ -216,7 +277,7 @@ export function mountCommunityPage(root, _params, onClose) {
       '<span class="sgc-story-ring">' + (myAuthor ? avatarHtml(myAuthor) : '<span class="sgc-avatar">' + ICONS.camera + "</span>") + '<i aria-hidden="true">' + ICONS.plus + "</i></span>" +
       "<span>Seu visual</span></button>";
     storiesEl.innerHTML = '<div class="sgc-stories-track">' + meItem + picks.map(function (p, i) {
-      return '<button class="sgc-story' + (p.featured ? " is-hot" : "") + '" type="button" data-story="' + i + '" aria-label="' + esc("Ver visual de " + p.author.name) + '">' +
+      return '<button class="sgc-story' + (p.featured ? " is-hot" : "") + '" type="button" data-story="' + i + '" style="--i:' + (i + 1) + '" aria-label="' + esc("Ver visual de " + p.author.name) + '">' +
         '<span class="sgc-story-ring">' + (p.imageUrl ? '<span class="sgc-avatar sgc-story-thumb"><img src="' + esc(p.imageUrl) + '" alt="" loading="lazy" decoding="async"></span>' : avatarHtml(p.author)) + "</span>" +
         "<span>" + esc(p.author.name) + "</span></button>";
     }).join("") + "</div>";
@@ -278,6 +339,7 @@ export function mountCommunityPage(root, _params, onClose) {
     if (grid) grid.insertAdjacentHTML("beforeend", res.items.map(function (p) { return gridTileHtml(p); }).join(""));
     var s = viewEl.querySelector("[data-sentinel]");
     if (s && !more.profile) s.remove();
+    observeReveal();
     if (viewer) viewer.refresh();
     return res.items.length > 0;
   }
@@ -308,24 +370,30 @@ export function mountCommunityPage(root, _params, onClose) {
         (isMe ? "<b>Seu primeiro visual começa aqui.</b><span>Poste usando a peça — a equipe aprova e você ganha +30 XP.</span><button class=\"btn btn-primary\" type=\"button\" data-community-publish>Postar visual</button>"
               : "<b>Nenhum visual no ar ainda.</b>") + "</div>";
     }
+    var cover = lists.profile[0] && lists.profile[0].imageUrl;
     viewEl.innerHTML =
       '<section class="sgc-profile">' +
         (isMe ? "" : '<button class="sgc-back" type="button" data-profile-back>' + ICONS.back + "Voltar</button>") +
+        '<div class="sgc-profile-card">' +
+        '<div class="sgc-profile-cover" aria-hidden="true">' + (cover ? '<img src="' + esc(cover) + '" alt="" decoding="async">' : "") + "</div>" +
         '<div class="sgc-profile-top">' +
-          '<span class="sgc-ring sgc-ring--xl is-hot">' + avatarHtml(p) + "</span>" +
+          '<span class="sgc-ring sgc-ring--xl is-hot">' + avatarHtml(p) +
+            (isMe ? '<button class="sgc-ring-cam" type="button" data-edit-profile aria-label="' + (p.avatarUrl ? "Trocar foto" : "Adicionar foto") + '">' + ICONS.camera + "</button>" : "") + "</span>" +
           '<div class="sgc-profile-id">' +
             '<div class="sgc-profile-name"><h2>' + esc(p.name) + "</h2>" + levelChipHtml(p) + "</div>" +
-            '<p class="sgc-profile-sub">' + esc([p.levelName, sinceLabel(p.since)].filter(Boolean).join(" · ") || "Membro Street Goose") + "</p>" +
+            '<p class="sgc-profile-sub">' + esc([p.handle && p.firstName ? p.firstName : null, p.levelName, sinceLabel(p.since)].filter(Boolean).join(" · ") || "Membro Street Goose") + "</p>" +
+            (p.bio ? '<p class="sgc-profile-bio">' + esc(p.bio) + "</p>" : (isMe ? '<button class="sgc-profile-bio is-empty" type="button" data-edit-profile>+ Escrever uma bio</button>' : "")) +
             '<ul class="sgc-profile-stats">' +
-              "<li><b>" + countLabel(p.posts) + "</b><span>" + (p.posts === 1 ? "visual" : "visuais") + "</span></li>" +
-              "<li><b>" + countLabel(p.likes) + "</b><span>curtidas</span></li>" +
+              '<li><b data-count-to="' + p.posts + '">0</b><span>' + (p.posts === 1 ? "visual" : "visuais") + "</span></li>" +
+              '<li><b data-count-to="' + p.likes + '">0</b><span>curtidas</span></li>' +
               "<li><b>" + (p.level || 1) + "</b><span>nível</span></li>" +
             "</ul>" +
             '<div class="sgc-profile-actions">' +
-              (isMe ? '<button class="btn btn-primary" type="button" data-community-publish>' + ICONS.plus + 'Postar visual</button><a class="btn btn-ghost" href="/conta">Editar perfil</a>'
+              (isMe ? '<button class="btn btn-primary" type="button" data-community-publish>' + ICONS.plus + 'Postar visual</button><button class="btn btn-ghost" type="button" data-edit-profile>' + ICONS.user + "Editar perfil</button>"
                     : '<button class="btn btn-ghost" type="button" data-profile-share>' + ICONS.link + "Compartilhar perfil</button>") +
             "</div>" +
           "</div>" +
+        "</div>" +
         "</div>" +
         (isMe ? '<div class="sgc-seg" role="tablist" aria-label="Seus visuais">' +
           '<button type="button" role="tab" data-seg="live" aria-selected="' + (mineSeg === "live") + '">' + ICONS.grid + "No ar<b>" + countLabel(lists.profile.length) + "</b></button>" +
@@ -333,6 +401,8 @@ export function mountCommunityPage(root, _params, onClose) {
         "</div>" : '<div class="sgc-seg sgc-seg--solo">' + ICONS.grid + "Visuais</div>") +
         gridHtml +
       "</section>";
+    countUp(viewEl);
+    observeReveal();
     watchSentinel();
   }
 
@@ -424,25 +494,36 @@ export function mountCommunityPage(root, _params, onClose) {
   // ---------- lateral ----------
   var myAuthor = null;
   var xp = null;
+  var sideAnimated = false;
   function renderSide() {
+    var animate = !sideAnimated && !reduced;
     var meCard = myAuthor
       ? '<div class="sgc-side-card sgc-me">' +
-          '<button class="sgc-author" type="button" data-view="me">' + ringHtml(myAuthor, true) +
+          '<div class="sgc-me-row"><button class="sgc-author" type="button" data-view="me">' + ringHtml(myAuthor, true) +
             '<span class="sgc-author-text"><b>' + esc(myAuthor.name) + "</b><small>" + esc(xp ? xp.level.name : "Membro Street Goose") + "</small></span></button>" +
+            '<button class="sgc-side-edit" type="button" data-edit-profile>Editar</button></div>' +
           (xp ? '<div class="sgc-xp"><div class="sgc-xp-row"><span>NV ' + xp.level.levelNumber + "</span><span>" + (xp.nextLevel ? xp.xpToNext + " XP para o NV " + xp.nextLevel.levelNumber : "Nível máximo") + "</span></div>" +
-            '<div class="sgc-xp-bar"><span style="width:' + Math.max(4, xp.progressPct) + '%"></span></div></div>' : "") +
+            '<div class="sgc-xp-bar"><span data-xp-fill="' + Math.max(4, xp.progressPct) + '" style="width:' + (animate ? 0 : Math.max(4, xp.progressPct)) + '%"></span></div></div>' : "") +
         "</div>"
       : '<div class="sgc-side-card sgc-join"><p class="kicker">SG COMMUNITY</p><h3>Entre na comunidade.</h3><p>Poste seus visuais, curta e comente os da galera.</p><button class="btn btn-primary" type="button" data-login>Entrar</button></div>';
     var creators = topCreators();
     sideEl.innerHTML = meCard +
       '<div class="sgc-side-card sgc-post-cta"><span class="sgc-post-cta-icon" aria-hidden="true">' + ICONS.camera + "</span><div><b>Poste seu visual</b><span>+30 XP quando a equipe aprovar</span></div>" +
         '<button class="btn btn-primary" type="button" data-community-publish>Postar</button></div>' +
-      (stats ? '<div class="sgc-side-card sgc-side-stats"><div><b>' + countLabel(stats.posts) + "</b><span>visuais</span></div><div><b>" + countLabel(stats.members) + "</b><span>membros</span></div><div><b>" + countLabel(stats.likes) + "</b><span>curtidas</span></div></div>" : "") +
+      (stats ? '<div class="sgc-side-card sgc-side-stats">' + [[stats.posts, "visuais"], [stats.members, "membros"], [stats.likes, "curtidas"]].map(function (s) {
+        return "<div><b" + (animate ? ' data-count-to="' + s[0] + '">0' : ">" + countLabel(s[0])) + "</b><span>" + s[1] + "</span></div>";
+      }).join("") + "</div>" : "") +
       (creators.length ? '<div class="sgc-side-card"><p class="sgc-side-title">Criadores em alta</p><ul class="sgc-creators">' + creators.map(function (c, i) {
         return '<li><button type="button" data-profile="' + esc(c.author.id) + '"><span class="sgc-creator-n">' + (i + 1) + "</span>" + avatarHtml(c.author) +
           '<span class="sgc-creator-who"><b>' + esc(c.author.name) + "</b><small>" + countLabel(c.likes) + (c.likes === 1 ? " curtida" : " curtidas") + "</small></span></button></li>";
       }).join("") + "</ul></div>" : "") +
       '<p class="sgc-side-foot">Feed com curadoria: todo visual passa pela equipe Street Goose antes de entrar.</p>';
+    if (animate && stats) {
+      sideAnimated = true;
+      countUp(sideEl);
+    }
+    var fill = sideEl.querySelector("[data-xp-fill]");
+    if (fill && animate) requestAnimationFrame(function () { requestAnimationFrame(function () { fill.style.width = fill.getAttribute("data-xp-fill") + "%"; }); });
   }
   function topCreators() {
     var by = {};
@@ -533,9 +614,12 @@ export function mountCommunityPage(root, _params, onClose) {
     if (viewer) { viewer.show(i); return true; }
     viewerPushed = !!push;
     if (push) history.pushState({ sgPost: id }, "", "/comunidade?post=" + encodeURIComponent(id));
+    var origin = openOrigin;
+    openOrigin = null;
     viewer = openViewer({
       posts: list,
       index: i,
+      origin: origin,
       focusComment: !!focusComment,
       hasMore: function () { return kind !== "stories" && !!more[kind]; },
       loadMore: function () {
@@ -603,6 +687,28 @@ export function mountCommunityPage(root, _params, onClose) {
   }
   window.addEventListener("popstate", onPopState);
 
+  // ---------- editar perfil ----------
+  function editProfile() {
+    import("./profile-editor.js").then(function (m) { return m.openProfileEditor({ onSaved: applyMyProfile }); });
+  }
+  // nome público = mesma regra do servidor: @apelido ou primeiro nome
+  function applyMyProfile(saved) {
+    if (destroyed || !myId) return;
+    var first = (saved.name || "").trim().split(/\s+/)[0];
+    var publicName = saved.handle ? "@" + saved.handle : (first || "Membro Street Goose");
+    if (myAuthor) { myAuthor.name = publicName; myAuthor.avatarUrl = saved.avatarUrl; }
+    allLists().forEach(function (l) { l.forEach(function (p) { if (p.author.id === myId) { p.author.name = publicName; p.author.avatarUrl = saved.avatarUrl; } }); });
+    if (profileData && profileData.id === myId) {
+      profileData.name = publicName; profileData.avatarUrl = saved.avatarUrl;
+      profileData.handle = saved.handle; profileData.firstName = first || null; profileData.bio = saved.bio;
+    }
+    renderSide();
+    buildStories();
+    if (view === "profile" && profileData && profileData.id === myId) renderProfile();
+    else if (view === "feed" && lists.feed.length) renderFeedList();
+    window.dispatchEvent(new CustomEvent("sg:profile-updated", { detail: saved }));
+  }
+
   // ---------- ações ----------
   function publish() {
     startPublish({
@@ -621,6 +727,8 @@ export function mountCommunityPage(root, _params, onClose) {
 
   function like(post, onlyLike, mediaEl) {
     if (onlyLike && mediaEl) burst(mediaEl.querySelector("[data-burst]"));
+    // faíscas só ao curtir (não ao descurtir), em todo botão desse post na tela
+    if (!post.liked) root.querySelectorAll('[data-like="' + CSS.escape(post.id) + '"]').forEach(function (b) { sparkle(b); });
     toggleLike(post, onlyLike).then(function () {
       eachCopy(post.id, function (c) { if (c !== post) { c.liked = post.liked; c.likeCount = post.likeCount; } });
       syncLike(post);
@@ -639,10 +747,12 @@ export function mountCommunityPage(root, _params, onClose) {
   }
 
   var openTimer = null;
+  var openOrigin = null; // foto clicada: o post aberto "cresce" a partir dela
   root.addEventListener("click", async function (e) {
     var t = e.target;
     if (t.closest("[data-app-close]")) { onClose(); return; }
     if (t.closest("[data-community-publish]")) { publish(); return; }
+    if (t.closest("[data-edit-profile]")) { editProfile(); return; }
     var viewBtn = t.closest("[data-view]");
     if (viewBtn) { selectView(viewBtn.getAttribute("data-view")); return; }
     if (t.closest("[data-profile-back]")) { if (history.state && history.state.sgProfile) history.back(); else selectView("feed", { force: true }); return; }
@@ -657,11 +767,13 @@ export function mountCommunityPage(root, _params, onClose) {
         if (lp) like(lp, true, card.querySelector(".sgc-card-media"));
         return;
       }
+      var srcImg = (open.closest(".sgc-card-media, .sgc-gridtile") || open).querySelector("img");
       if (card && e.detail === 1) {
         clearTimeout(openTimer);
-        openTimer = setTimeout(function () { openTimer = null; openPost(id, true, kind); }, 260);
+        openTimer = setTimeout(function () { openTimer = null; openOrigin = srcImg; openPost(id, true, kind); }, 260);
         return;
       }
+      openOrigin = srcImg;
       openPost(id, true, kind);
       return;
     }
@@ -680,7 +792,7 @@ export function mountCommunityPage(root, _params, onClose) {
     var exp = t.closest("[data-expand]");
     if (exp) { var cap = exp.closest("[data-caption]"); cap.classList.remove("is-clamped"); exp.remove(); return; }
     var story = t.closest("[data-story]");
-    if (story) { var sp2 = lists.stories[Number(story.getAttribute("data-story"))]; if (sp2) openPost(sp2.id, true, "stories"); return; }
+    if (story) { var sp2 = lists.stories[Number(story.getAttribute("data-story"))]; if (sp2) { openOrigin = story.querySelector("img"); openPost(sp2.id, true, "stories"); } return; }
     var seg = t.closest("[data-seg]");
     if (seg && !seg.disabled) { mineSeg = seg.getAttribute("data-seg"); renderProfile(); return; }
     var mineOpen = t.closest("[data-mine-open]");
@@ -706,7 +818,7 @@ export function mountCommunityPage(root, _params, onClose) {
   // teclado no card: Enter/Espaço na foto abre (o botão invisível cobre a foto)
   function onKeydown(e) {
     if (e.key !== "Escape" || viewer) return;
-    if (document.querySelector("[data-sgc-publisher], [data-sgc-menu], .sgc-sheet, .quickview.is-open, .auth-modal:not([hidden])")) return;
+    if (document.querySelector("[data-sgc-publisher], [data-sgc-menu], .sgc-sheet, [data-pfe], .quickview.is-open, .auth-modal:not([hidden])")) return;
     onClose();
   }
   // captura: roda antes do ESC do login, enquanto ele ainda está aberto (senão
@@ -758,6 +870,10 @@ export function mountCommunityPage(root, _params, onClose) {
     root.classList.remove("is-community");
     clearTimeout(openTimer);
     window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("resize", onResize);
+    root.removeEventListener("pointermove", onSpot);
+    clearTimeout(navResizeTimer);
+    if (revealObs) revealObs.disconnect();
     document.removeEventListener("keydown", onKeydown, true);
     if (sentinelObs) sentinelObs.disconnect();
     if (unsubscribeAuth) unsubscribeAuth();

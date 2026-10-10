@@ -781,6 +781,9 @@ footer>small{grid-column:1/-1;border-top:1px solid var(--line);padding-top:24px;
 .favorites-btn.has-items .icon-heart{fill:var(--hdr-beak,var(--accent));stroke:var(--hdr-beak,var(--accent))}
 .favorites-btn:hover .icon-heart{filter:drop-shadow(0 0 5px color-mix(in srgb,var(--hdr-beak,var(--accent)) 55%,transparent))}
 .account-btn span[data-account-avatar] svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6}
+/* foto do perfil no botão de conta (topo e menu do celular) */
+[data-account-avatar][data-has-photo],[data-account-avatar-mobile][data-has-photo]{overflow:hidden;padding:0}
+[data-account-avatar] img,[data-account-avatar-mobile] img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .account-btn[data-signed-in] span[data-account-avatar]{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#080808;font-size:11px;font-weight:800;text-transform:uppercase}
 .account-btn span[data-account-label]{font-size:11px}
 .account-menu-wrap,.settings-menu-wrap{position:relative}
@@ -2091,3 +2094,16 @@ button.admin-post-media{position:relative;width:100%;padding:0;border:0;cursor:z
   /* celular: rótulo e subtítulo quebram linha em vez de cortar com reticências */
   .admin-body .admin-kpi .admin-kpi-label,.admin-body .admin-kpi .admin-kpi-sub,.fin-stat-label{white-space:normal;line-height:1.35}
 }
+
+/* ===== SG COMMUNITY — convite (home e /comunidade): luz que percorre a borda,
+   botões com reflexo. Sem @property o card fica com a borda normal. ===== */
+@property --sgc-a{syntax:"<angle>";inherits:false;initial-value:0deg}
+.sgc-empty{position:relative;isolation:isolate}
+.sgc-empty::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;pointer-events:none;background:conic-gradient(from var(--sgc-a),transparent 0 62%,color-mix(in srgb,var(--accent) 85%,transparent) 76%,#ffd2ad 80%,transparent 92%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:sgc-orbit 9s linear infinite}
+@keyframes sgc-orbit{to{--sgc-a:360deg}}
+.sgc-home .btn,.sgc-empty .btn{position:relative;overflow:hidden;isolation:isolate}
+.sgc-home .btn-primary::after,.sgc-empty .btn-primary::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.6) 48%,transparent 66%);transform:translateX(-120%);transition:transform .9s var(--ease)}
+.sgc-home .btn-primary:hover::after,.sgc-empty .btn-primary:hover::after{transform:translateX(120%)}
+.sgc-steps li{transition:padding-left .35s var(--ease),color .3s}
+.sgc-steps li:hover{padding-left:6px;color:var(--text)}
+@media(prefers-reduced-motion:reduce){.sgc-empty::before{animation:none}}
