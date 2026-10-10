@@ -342,7 +342,8 @@ img{max-width:100%;display:block}
 
 /* ===== FULL-BLEED BANNER LINKS ===== */
 .banner-link{display:block;position:relative;overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.banner-img{width:100%;height:auto;transition:transform var(--t-cinematic) var(--ease)}
+.banner-link:not(.banner-link--film){margin-block:clamp(24px,3vw,48px)}
+.banner-img{display:block;width:100%;height:auto;transition:transform var(--t-cinematic) var(--ease)}
 .banner-link:hover .banner-img{transform:scale(1.025)}
 .banner-link::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,0);transition:box-shadow var(--t-base);pointer-events:none}
 .banner-link:hover::after{box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
@@ -659,7 +660,7 @@ img{max-width:100%;display:block}
 .banner-link--film{margin:100px auto;max-width:calc(var(--max) - 48px);border:0;border-radius:18px;box-shadow:0 0 0 1px rgba(255,255,255,.09) inset,0 40px 90px -30px rgba(0,0,0,.7),0 0 60px -18px color-mix(in srgb,var(--orange) 30%,transparent)}
 .banner-link--film .banner-img{border-radius:18px}
 .film-sweep{position:absolute;top:0;bottom:0;left:0;width:38%;pointer-events:none;background:linear-gradient(100deg,transparent 0%,color-mix(in srgb,var(--orange) 22%,transparent) 45%,transparent 100%);transform:translateX(-130%);mix-blend-mode:screen}
-@media(max-width:640px){.banner-link--film{margin:60px auto;max-width:calc(100% - 36px);border-radius:12px}.banner-link--film .banner-img{border-radius:12px}}
+@media(max-width:640px){.banner-link:not(.banner-link--film){margin-block:20px}.banner-link--film{margin:60px auto;max-width:calc(100% - 36px);border-radius:12px}.banner-link--film .banner-img{border-radius:12px}}
 
 /* ===== TRUST / NEWSLETTER ===== */
 .trust-strip{max-width:var(--max);margin:120px auto 120px;padding:0 24px;display:grid;grid-template-columns:repeat(4,1fr);gap:0}
