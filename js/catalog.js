@@ -8,25 +8,25 @@
    category-portals.js). import.meta.glob evita digitar à mão os ~118 nomes
    de arquivo (com vírgula, acento e parênteses) — Vite resolve o caminho
    real de cada um. */
-import heroLupasVideo from "../assets/heroes/web/hero-lupas.mp4";
-import heroLupasVideoMobile from "../assets/heroes/web-mobile/hero-lupas.mp4";
-import heroLupasPoster from "../assets/heroes/web/hero-lupas-poster.jpg";
+import heroLupasVideo from "../assets/heroes/loop/hero-lupas.mp4";
+import heroLupasVideoMobile from "../assets/heroes/loop-mobile/hero-lupas.mp4";
+import heroLupasPoster from "../assets/heroes/loop/hero-lupas-poster.jpg";
 import heroLupasPreview from "../assets/heroes/previews/hero-lupas.mp4";
-import heroAcessoriosVideo from "../assets/heroes/web/hero-acessorios.mp4";
-import heroAcessoriosVideoMobile from "../assets/heroes/web-mobile/hero-acessorios.mp4";
-import heroAcessoriosPoster from "../assets/heroes/web/hero-acessorios-poster.jpg";
+import heroAcessoriosVideo from "../assets/heroes/loop/hero-acessorios.mp4";
+import heroAcessoriosVideoMobile from "../assets/heroes/loop-mobile/hero-acessorios.mp4";
+import heroAcessoriosPoster from "../assets/heroes/loop/hero-acessorios-poster.jpg";
 import heroAcessoriosPreview from "../assets/heroes/previews/hero-acessorios.mp4";
-import heroRelogiosVideo from "../assets/heroes/web/hero-relogios.mp4";
-import heroRelogiosVideoMobile from "../assets/heroes/web-mobile/hero-relogios.mp4";
-import heroRelogiosPoster from "../assets/heroes/web/hero-relogios-poster.jpg";
+import heroRelogiosVideo from "../assets/heroes/loop/hero-relogios.mp4";
+import heroRelogiosVideoMobile from "../assets/heroes/loop-mobile/hero-relogios.mp4";
+import heroRelogiosPoster from "../assets/heroes/loop/hero-relogios-poster.jpg";
 import heroRelogiosPreview from "../assets/heroes/previews/hero-relogios.mp4";
-import heroPerfumesVideo from "../assets/heroes/web/hero-perfumes.mp4";
-import heroPerfumesVideoMobile from "../assets/heroes/web-mobile/hero-perfumes.mp4";
-import heroPerfumesPoster from "../assets/heroes/web/hero-perfumes-poster.jpg";
+import heroPerfumesVideo from "../assets/heroes/loop/hero-perfumes.mp4";
+import heroPerfumesVideoMobile from "../assets/heroes/loop-mobile/hero-perfumes.mp4";
+import heroPerfumesPoster from "../assets/heroes/loop/hero-perfumes-poster.jpg";
 import heroPerfumesPreview from "../assets/heroes/previews/hero-perfumes.mp4";
-import heroTrajesVideo from "../assets/heroes/web/hero-trajes.mp4";
-import heroTrajesVideoMobile from "../assets/heroes/web-mobile/hero-trajes.mp4";
-import heroTrajesPoster from "../assets/heroes/web/hero-trajes-poster.jpg";
+import heroTrajesVideo from "../assets/heroes/loop/hero-trajes.mp4";
+import heroTrajesVideoMobile from "../assets/heroes/loop-mobile/hero-trajes.mp4";
+import heroTrajesPoster from "../assets/heroes/loop/hero-trajes-poster.jpg";
 import heroTrajesPreview from "../assets/heroes/previews/hero-trajes.mp4";
 
 var CATEGORY_META = {

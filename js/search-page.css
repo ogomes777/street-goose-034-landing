@@ -54,21 +54,24 @@
 .sp-chip--recent{color:var(--muted)}
 .sp-chip--recent:hover{color:var(--text)}
 
-/* categorias com foto */
+/* categorias com vídeo em loop (mesmo preview dos cards da home) */
 .sp-cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
-.sp-cat{position:relative;display:flex;align-items:flex-end;height:210px;overflow:hidden;border-radius:20px;border:1px solid var(--border);text-decoration:none;color:#fff;isolation:isolate;animation:sp-up .5s cubic-bezier(.2,.75,.2,1) both;animation-delay:calc(120ms + var(--i,0) * 60ms);transition:transform .35s cubic-bezier(.2,.75,.2,1),border-color .3s,box-shadow .35s}
-.sp-cat-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-3;transform:scale(1.08);filter:saturate(.85) brightness(.42) blur(1px);transition:transform .7s cubic-bezier(.2,.75,.2,1),filter .5s}
-.sp-cat::before{content:"";position:absolute;inset:0;z-index:-2;background:radial-gradient(60% 55% at 62% 40%,color-mix(in srgb,var(--ca,#ff5a00) 38%,transparent),transparent 70%)}
-.sp-cat-product{position:absolute;right:-4%;top:6%;width:74%;height:66%;object-fit:contain;z-index:-1;transform:rotate(-7deg);filter:drop-shadow(0 18px 20px rgba(0,0,0,.6));transition:transform .6s cubic-bezier(.2,.75,.2,1)}
-.sp-cat-shade{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,transparent 30%,color-mix(in srgb,var(--cb,#000) 85%,transparent) 88%),radial-gradient(80% 50% at 50% 110%,color-mix(in srgb,var(--ca,#ff5a00) 45%,transparent),transparent 70%)}
+.sp-cat{position:relative;display:flex;align-items:flex-end;height:210px;overflow:hidden;border-radius:20px;border:1px solid var(--border);background:#0b0b0b;text-decoration:none;color:#fff;isolation:isolate;animation:sp-up .5s cubic-bezier(.2,.75,.2,1) both;animation-delay:calc(120ms + var(--i,0) * 60ms);transition:transform .35s cubic-bezier(.2,.75,.2,1),border-color .3s,box-shadow .35s}
+/* capa (1º frame do loop) e vídeo no mesmo lugar: quando o vídeo tem frame,
+   a capa sai de baixo dele — as duas nunca ficam misturadas */
+.sp-cat-bg,.sp-cat-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-3;transform:scale(1.04);transition:transform .7s cubic-bezier(.2,.75,.2,1),opacity .6s linear}
+.sp-cat-video{opacity:0}
+.sp-cat.is-video-ready .sp-cat-video{opacity:1}
+.sp-cat.is-video-ready .sp-cat-bg{opacity:0}
+.sp-cat::before{content:"";position:absolute;inset:0;z-index:-2;background:radial-gradient(60% 55% at 62% 40%,color-mix(in srgb,var(--ca,#ff5a00) 18%,transparent),transparent 70%)}
+.sp-cat-shade{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,transparent 30%,color-mix(in srgb,var(--cb,#000) 85%,transparent) 88%),radial-gradient(80% 50% at 50% 110%,color-mix(in srgb,var(--ca,#ff5a00) 45%,transparent),transparent 70%),linear-gradient(rgba(0,0,0,.32),rgba(0,0,0,.32))}
 .sp-cat-text{display:flex;flex-direction:column;gap:3px;padding:16px 18px}
 .sp-cat-label{font-size:21px;font-weight:800;letter-spacing:-.01em;text-shadow:0 4px 18px rgba(0,0,0,.5)}
 .sp-cat-count{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.7)}
 .sp-cat-go{position:absolute;top:14px;right:14px;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:rgba(10,10,10,.45);border:1px solid rgba(255,255,255,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);opacity:0;transform:translate(-6px,6px);transition:opacity .3s,transform .3s}
 .sp-cat-go svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2}
 .sp-cat:hover,.sp-cat:focus-visible{transform:translateY(-4px);border-color:color-mix(in srgb,var(--ca,#ff5a00) 70%,transparent);box-shadow:0 24px 50px -24px color-mix(in srgb,var(--ca,#ff5a00) 70%,transparent);outline:none}
-.sp-cat:hover .sp-cat-bg{transform:scale(1.14);filter:saturate(1) brightness(.5) blur(0)}
-.sp-cat:hover .sp-cat-product{transform:rotate(-3deg) scale(1.06) translateY(-4px)}
+.sp-cat:hover .sp-cat-bg,.sp-cat:hover .sp-cat-video{transform:scale(1.1)}
 .sp-cat:hover .sp-cat-go{opacity:1;transform:none}
 
 /* ---------- cards de produto ---------- */
@@ -147,5 +150,5 @@
 @media(prefers-reduced-motion:reduce){
   .sp-section,.sp-cat,.sp-card,.sp-results-head,.sp-empty{animation:none}
   .sp-field:focus-within::after{animation:none;opacity:0}
-  .sp-cat-bg,.sp-cat-product,.sp-card-media img{transition:none}
+  .sp-cat-bg,.sp-card-media img{transition:none}
 }

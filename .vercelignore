@@ -1,3 +1,5 @@
+# cópias de trabalho e config das sessões do Claude — nada disso entra no site
+.claude/
 CLAUDE.md
 assets/heroes/*.mp4
 assets/heroes/*.png
@@ -6,3 +8,12 @@ assets/banners/*.png
 assets/products/*.png
 assets/logos/*.png
 assets/lifestyle/*.webp
+# vídeos de categoria antigos (scroll-scrub) — trocados pelos loops em
+# assets/heroes/loop/ e loop-mobile/, nada mais importa estes
+assets/heroes/web-mobile/
+assets/heroes/web-original-backup/
+assets/heroes/web/hero-lupas.mp4
+assets/heroes/web/hero-acessorios.mp4
+assets/heroes/web/hero-relogios.mp4
+assets/heroes/web/hero-perfumes.mp4
+assets/heroes/web/hero-trajes.mp4

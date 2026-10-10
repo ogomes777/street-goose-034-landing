@@ -1,15 +1,14 @@
 /* Street Goose 034 — Página de categoria (montada sob demanda pelo router).
-   Hero com vídeo sincronizado ao scroll via ScrollTrigger — única fonte de
-   verdade de progresso, mas o <video>.currentTime nunca é escrito direto no
-   onUpdate: um único RAF (gate por requestVideoFrameCallback quando
-   disponível) lê um targetProgress e só dispara um novo seek quando a
-   diferença passa de ~1 frame E o seek anterior já resolveu. Isso evita
-   engasgo por seeks empilhados em vídeo com GOP longo.
-   Produtos da categoria ficam ocultos até o hero chegar perto do fim
-   (~0.995) — voltar o scroll esconde tudo de novo, nada é "on enter"
-   irreversível. scroller aponta pro overlay (.category-page), que é quem
-   tem overflow-y:auto — o document/window não rola enquanto a categoria
-   está aberta (body fica position:fixed, ver router.js). */
+   Hero com vídeo em loop infinito tocando sozinho — não depende do scroll.
+   Os arquivos de assets/heroes/loop/ já saem do encode com o fim emendado
+   no começo por uma dissolução curta (sem o flash/preto das pontas do
+   original), então o `loop` nativo dá a volta sem piscar. O poster é o
+   primeiro frame do próprio loop: a troca poster → vídeo não tem salto.
+   O vídeo só toca enquanto o hero está na tela e a aba está visível.
+   Produtos aparecem uma única vez quando a grade entra na tela — nada se
+   esconde de novo ao voltar o scroll. scroller é o overlay
+   (.category-page), que tem overflow-y:auto — o document/window não rola
+   enquanto a categoria está aberta (body fica position:fixed, ver router.js). */
 export function mountCategoryPage(root, slug, onRequestClose) {
   var cat = window.SG_CATALOG_BY_SLUG && window.SG_CATALOG_BY_SLUG[slug];
   if (!cat) {
@@ -20,9 +19,10 @@ export function mountCategoryPage(root, slug, onRequestClose) {
   root.style.setProperty("--portal-accent", cat.a);
 
   // arquivo escolhido uma única vez, antes de montar — nunca troca de <source>
-  // no meio do scrub, mesmo se a janela for redimensionada depois
+  // com o vídeo tocando, mesmo se a janela for redimensionada depois
   var isMobileHero = window.innerWidth <= 860 && cat.heroVideoMobile;
   var heroVideoSrc = isMobileHero ? cat.heroVideoMobile : cat.heroVideo;
+  var reduced = window.SG.prefersReducedMotion();
 
   function itemBodyHtml(item) {
     return (
@@ -50,32 +50,31 @@ export function mountCategoryPage(root, slug, onRequestClose) {
     '<button class="cat-close" type="button" data-cat-close aria-label="Fechar categoria">' +
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
     "</button>" +
-    '<div class="cat-hero" data-cat-hero>' +
-      '<div class="cat-hero-sticky">' +
-        '<img class="cat-hero-bg" src="' + cat.heroPoster + '" alt="" aria-hidden="true" />' +
-        '<img class="cat-hero-poster" src="' + cat.heroPoster + '" alt="" />' +
-        '<video class="cat-hero-video" data-cat-video muted playsinline preload="auto" poster="' + cat.heroPoster + '"><source src="' + heroVideoSrc + '" type="video/mp4" /></video>' +
-        '<div class="cat-hero-scrim"></div>' +
-        '<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h2 class="cat-hero-title">' + cat.label + "</h2></div>" +
-        '<div class="cat-hero-progress"><div class="cat-hero-progress-track"><div class="cat-hero-progress-fill" data-cat-progress></div></div></div>' +
-      "</div>" +
-    "</div>" +
+    '<section class="cat-hero" data-cat-hero>' +
+      '<img class="cat-hero-bg" src="' + cat.heroPoster + '" alt="" aria-hidden="true" />' +
+      '<img class="cat-hero-poster" src="' + cat.heroPoster + '" alt="" />' +
+      (reduced ? "" :
+        '<video class="cat-hero-video" data-cat-video muted loop playsinline preload="auto" poster="' + cat.heroPoster + '" aria-hidden="true"><source src="' + heroVideoSrc + '" type="video/mp4" /></video>') +
+      '<div class="cat-hero-scrim"></div>' +
+      '<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h2 class="cat-hero-title">' + cat.label + "</h2></div>" +
+      '<button class="cat-hero-cue" type="button" data-cat-cue>Ver as peças' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+      "</button>" +
+    "</section>" +
     '<div class="cat-catalog" data-cat-catalog>' +
       '<div class="cat-catalog-head"><h3>' + cat.label + "</h3><p>" + cat.count + " peças</p></div>" +
       '<div class="cat-catalog-grid" data-cat-grid>' + itemsHtml + "</div>" +
     "</div>";
 
   // root é reaproveitado entre categorias (só o innerHTML troca) — sem isso
-  // o scrollTop de uma categoria anterior vaza pra próxima, o ScrollTrigger
-  // mede o range do hero novo a partir de uma posição errada e o vídeo nunca
-  // termina de scrubar (bug real: reproduzido testando abrir categoria B
-  // logo depois de ter rolado a categoria A até o fim)
+  // o scrollTop de uma categoria anterior vaza pra próxima
   root.scrollTop = 0;
 
   var closeBtn = root.querySelector("[data-cat-close]");
+  var cueBtn = root.querySelector("[data-cat-cue]");
   var heroSection = root.querySelector("[data-cat-hero]");
+  var catalog = root.querySelector("[data-cat-catalog]");
   var video = root.querySelector("[data-cat-video]");
-  var progressFill = root.querySelector("[data-cat-progress]");
   var grid = root.querySelector("[data-cat-grid]");
   var items = Array.prototype.slice.call(grid.children);
 
@@ -84,9 +83,43 @@ export function mountCategoryPage(root, slug, onRequestClose) {
   function onKeydown(e) { if (e.key === "Escape") close(); }
   document.addEventListener("keydown", onKeydown);
 
+  function onCue() {
+    root.scrollTo({ top: catalog.offsetTop, behavior: reduced ? "auto" : "smooth" });
+  }
+  cueBtn.addEventListener("click", onCue);
+
+  /* ---------------- Grade: entra uma vez, quando aparece ---------------- */
+  var revealed = false;
+  var revealTween = null;
+  function showNow(list) {
+    list.forEach(function (el) { el.style.opacity = "1"; el.style.transform = "none"; });
+  }
+  function reveal() {
+    if (revealed) return;
+    revealed = true;
+    if (window.gsap && !reduced) {
+      revealTween = window.gsap.to(items, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "power2.out", stagger: 0.035 });
+    } else {
+      showNow(items);
+    }
+  }
+
+  var gridIo = null;
+  if ("IntersectionObserver" in window && !reduced) {
+    gridIo = new IntersectionObserver(function (entries) {
+      if (!entries.some(function (e) { return e.isIntersecting; })) return;
+      reveal();
+      gridIo.disconnect();
+      gridIo = null;
+    }, { root: root, rootMargin: "0px 0px -8% 0px" });
+    gridIo.observe(grid);
+  } else {
+    reveal();
+  }
+
   // preço do banco chegou depois de montar (ex.: deep link /categoria/...):
   // troca só o corpo do card — preço e, se a peça ganhou/perdeu preço, o
-  // botão (sacola ↔ WhatsApp). Hero, scrub e reveal não são tocados.
+  // botão (sacola ↔ WhatsApp). Hero e vídeo não são tocados.
   function onPrices() {
     cat.items.forEach(function (item) {
       var body = grid.querySelector('[data-product-id="' + item.id + '"] .cat-item-body');
@@ -96,188 +129,80 @@ export function mountCategoryPage(root, slug, onRequestClose) {
   window.addEventListener("sg:prices", onPrices);
 
   // produto novo/removido/reordenado no painel e o banco respondeu depois de
-  // montar (cache antigo): refaz só a grade; hero e scrub seguem intactos
+  // montar (cache antigo): refaz só a grade; hero e vídeo seguem intactos
   function onCatalog() {
+    if (revealTween) { revealTween.kill(); revealTween = null; }
     grid.innerHTML = cat.items.map(itemHtml).join("");
     items = Array.prototype.slice.call(grid.children);
     var countEl = root.querySelector(".cat-catalog-head p");
     if (countEl) countEl.textContent = cat.count + " peças";
-    if (revealed || !canScrub) items.forEach(function (el) { el.style.opacity = "1"; el.style.transform = "none"; });
+    if (revealed) showNow(items);
   }
   window.addEventListener("sg:catalog", onCatalog);
 
-  var reduced = window.SG.prefersReducedMotion();
-  var canScrub = window.SG.hasGSAP && window.ScrollTrigger && !reduced;
-
-  var revealTween = null;
-  var revealed = false;
-  function reveal() {
-    if (revealed) return;
-    revealed = true;
-    if (window.gsap) {
-      if (revealTween) revealTween.kill();
-      revealTween = window.gsap.to(items, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "power2.out", stagger: 0.035 });
-    } else {
-      items.forEach(function (el) { el.style.opacity = "1"; el.style.transform = "none"; });
-    }
-  }
-  function unreveal() {
-    if (!revealed) return;
-    revealed = false;
-    if (window.gsap) {
-      if (revealTween) revealTween.kill();
-      revealTween = window.gsap.to(items, { opacity: 0, y: 24, scale: 0.97, duration: 0.35, ease: "power2.in", stagger: 0.01 });
-    } else {
-      items.forEach(function (el) { el.style.opacity = "0"; });
-    }
-  }
-
-  /* ---------------- Fallback estático: reduced motion / sem GSAP ---------------- */
-  if (!canScrub) {
-    heroSection.classList.add("cat-hero--static");
-    video.setAttribute("preload", "none");
-    items.forEach(function (el) { el.style.opacity = "1"; el.style.transform = "none"; });
-    return function () {
-      closeBtn.removeEventListener("click", close);
-      document.removeEventListener("keydown", onKeydown);
-      window.removeEventListener("sg:prices", onPrices);
-      window.removeEventListener("sg:catalog", onCatalog);
-    };
-  }
-
-  // sem isso o <video> pinta uma área branca (comportamento padrão de vários
-  // browsers antes do primeiro frame decodificado) por cima do poster —
-  // nunca aparece até termos loadedmetadata + readyState>=2 + um seeked real
-  video.style.opacity = "0";
-  var firstFrameReady = false;
-  var hasLoadedMeta = false;
-  var hasSeekedOnce = false;
-  function tryRevealFirstFrame() {
-    if (firstFrameReady || !hasLoadedMeta || !hasSeekedOnce || video.readyState < 2) return;
-    firstFrameReady = true;
-    video.style.transition = "opacity .18s linear";
-    video.style.opacity = "1";
-  }
-  // depois do primeiro frame, NUNCA mais escondemos por "waiting"/"seeking" —
-  // o browser já preserva o último frame válido sozinho durante um seek; ficar
-  // alternando opacidade a cada evento de scrub é exatamente o que causava a
-  // "piscada" (não tela branca real, e sim o vídeo sumindo e voltando à toa)
-  video.addEventListener("seeked", function () { hasSeekedOnce = true; tryRevealFirstFrame(); });
-  video.addEventListener("canplay", tryRevealFirstFrame);
-
-  var videoReady = false;
-  var duration = 0;
-  var catST = null;
-  var refreshedAfterMeta = false;
-  function onLoadedMeta() {
-    duration = video.duration || 0;
-    videoReady = true;
-    hasLoadedMeta = true;
-    tryRevealFirstFrame();
-    // um único refresh, depois que o vídeo (que define a proporção sticky)
-    // e o layout já assentaram — nunca durante o próprio scroll
-    if (!refreshedAfterMeta && window.ScrollTrigger) {
-      refreshedAfterMeta = true;
-      window.ScrollTrigger.refresh();
-    }
-  }
-  video.addEventListener("loadedmetadata", onLoadedMeta);
-  video.load();
-
-  var REVEAL_AT = 0.995;
-  var targetProgress = 0;
-  var isSeeking = false;
-  var syncRaf = 0;
-  var destroyed = false;
-  var lastAppliedTime = -1;
-  var FRAME_DURATION = 1 / 30; // vídeos rodam a 30fps — não vale a pena seekar por menos que isso
-
-  // Máquina de estados explícita: category-selection (já passou, é essa
-  // função sendo chamada) → hero-loading → hero-active → hero-completed →
-  // products. Sem isso, qualquer refresh do ScrollTrigger (resize da barra
-  // de endereço do Safari, troca de layout, IntersectionObserver oscilando)
-  // podia recalcular self.progress um pouco abaixo do limiar de revelação
-  // mesmo sem o usuário ter rolado nada, chamando unreveal() sozinho — o
-  // "hero volta sozinho depois de concluído". Uma vez COMPLETED, o estado é
-  // travado: só fechar e abrir a categoria de novo (nova entrada) reseta.
-  var HERO_STATE = { LOADING: "hero-loading", ACTIVE: "hero-active", COMPLETED: "hero-completed" };
-  var heroState = HERO_STATE.LOADING;
-
-  video.addEventListener("seeking", function () { isSeeking = true; });
-  video.addEventListener("seeked", function () { isSeeking = false; });
-
-  // requestVideoFrameCallback existe, mas na prática só dispara de forma
-  // confiável durante playback — pra vídeo pausado e só sendo "seekado" (o
-  // caso do scrub) ele pode nunca disparar de novo depois do primeiro tick
-  // em alguns browsers, travando a sincronização inteira (currentTime fica
-  // parado em 0 pro resto da sessão — bug real encontrado testando). RAF
-  // simples é o driver confiável aqui; o ganho de rVFC não vale o risco.
-  function syncVideoToTarget() {
-    if (destroyed) return;
-    if (videoReady && !isSeeking && duration > 0) {
-      var desired = Math.max(0, Math.min(duration, targetProgress * duration));
-      if (Math.abs(desired - lastAppliedTime) > FRAME_DURATION) {
-        video.currentTime = desired;
-        lastAppliedTime = desired;
-      }
-    }
-    syncRaf = requestAnimationFrame(syncVideoToTarget);
-  }
-  syncVideoToTarget();
-
-  function completeHero() {
-    if (heroState === HERO_STATE.COMPLETED) return;
-    heroState = HERO_STATE.COMPLETED;
-    progressFill.style.width = "100%";
-    reveal();
-    video.pause();
-    // encerra o próprio trigger — nada mais escreve currentTime ou chama
-    // reveal/unreveal depois disso; scroll na região do hero só mostra o
-    // último frame parado, como esperado de "hero concluído"
-    if (catST) { catST.kill(); catST = null; }
-  }
-
-  function applyProgress(p) {
-    if (heroState === HERO_STATE.COMPLETED) return;
-    targetProgress = p;
-    progressFill.style.width = (Math.min(1, p) * 100).toFixed(1) + "%";
-    if (p >= REVEAL_AT) {
-      completeHero();
-      return;
-    }
-    heroState = HERO_STATE.ACTIVE;
-    unreveal();
-  }
-
-  catST = window.ScrollTrigger.create({
-    trigger: heroSection, scroller: root, start: "top top", end: "bottom bottom", scrub: 0.18,
-    invalidateOnRefresh: true,
-    onUpdate: function (self) { applyProgress(self.progress); }
-  });
-  // o overlay é montado depois do DOM já existir com altura 0 no primeiro
-  // paint — sem isso o ScrollTrigger mede o trigger antes do layout assentar
-  requestAnimationFrame(function () { if (window.ScrollTrigger && !refreshedAfterMeta) window.ScrollTrigger.refresh(); });
-
-  function onVisibilityChange() {
-    if (document.hidden) { video.pause(); return; }
-    lastAppliedTime = -1; // força ressincronizar ao voltar, o tempo pode ter ficado velho
-  }
-  document.addEventListener("visibilitychange", onVisibilityChange);
-
-  return function destroy() {
-    destroyed = true;
-    if (catST) catST.kill();
+  function teardownCommon() {
+    if (gridIo) gridIo.disconnect();
     if (revealTween) revealTween.kill();
-    if (syncRaf) cancelAnimationFrame(syncRaf);
-    video.removeEventListener("loadedmetadata", onLoadedMeta);
-    video.removeEventListener("canplay", tryRevealFirstFrame);
-    document.removeEventListener("visibilitychange", onVisibilityChange);
     closeBtn.removeEventListener("click", close);
+    cueBtn.removeEventListener("click", onCue);
     document.removeEventListener("keydown", onKeydown);
     window.removeEventListener("sg:prices", onPrices);
     window.removeEventListener("sg:catalog", onCatalog);
+  }
+
+  /* ---------------- Reduced motion: só o poster, sem vídeo ---------------- */
+  if (!video) return teardownCommon;
+
+  /* ---------------- Vídeo em loop ---------------- */
+  video.muted = true;
+  video.defaultMuted = true;
+
+  // o <video> fica invisível até ter frame decodificado de verdade — antes
+  // disso alguns browsers pintam branco/vazio por cima do poster
+  function markReady() {
+    if (video.readyState >= 2) heroSection.classList.add("is-video-ready");
+  }
+  video.addEventListener("loadeddata", markReady);
+  video.addEventListener("playing", markReady);
+
+  var heroVisible = true; // o hero é o topo da página: começa na tela
+  function play() {
+    if (document.hidden || !heroVisible) return;
+    // autoplay bloqueado (iPhone em economia de bateria, etc.) só rejeita a
+    // promise — o poster, que é o mesmo primeiro frame, continua ali
+    var p = video.play();
+    if (p && typeof p.catch === "function") p.catch(function () {});
+  }
+
+  // fora da tela não decodifica à toa (GPU livre pra rolar a grade)
+  var heroIo = null;
+  if ("IntersectionObserver" in window) {
+    heroIo = new IntersectionObserver(function (entries) {
+      heroVisible = entries[entries.length - 1].isIntersecting;
+      if (heroVisible) play();
+      else video.pause();
+    }, { root: root });
+    heroIo.observe(heroSection);
+  }
+
+  function onVisibilityChange() {
+    if (document.hidden) video.pause();
+    else play();
+  }
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
+  play();
+
+  return function destroy() {
+    teardownCommon();
+    if (heroIo) heroIo.disconnect();
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    video.removeEventListener("loadeddata", markReady);
+    video.removeEventListener("playing", markReady);
     video.pause();
+    // solta o decoder e o buffer na hora, sem esperar o GC
     video.removeAttribute("src");
+    Array.prototype.forEach.call(video.querySelectorAll("source"), function (s) { s.removeAttribute("src"); });
     video.load();
   };
 }

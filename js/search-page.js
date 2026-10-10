@@ -1,6 +1,6 @@
 /* Street Goose 034 — /busca. Vitrine de busca 100% client-side sobre o
    catálogo real (window.SG_PRODUCTS, já sem peças ocultas pelo painel).
-   Campo vazio: buscas recentes, sugestões, categorias com foto e seleção da
+   Campo vazio: buscas recentes, sugestões, categorias com vídeo e seleção da
    casa. Digitando: cards com preço/ação, destaque do termo, filtro por
    categoria. Busca sem acento e por sinônimo ("moletom", "mochila",
    "óculos"), já que os nomes de fábrica das peças são genéricos.
@@ -157,13 +157,11 @@ export function mountSearchPage(root, _params, onClose) {
   function categoriesHtml() {
     var t = L();
     return categories().filter(function (c) { return c.count > 0; }).map(function (c, i) {
-      // peça real da categoria flutuando na frente da capa (capas claras,
-      // como a de Lupas, ficavam lavadas sozinhas)
-      var lead = (c.items || []).filter(function (p) { return !p.soldOut && p.images && p.images.length; })[0];
+      // capa = 1º frame do loop da categoria; o vídeo entra por cima dela
+      // (mountCatVideos) — no reduced motion a capa fica sozinha
       return (
-        '<a class="sp-cat" href="/categoria/' + esc(c.slug) + '" style="--i:' + i + ";--ca:" + esc(c.a) + ";--cb:" + esc(c.b) + '">' +
+        '<a class="sp-cat" href="/categoria/' + esc(c.slug) + '" data-sp-cat="' + esc(c.slug) + '" style="--i:' + i + ";--ca:" + esc(c.a) + ";--cb:" + esc(c.b) + '">' +
           '<img class="sp-cat-bg" src="' + esc(c.heroPoster) + '" alt="" loading="lazy" decoding="async">' +
-          (lead ? '<img class="sp-cat-product" src="' + esc(lead.images[0]) + '" alt="" loading="lazy" decoding="async">' : "") +
           '<span class="sp-cat-shade"></span>' +
           '<span class="sp-cat-text"><span class="sp-cat-label">' + esc(c.label) + "</span>" +
           '<span class="sp-cat-count">' + c.count + " " + esc(c.count === 1 ? t.piece : t.pieces) + "</span></span>" +
@@ -176,10 +174,8 @@ export function mountSearchPage(root, _params, onClose) {
   // seleção da casa: alterna categorias (até 2 por categoria), sem esgotados
   function highlights() {
     var picked = [];
-    // pula a 1ª peça de cada categoria: ela já aparece na capa da categoria
     var pools = categories().map(function (c) {
-      var list = (c.items || []).filter(function (p) { return !p.soldOut && p.images && p.images.length; });
-      return list.length > 2 ? list.slice(1) : list;
+      return (c.items || []).filter(function (p) { return !p.soldOut && p.images && p.images.length; });
     });
     for (var round = 0; round < 2; round++) {
       pools.forEach(function (pool) { if (pool[round]) picked.push(pool[round]); });
@@ -217,6 +213,83 @@ export function mountSearchPage(root, _params, onClose) {
     );
   }
 
+  // ---------- vídeo nos cards de categoria ----------
+  // Mesmo preview em loop dos cards da home (category-portals.js). Cada
+  // <video> nasce uma vez por categoria e só troca de card quando a lista
+  // redesenha (digitar, trocar idioma, catálogo mudar): é reinserido na mesma
+  // tarefa, então segue tocando de onde estava, sem recarregar nem piscar.
+  // Só toca o card visível e com a aba aberta.
+  var reducedMotion = window.SG.prefersReducedMotion();
+  var catVideos = {}; // slug -> <video>
+  var onScreen = new WeakMap(); // card -> visível?
+  var videoIo = null;
+
+  function catVideo(c) {
+    var v = catVideos[c.slug];
+    if (v) return v;
+    v = document.createElement("video");
+    v.className = "sp-cat-video";
+    v.muted = true;
+    v.defaultMuted = true;
+    v.loop = true;
+    v.playsInline = true;
+    v.setAttribute("playsinline", ""); // alguns iOS antigos só respeitam o atributo
+    v.setAttribute("aria-hidden", "true");
+    v.preload = "metadata";
+    v.src = c.heroPreview;
+    // só aparece com frame decodificado — antes disso fica a capa
+    function markReady() {
+      if (v.readyState >= 2 && v.parentNode) v.parentNode.classList.add("is-video-ready");
+    }
+    v.addEventListener("loadeddata", markReady);
+    v.addEventListener("playing", markReady);
+    catVideos[c.slug] = v;
+    return v;
+  }
+
+  function syncCard(card) {
+    var v = card.querySelector(".sp-cat-video");
+    if (!v) return;
+    if (onScreen.get(card) && !document.hidden) {
+      // autoplay bloqueado (economia de bateria) só rejeita: a capa fica
+      var p = v.play();
+      if (p && typeof p.catch === "function") p.catch(function () {});
+    } else {
+      v.pause();
+    }
+  }
+
+  if (!reducedMotion && "IntersectionObserver" in window) {
+    videoIo = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { onScreen.set(e.target, e.isIntersecting); syncCard(e.target); });
+    }, { threshold: 0.25 });
+  }
+
+  function mountCatVideos() {
+    if (!videoIo) return;
+    videoIo.disconnect(); // cards antigos saíram do DOM junto com o innerHTML
+    resultsEl.querySelectorAll("[data-sp-cat]").forEach(function (card) {
+      var slug = card.getAttribute("data-sp-cat");
+      var c = categories().filter(function (x) { return x.slug === slug; })[0];
+      if (!c || !c.heroPreview) return;
+      var v = catVideo(c);
+      var bg = card.querySelector(".sp-cat-bg");
+      card.insertBefore(v, bg ? bg.nextSibling : card.firstChild);
+      if (v.readyState >= 2) card.classList.add("is-video-ready");
+      videoIo.observe(card);
+    });
+  }
+
+  function setResults(html) {
+    resultsEl.innerHTML = html;
+    mountCatVideos();
+  }
+
+  function onVisibility() {
+    resultsEl.querySelectorAll("[data-sp-cat]").forEach(syncCard);
+  }
+  document.addEventListener("visibilitychange", onVisibility);
+
   function renderIdle() {
     var t = L();
     activeIndex = -1;
@@ -241,7 +314,7 @@ export function mountSearchPage(root, _params, onClose) {
         '<p class="sp-section-sub">' + esc(t.highlightsSub) + "</p>" +
         '<div class="sp-grid">' + picks.map(function (p, i) { return cardHtml(p, i, ""); }).join("") + "</div>", "", n++);
     }
-    resultsEl.innerHTML = html;
+    setResults(html);
   }
 
   function renderResults(term) {
@@ -251,7 +324,7 @@ export function mountSearchPage(root, _params, onClose) {
     if (!q) { activeFilter = "all"; renderIdle(); return; }
     var all = search(q);
     if (!all.length) {
-      resultsEl.innerHTML =
+      setResults(
         '<div class="sp-empty">' +
           '<span class="sp-empty-icon">' + ICON.search + "</span>" +
           '<h2 class="sp-empty-title">' + esc(t.none(q)) + "</h2>" +
@@ -261,7 +334,7 @@ export function mountSearchPage(root, _params, onClose) {
             return '<button class="sp-chip" type="button" data-search-term="' + esc(s.q) + '">' + esc(s.label) + "</button>";
           }).join("") + "</div>" +
         "</div>" +
-        section(t.categories, "", '<div class="sp-cats">' + categoriesHtml() + "</div>", "", 1);
+        section(t.categories, "", '<div class="sp-cats">' + categoriesHtml() + "</div>", "", 1));
       return;
     }
     // filtro por categoria (contagem dentro do resultado)
@@ -279,9 +352,9 @@ export function mountSearchPage(root, _params, onClose) {
           }).join("") +
         "</div>"
       : "";
-    resultsEl.innerHTML =
+    setResults(
       '<div class="sp-results-head"><p class="sp-results-count">' + esc(t.results(all.length, q)) + "</p>" + filters + "</div>" +
-      '<div class="sp-grid sp-grid--results">' + shown.slice(0, 60).map(function (p, i) { return cardHtml(p, i, q); }).join("") + "</div>";
+      '<div class="sp-grid sp-grid--results">' + shown.slice(0, 60).map(function (p, i) { return cardHtml(p, i, q); }).join("") + "</div>");
   }
 
   // ---------- eventos ----------
@@ -350,6 +423,15 @@ export function mountSearchPage(root, _params, onClose) {
     document.removeEventListener("keydown", onKeydown, true);
     window.removeEventListener("sg:catalog", refresh);
     document.removeEventListener("sg:lang-change", onLang);
+    document.removeEventListener("visibilitychange", onVisibility);
     clearTimeout(debounceTimer);
+    if (videoIo) videoIo.disconnect();
+    // solta decoder e buffer na hora, sem esperar o GC
+    Object.keys(catVideos).forEach(function (slug) {
+      var v = catVideos[slug];
+      v.pause();
+      v.removeAttribute("src");
+      v.load();
+    });
   };
 }

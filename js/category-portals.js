@@ -1,7 +1,7 @@
 /* Street Goose 034 — Portais de categoria.
    Seção separada do palco de 7 produtos (product-universe.js). Cinco cards
-   quadrados com preview de vídeo autoplay independente do scroll (não é
-   scroll-scrub — isso só acontece depois do clique, em category-page.js).
+   quadrados com preview de vídeo autoplay independente do scroll (o loop
+   completo da categoria toca depois do clique, em category-page.js).
    Só o card visível toca; fora da viewport pausa. Clique navega via router
    para /categoria/:slug — nunca mostra produto nenhum aqui, só o convite. */
 (function () {
