@@ -34,6 +34,99 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="intro-loader" data-intro-loader role="dialog" aria-modal="true" aria-label="Street Goose 034 — abertura">
+    <video class="intro-loader-video" data-intro-video autoplay muted playsinline preload="auto" aria-hidden="true">
+      <source src="assets/INTRO-LOADER-STREET-small.mp4" type="video/mp4" />
+    </video>
+    <div class="intro-loader-stars" aria-hidden="true"></div>
+    <div class="intro-loader-content">
+      <img src="assets/logos/web/logo-street-goose-034.webp" alt="Street Goose 034" width="220" height="59" />
+      <span class="intro-loader-line" aria-hidden="true"></span>
+      <p>UMA NOVA ÓTICA DE RUA</p>
+      <button type="button" data-intro-skip>Pular intro <span aria-hidden="true">↗</span></button>
+    </div>
+    <audio data-intro-audio src="assets/INTRO-LOADER-STREET.MP3" preload="auto"></audio>
+  </div>
+  <script>
+    (function () {
+      var intro = document.querySelector("[data-intro-loader]");
+      var skip = document.querySelector("[data-intro-skip]");
+      var introVideo = document.querySelector("[data-intro-video]");
+      var introAudio = document.querySelector("[data-intro-audio]");
+      if (!intro || !skip) return;
+      var alreadySeen = false;
+      try { alreadySeen = sessionStorage.getItem("sgIntroSeen") === "1"; } catch (e) {}
+      var introShouldShow = !alreadySeen && navigator.webdriver !== true && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (introShouldShow) {
+        var introScrollY = window.scrollY || window.pageYOffset || 0;
+        window.__sgIntroScrollY = introScrollY;
+        document.body.style.position = "fixed";
+        document.body.style.top = "-" + introScrollY + "px";
+        document.body.style.left = "0";
+        document.body.style.right = "0";
+        document.body.style.width = "100%";
+      }
+      function releaseIntroScroll() {
+        if (typeof window.__sgIntroScrollY !== "number") return;
+        var savedY = window.__sgIntroScrollY;
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.left = "";
+        document.body.style.right = "";
+        document.body.style.width = "";
+        try { delete window.__sgIntroScrollY; } catch (e) { window.__sgIntroScrollY = undefined; }
+        window.scrollTo({ top: savedY, left: 0, behavior: "instant" });
+      }
+      function finishIntro() {
+        if (intro.hidden || intro.classList.contains("is-leaving")) return;
+        if (window.SG && typeof window.SG.skipIntro === "function") {
+          window.SG.skipIntro();
+          return;
+        }
+        intro.classList.add("is-leaving");
+        try { sessionStorage.setItem("sgIntroSeen", "1"); } catch (e) {}
+        releaseIntroScroll();
+        window.__sgIntroSkipRequested = true;
+        window.SG = window.SG || {};
+        window.SG.introComplete = true;
+        document.dispatchEvent(new CustomEvent("sg:intro-complete"));
+        if (introVideo) introVideo.pause();
+        if (introAudio) introAudio.pause();
+        window.setTimeout(function () { intro.hidden = true; }, 650);
+      }
+      skip.addEventListener("click", finishIntro);
+      if (!introShouldShow) {
+        if (introVideo) introVideo.pause();
+        if (introAudio) introAudio.pause();
+        intro.hidden = true;
+        window.__sgIntroSkipRequested = true;
+        window.SG = window.SG || {};
+        window.SG.introComplete = true;
+        document.dispatchEvent(new CustomEvent("sg:intro-complete"));
+      } else {
+        var introFallback = window.setTimeout(finishIntro, 30000);
+        document.addEventListener("sg:intro-complete", function () { window.clearTimeout(introFallback); }, { once: true });
+      }
+    })();
+  </script>
+  <div class="music-player" data-music-player hidden>
+    <audio data-music-audio src="assets/street-goose-theme.mp3" preload="none" loop></audio>
+    <button class="music-orb" data-music-orb type="button" aria-label="Abrir player de música" hidden>♫</button>
+    <div class="music-panel" data-music-panel>
+      <span class="music-player-label"><i aria-hidden="true"></i> STREET GOOSE / SOUND</span>
+      <button class="music-playpause" data-music-playpause type="button" aria-label="Tocar música" aria-pressed="false">
+        <svg data-icon-play viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg>
+        <svg data-icon-pause viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M7 5h4v14H7zM15 5h4v14h-4z"/></svg>
+        <span data-music-label hidden>Ativar som</span>
+      </button>
+      <button class="music-mute" data-music-mute type="button" aria-label="Mutar" aria-pressed="false">
+        <svg data-icon-vol-high viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4zm12-2a6 6 0 0 1 0 8m2-11a10 10 0 0 1 0 14"/></svg>
+        <svg data-icon-vol-mute viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M4 10v4h4l5 4V6l-5 4H4zm12 1 5 5m0-5-5 5"/></svg>
+      </button>
+      <input data-music-volume type="range" min="0" max="100" value="35" aria-label="Volume da música" />
+      <button class="music-minimize" data-music-minimize type="button" aria-label="Minimizar player">−</button>
+    </div>
+  </div>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
       <linearGradient id="sgStarGrad" x1="0" y1="0" x2="1" y2="1">

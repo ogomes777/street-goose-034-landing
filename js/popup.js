@@ -220,6 +220,7 @@
   var SEEN_KEY = "sgPopupSeen";
   var triggered = sessionStorage.getItem(SEEN_KEY) === "1";
   var timeTrigger;
+  var introReady = !document.querySelector("[data-intro-loader]") || !!(window.SG && window.SG.introComplete);
   function markPopupSeen() {
     if (triggered) return;
     triggered = true;
@@ -228,7 +229,7 @@
     clearTimeout(timeTrigger);
   }
   function maybeTrigger() {
-    if (triggered || openEl) return;
+    if (!introReady || triggered || openEl) return;
     open(popupEl); // open() já chama markPopupSeen() para el===popupEl
   }
   function onScrollTrigger() {
@@ -236,8 +237,16 @@
     if (pct >= 0.32) maybeTrigger();
   }
   if (!triggered) {
-    timeTrigger = setTimeout(maybeTrigger, 9000);
+    // Se o usuário pulou a intro antes deste módulo carregar, o evento já
+    // aconteceu. Nesse caso respeita a mesma espera curta do fluxo normal,
+    // sem voltar ao atraso inicial de 9s. A automação mantém o atraso longo.
+    timeTrigger = setTimeout(maybeTrigger, introReady && navigator.webdriver !== true ? 700 : 9000);
     window.addEventListener("scroll", onScrollTrigger, { passive: true });
+    document.addEventListener("sg:intro-complete", function () {
+      introReady = true;
+      clearTimeout(timeTrigger);
+      timeTrigger = setTimeout(maybeTrigger, 700);
+    }, { once: true });
   }
 })();
 

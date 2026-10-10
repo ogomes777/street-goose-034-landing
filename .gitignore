@@ -12,5 +12,10 @@ supabase/.temp
 
 # vídeos grandes (servidos pelo deploy da Vercel, não pelo git)
 *.mp4
+!/assets/INTRO-LOADER-STREET-small.mp4
+!/assets/heroes/loop/*.mp4
+!/assets/heroes/loop-mobile/*.mp4
+!/assets/heroes/previews/*.mp4
+!/assets/heroes/web/*.mp4
 *.mov
 *.webm

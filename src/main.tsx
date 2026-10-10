@@ -25,6 +25,8 @@ async function bootstrap() {
   legacyWindow.ScrollTrigger = ScrollTrigger;
 
   await import("../js/motion.js");
+  await import("../js/intro-loader.js");
+  await import("../js/music-player.js");
   await import("../js/config.js");
   await import("../js/theme.js");
   await import("../js/i18n.js");

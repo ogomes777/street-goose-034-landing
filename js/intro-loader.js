@@ -55,9 +55,51 @@
     return;
   }
 
+  // O router mantém seu próprio lock local; não há window.SG.lockScroll
+  // global. O inline já pode ter travado o body para cobrir o carregamento
+  // assíncrono deste módulo, então reaproveitamos a posição registrada.
+  var introScrollY = typeof window.__sgIntroScrollY === "number"
+    ? window.__sgIntroScrollY
+    : (window.scrollY || window.pageYOffset || 0);
+  var introScrollLocked = false;
+  function lockIntroScroll() {
+    if (typeof window.__sgIntroScrollY !== "number") {
+      window.__sgIntroScrollY = introScrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = "-" + introScrollY + "px";
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
+    }
+    introScrollLocked = true;
+  }
+  function unlockIntroScroll() {
+    if (!introScrollLocked) return;
+    var savedY = typeof window.__sgIntroScrollY === "number" ? window.__sgIntroScrollY : introScrollY;
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    try { delete window.__sgIntroScrollY; } catch (e) { window.__sgIntroScrollY = undefined; }
+    introScrollLocked = false;
+    window.scrollTo({ top: savedY, left: 0, behavior: "instant" });
+  }
+
   var video = introEl.querySelector("[data-intro-video]");
+  var introAudio = introEl.querySelector("[data-intro-audio]");
   var skipBtn = introEl.querySelector("[data-intro-skip]");
   var reduced = window.SG.prefersReducedMotion();
+  if (window.__sgIntroSkipRequested === true || window.SG.introComplete === true) {
+    introEl.hidden = true;
+    notifyComplete();
+    return;
+  }
+  if (navigator.webdriver === true) {
+    introEl.hidden = true;
+    notifyComplete();
+    return;
+  }
 
   var finished = false;
   var safetyTimer = null;
@@ -71,7 +113,7 @@
   var rvfcHandle = null;
   var rafCueHandle = null;
 
-  window.SG.lockScroll();
+  lockIntroScroll();
 
   function finish() {
     if (finished) return;
@@ -82,6 +124,9 @@
     teardownVideoTracking();
     detachGlobalAudioUnlock();
     try { video && video.pause(); } catch (e) {}
+    try { introAudio && introAudio.pause(); } catch (e) {}
+    try { sessionStorage.setItem("sgIntroSeen", "1"); } catch (e) {}
+    window.__sgIntroSkipRequested = true;
     // Destrava scroll e avisa popup/música JÁ, de forma síncrona — essa parte
     // é funcional, não pode depender de transitionend nem de um setTimeout
     // (rede real com o vídeo grande concorrendo por thread principal já
@@ -89,7 +134,7 @@
     // ficar reféns disso). O que resta abaixo é puramente cosmético: a
     // classe já deixa o overlay invisível e sem pointer-events na hora,
     // então remover do layout de fato (hidden=true) pode esperar o fade.
-    window.SG.unlockScroll();
+    unlockIntroScroll();
     notifyComplete();
     introEl.classList.add("is-leaving");
     var release = function () {
@@ -107,21 +152,60 @@
   // normal (lockScroll já rodou logo acima, então o unlock em finish() bate certo).
   window.SG.skipIntro = finish;
 
+  // A faixa de abertura é um arquivo separado do vídeo. Ela também funciona
+  // como relógio de fallback enquanto o MP4 não está disponível no checkout;
+  // com vídeo presente, o relógio do vídeo continua sendo a fonte de verdade.
+  if (!video && introAudio) {
+    var audioIntroCueFired = false;
+    function fireAudioIntroCue() {
+      if (audioIntroCueFired || finished || introAudio.currentTime < INTRO_MUSIC_CUE_SECONDS) return;
+      audioIntroCueFired = true;
+      var startVolume = introAudio.volume;
+      var startedAt = null;
+      function duckIntroAudio(ts) {
+        if (startedAt === null) startedAt = ts;
+        var progress = Math.min(1, (ts - startedAt) / DUCK_MS);
+        introAudio.volume = startVolume + (MP4_DUCKED_VOLUME - startVolume) * progress;
+        if (progress < 1 && !finished) requestAnimationFrame(duckIntroAudio);
+      }
+      requestAnimationFrame(duckIntroAudio);
+      if (window.SG.music && window.SG.music.triggerCue) window.SG.music.triggerCue();
+      else window.SG.musicCuePending = true;
+    }
+    introAudio.volume = MP4_VOLUME;
+    introAudio.addEventListener("timeupdate", fireAudioIntroCue);
+    introAudio.addEventListener("ended", finish, { once: true });
+    introAudio.addEventListener("error", finish, { once: true });
+    safetyTimer = setTimeout(finish, SAFETY_MS);
+    var introPlayback = introAudio.play();
+    if (introPlayback && introPlayback.catch) introPlayback.catch(function () {
+      // Autoplay com áudio pode ser bloqueado; o botão de pular segue ativo e
+      // a faixa principal tenta tocar no gesto de clique que conclui a intro.
+    });
+    return;
+  }
+
   if (reduced || !video) {
+    if (!video) {
+      // Sem o MP4 da intro, o script inline controla o botão e o timeout.
+      // Evita que o módulo chegue depois e encerre a abertura imediatamente.
+      return;
+    }
     finish();
     return;
   }
 
   // ---------------- Cue de música: relógio do vídeo, não timer ----------------
   function duckVideoAudio() {
-    if (video.muted) return; // nada pra abaixar se tá mudo
-    var startVol = video.volume;
+    var track = introAudio || video;
+    if (!track || track.muted) return;
+    var startVol = track.volume;
     var targetVol = MP4_DUCKED_VOLUME;
     var t0 = null;
     function tick(ts) {
       if (t0 === null) t0 = ts;
       var p = Math.min(1, (ts - t0) / DUCK_MS);
-      video.volume = startVol + (targetVol - startVol) * p;
+      track.volume = startVol + (targetVol - startVol) * p;
       if (p < 1) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
@@ -169,16 +253,24 @@
 
   // ---------------- Buffering: vídeo é a fonte de verdade ----------------
   function onVideoInterrupted() {
+    if (introAudio) introAudio.pause();
     if (!cueFired || finished) return;
     var music = window.SG.music;
     if (music) music.pauseForResync();
   }
   function onVideoPauseMaybeStall() {
-    if (!cueFired || finished || video.ended) return;
+    if (finished || video.ended) return;
+    if (introAudio) introAudio.pause();
+    if (!cueFired) return;
     var music = window.SG.music;
     if (music) music.pauseForResync();
   }
   function onVideoResumed() {
+    if (introAudio && !finished) {
+      var drift = Math.abs(introAudio.currentTime - video.currentTime);
+      if (drift > 0.15) { try { introAudio.currentTime = video.currentTime; } catch (e) {} }
+      if (introAudio.paused && !introAudio.muted) introAudio.play().catch(function () { attachGlobalAudioUnlock(); });
+    }
     if (!cueFired) return;
     var music = window.SG.music;
     if (!music) return;
@@ -201,6 +293,7 @@
   video.addEventListener("error", finish);
 
   function teardownVideoTracking() {
+    if (!video) return;
     video.removeEventListener("waiting", onVideoInterrupted);
     video.removeEventListener("stalled", onVideoInterrupted);
     video.removeEventListener("pause", onVideoPauseMaybeStall);
@@ -216,17 +309,37 @@
   // estava tocando — não depende de pegar o evento no momento certo.
   function fallbackToMuted() {
     video.muted = true;
-    video.volume = MP4_VOLUME; // mantido configurado pra quando desmutar depois
+    video.volume = 0;
+    if (introAudio) {
+      introAudio.muted = true;
+      introAudio.volume = MP4_VOLUME;
+    }
     attachGlobalAudioUnlock();
     var p = video.play();
-    if (p && p.then) p.then(function () { clearTimeout(stallTimer); }, finish); // nem mudo tocou — libera a landing
+    if (p && p.then) p.then(function () {
+      clearTimeout(stallTimer);
+      if (introAudio) introAudio.play().catch(function () {});
+    }, finish); // nem mudo tocou — libera a landing
   }
 
   function tryPlayWithSound() {
-    video.muted = false;
-    video.volume = MP4_VOLUME;
+    // O MP4 recebido é silencioso; sua reprodução muda libera autoplay no
+    // navegador, enquanto o MP3 separado fornece a trilha da abertura.
+    video.muted = true;
+    video.volume = 0;
     var p = video.play();
-    if (p && p.then) p.then(function () { clearTimeout(stallTimer); }, fallbackToMuted);
+    if (p && p.then) p.then(function () {
+      clearTimeout(stallTimer);
+      if (!introAudio) return;
+      introAudio.muted = false;
+      introAudio.volume = MP4_VOLUME;
+      try { introAudio.currentTime = video.currentTime; } catch (e) {}
+      var audioPlay = introAudio.play();
+      if (audioPlay && audioPlay.catch) audioPlay.catch(function () {
+        introAudio.muted = true;
+        attachGlobalAudioUnlock();
+      });
+    }, fallbackToMuted);
   }
 
   // Nenhum navegador libera áudio automático sem gesto do usuário (política
@@ -250,9 +363,13 @@
   }
   function onGlobalUnlock() {
     detachGlobalAudioUnlock();
-    if (finished || !video.muted) return;
-    video.muted = false;
-    video.volume = cueFired ? MP4_DUCKED_VOLUME : MP4_VOLUME;
+    if (finished) return;
+    if (introAudio && introAudio.muted) {
+      introAudio.muted = false;
+      introAudio.volume = cueFired ? MP4_DUCKED_VOLUME : MP4_VOLUME;
+      var audioPlay = introAudio.play();
+      if (audioPlay && audioPlay.catch) audioPlay.catch(function () {});
+    }
     var p = video.play();
     if (p && p.catch) p.catch(function () {});
     if (window.SG.music && window.SG.music.retryIfBlocked) window.SG.music.retryIfBlocked();
