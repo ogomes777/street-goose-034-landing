@@ -73,7 +73,7 @@
     var isPaused = audio.paused;
     if (iconPlay) iconPlay.hidden = !isPaused;
     if (iconPause) iconPause.hidden = isPaused;
-    var showCta = autoplayBlocked && isPaused;
+    var showCta = autoplayBlocked || audio.muted || audio.volume === 0;
     if (label) { label.hidden = !showCta; label.textContent = "Ativar som"; }
     if (playBtn) {
       playBtn.classList.toggle("is-cta", showCta);
@@ -106,6 +106,15 @@
     else playPending = false;
   }
 
+  function activateSound() {
+    userPaused = false;
+    userWantsMuted = false;
+    audio.muted = false;
+    saveMuted(false);
+    if (audio.volume === 0) { audio.volume = DEFAULT_VOLUME; saveVolume(audio.volume); }
+    play();
+  }
+
   function play() {
     autoplayBlocked = false;
     attemptPlay();
@@ -116,15 +125,15 @@
   audio.addEventListener("volumechange", syncUI);
 
   playBtn && playBtn.addEventListener("click", function () {
-    userPaused = !audio.paused;
-    if (audio.paused) play(); else audio.pause();
+    if (audio.paused || audio.muted || audio.volume === 0) activateSound();
+    else { userPaused = true; audio.pause(); }
   });
 
   muteBtn && muteBtn.addEventListener("click", function () {
     audio.muted = !audio.muted;
     userWantsMuted = audio.muted;
     saveMuted(userWantsMuted);
-    if (!audio.muted && audio.paused && autoplayBlocked) play();
+    if (!audio.muted && audio.paused) { userPaused = false; play(); }
     syncUI();
   });
 
@@ -147,7 +156,7 @@
     orb.hidden = true;
     if (panel) panel.hidden = false;
     userPaused = false;
-    if (!userWantsMuted) play();
+    activateSound();
     playBtn && playBtn.focus();
   });
 
@@ -217,6 +226,7 @@
   // currentTime nem chama play() de novo se o cue já rodou.
   function afterIntro() {
     if (!cueTriggered) triggerCue();
+    else if (audio.paused && !userPaused && !userWantsMuted) play();
     root.hidden = false;
     syncUI();
   }

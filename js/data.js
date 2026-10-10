@@ -29,7 +29,7 @@ window.SG_HERO_SLIDES = [
     ctaSecondary: { label: "Entender a Street Goose →", href: "#manifesto" }
   },
   {
-    id: "curadoria-01", type: "image", accent: "#FF5A00", mobileFocus: "72% center",
+    id: "curadoria-01", type: "image", accent: "#DCE4EF", mobileFocus: "72% center",
     image: "/assets/heroes/web/curadoria-01.webp",
     eyebrow: "STREET GOOSE 034 / CURADORIA 01",
     heading: "Não é só óculos.<br><em>É presença.</em>",
@@ -37,7 +37,7 @@ window.SG_HERO_SLIDES = [
     ctaPrimary: { label: "Ver curadoria", href: "#colecao" }
   },
   {
-    id: "performance-run", type: "image", accent: "#FF7A00", mobileFocus: "65% center",
+    id: "performance-run", type: "image", accent: "#C7F36B", mobileFocus: "65% center",
     image: "/assets/heroes/web/performance-run.webp",
     eyebrow: "SG / PERFORMANCE 034",
     heading: "Preciso pra quem<br><em>não para.</em>",
@@ -45,7 +45,7 @@ window.SG_HERO_SLIDES = [
     ctaPrimary: { label: "Ver performance", href: "#performance" }
   },
   {
-    id: "street-style", type: "image", accent: "#FF5A00", mobileFocus: "center",
+    id: "street-style", type: "image", accent: "#F28AB2", mobileFocus: "center",
     image: "/assets/heroes/web/street-style.webp",
     eyebrow: "STREET GOOSE 034 / STYLE",
     heading: "Seu estilo.<br><em>Sua assinatura.</em>",
