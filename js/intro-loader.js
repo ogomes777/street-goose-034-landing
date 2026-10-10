@@ -365,7 +365,7 @@
   function attachGlobalAudioUnlock() {
     if (globalUnlockAttached) return;
     globalUnlockAttached = true;
-    if (soundBtn) soundBtn.hidden = false;
+    if (soundBtn) { soundBtn.hidden = false; soundBtn.textContent = "Ativar som"; }
     document.addEventListener("pointerdown", onGlobalUnlock, true);
     document.addEventListener("keydown", onGlobalUnlock, true);
   }
@@ -378,7 +378,10 @@
   function onGlobalUnlock() {
     detachGlobalAudioUnlock();
     if (finished) return;
-    if (soundBtn) soundBtn.hidden = true;
+    if (soundBtn) {
+      soundBtn.textContent = "Som ativado";
+      soundBtn.hidden = window.matchMedia("(max-width: 640px)").matches;
+    }
     if (window.SG.music && window.SG.music.activateIntroSound) window.SG.music.activateIntroSound();
     if (introAudio) {
       introAudio.muted = false;
