@@ -28,8 +28,7 @@
   <link rel="apple-touch-icon" href="assets/logos/web/favicon.png" />
 
   <link rel="preload" as="image" href="assets/heroes/web/hero-poster.jpg" fetchpriority="high" />
-  <link rel="preload" as="video" href="assets/heroes/web/hero-film.mp4" type="video/mp4" media="(min-width:901px) and (min-height:521px)" />
-  <link rel="preload" as="video" href="assets/heroes/web/hero-film-mobile.mp4" type="video/mp4" media="(max-width:900px), (max-height:520px)" />
+  <link rel="preload" as="video" href="assets/INTRO-LOADER-STREET-small.mp4" type="video/mp4" />
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -45,6 +44,7 @@
       <p>UMA NOVA ÓTICA DE RUA</p>
       <button type="button" data-intro-skip>Pular intro <span aria-hidden="true">↗</span></button>
     </div>
+    <button type="button" data-intro-sound hidden style="position:absolute;right:24px;bottom:24px;z-index:5">Ativar som</button>
     <audio data-intro-audio src="assets/INTRO-LOADER-STREET.MP3" preload="auto"></audio>
   </div>
   <script>
@@ -56,7 +56,7 @@
       if (!intro || !skip) return;
       var alreadySeen = false;
       try { alreadySeen = sessionStorage.getItem("sgIntroSeen") === "1"; } catch (e) {}
-      var introShouldShow = !alreadySeen && navigator.webdriver !== true && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var introShouldShow = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (introShouldShow) {
         var introScrollY = window.scrollY || window.pageYOffset || 0;
         window.__sgIntroScrollY = introScrollY;
@@ -230,7 +230,7 @@
     <!-- CAPÍTULO 01 — HERO FILM + CAMPAIGN SLIDER -->
     <section class="hero" aria-label="Destaques Street Goose" data-hero style="--accent:#FF5A00">
       <div class="hero-media">
-        <video class="hero-video" data-hero-video autoplay muted loop playsinline webkit-playsinline="true" x-webkit-airplay="allow" preload="auto"
+        <video class="hero-video" data-hero-video muted loop playsinline webkit-playsinline="true" x-webkit-airplay="allow" preload="metadata"
           poster="assets/heroes/web/hero-poster.jpg">
           <source data-src-desktop src="assets/heroes/web/hero-film.mp4" type="video/mp4" media="(min-width:901px) and (min-height:521px)" />
           <source data-src-mobile src="assets/heroes/web/hero-film-mobile.mp4" type="video/mp4" />
@@ -557,6 +557,7 @@
     </aside>
   </div>
 
+  <script type="module" src="/js/intro-entry.js"></script>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

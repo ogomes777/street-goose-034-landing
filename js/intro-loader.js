@@ -47,11 +47,7 @@
   // que já rodou por conta própria via script inline (rede lenta) — em
   // qualquer um desses casos o scroll nunca deve ser travado por este
   // módulo, e o vídeo nunca deve tentar tocar.
-  var isAutomated = navigator.webdriver === true;
-  var manualBypass = false;
-  try { manualBypass = sessionStorage.getItem("sgIntroSeen") === "1"; } catch (e) {}
-  var alreadySkipped = window.__sgIntroSkipRequested === true;
-  if (isAutomated || manualBypass || alreadySkipped) {
+  if (window.__sgIntroSkipRequested === true) {
     introEl.hidden = true;
     notifyComplete();
     return;
@@ -91,6 +87,7 @@
   var video = introEl.querySelector("[data-intro-video]");
   var introAudio = introEl.querySelector("[data-intro-audio]");
   var skipBtn = introEl.querySelector("[data-intro-skip]");
+  var soundBtn = introEl.querySelector("[data-intro-sound]");
   function introAudioTimeFor(videoTime) {
     var target = Math.max(0, videoTime + INTRO_AUDIO_LEAD_SECONDS);
     if (introAudio && isFinite(introAudio.duration) && introAudio.duration > 0) {
@@ -104,12 +101,6 @@
     notifyComplete();
     return;
   }
-  if (navigator.webdriver === true) {
-    introEl.hidden = true;
-    notifyComplete();
-    return;
-  }
-
   var finished = false;
   var safetyTimer = null;
   var stallTimer = null;
@@ -374,6 +365,7 @@
   function attachGlobalAudioUnlock() {
     if (globalUnlockAttached) return;
     globalUnlockAttached = true;
+    if (soundBtn) soundBtn.hidden = false;
     document.addEventListener("pointerdown", onGlobalUnlock, true);
     document.addEventListener("keydown", onGlobalUnlock, true);
   }
@@ -386,17 +378,21 @@
   function onGlobalUnlock() {
     detachGlobalAudioUnlock();
     if (finished) return;
-    if (introAudio && introAudio.muted) {
+    if (soundBtn) soundBtn.hidden = true;
+    if (window.SG.music && window.SG.music.unlockForIntro) window.SG.music.unlockForIntro();
+    if (introAudio) {
       introAudio.muted = false;
       introAudio.volume = cueFired ? MP4_DUCKED_VOLUME : MP4_VOLUME;
       try { introAudio.currentTime = introAudioTimeFor(video.currentTime); } catch (e) {}
       var audioPlay = introAudio.play();
-      if (audioPlay && audioPlay.catch) audioPlay.catch(function () {});
+      if (audioPlay && audioPlay.catch) audioPlay.catch(attachGlobalAudioUnlock);
     }
     var p = video.play();
     if (p && p.catch) p.catch(function () {});
     if (window.SG.music && window.SG.music.retryIfBlocked) window.SG.music.retryIfBlocked();
   }
+
+  if (soundBtn) soundBtn.addEventListener("click", onGlobalUnlock);
 
   // ---------------- Pular intro / foco ----------------
   if (skipBtn) {
@@ -404,7 +400,10 @@
     // único controle focável do overlay — Tab não deve escapar para o
     // conteúdo (invisível, mas tecnicamente focável) atrás do vídeo
     skipBtn.addEventListener("keydown", function (e) {
-      if (e.key === "Tab") { e.preventDefault(); skipBtn.focus(); }
+      if (e.key === "Tab") { e.preventDefault();
+        if (soundBtn && !soundBtn.hidden && !e.shiftKey) soundBtn.focus();
+        else skipBtn.focus();
+      }
     });
     skipBtn.focus();
   }

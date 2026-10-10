@@ -2182,3 +2182,6 @@ button.admin-post-media{position:relative;width:100%;padding:0;border:0;cursor:z
   .hero[data-slide-type="image"] .hero-slide-content h1{font-size:clamp(36px,10vw,54px);line-height:.95}
   .hero[data-slide-type="image"] .hero-slide-content .lead{margin:16px 0 20px}
 }
+
+.intro-loader [data-intro-sound]{border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:13px 19px;background:rgba(12,12,12,.8);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;backdrop-filter:blur(12px)}
+.intro-loader [data-intro-sound][hidden]{display:none!important}

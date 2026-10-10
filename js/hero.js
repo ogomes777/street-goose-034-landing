@@ -80,7 +80,8 @@
   var heroVisible = heroRect.bottom > 0 && heroRect.top < window.innerHeight;
 
   function startVideoOnce() {
-    if (!video || videoStarted || !heroVisible || document.hidden) return;
+    if (!video || videoStarted || !introComplete || !heroVisible || document.hidden) return;
+    video.preload = "auto";
     videoStarted = true;
     video.setAttribute("data-ready", "0");
     var p;

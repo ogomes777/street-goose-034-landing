@@ -206,8 +206,28 @@
     if (!root.contains(event.target) && autoplayBlocked) retryIfBlocked();
   }, true);
 
+  // Unlock this audio element during a real intro gesture, keeping it silent
+  // until the radio cue. Once play resolves, pause it at zero if still pre-cue.
+  function unlockForIntro() {
+    if (cueTriggered) { retryIfBlocked(); return; }
+    if (userWantsMuted || playPending) return;
+    var savedVolume = audio.volume;
+    audio.volume = 0;
+    playPending = true;
+    var p = audio.play();
+    if (p && p.then) p.then(function () {
+      playPending = false;
+      if (!cueTriggered) { audio.pause(); try { audio.currentTime = 0; } catch (e) {} }
+      audio.volume = savedVolume;
+    }, function () {
+      playPending = false;
+      audio.volume = savedVolume;
+    });
+  }
+
   window.SG.music = {
     audio: audio,
+    unlockForIntro: unlockForIntro,
     triggerCue: triggerCue,
     pauseForResync: pauseForResync,
     resumeFromResync: resumeFromResync,
