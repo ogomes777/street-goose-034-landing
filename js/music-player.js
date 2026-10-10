@@ -68,20 +68,32 @@
   var cueTriggered = false;
   var playPending = false;
   var userPaused = false;
+  var buffering = false;
+  var mediaError = false;
+
+  function hideIcon(icon, hidden) {
+    if (!icon) return;
+    if (hidden) icon.setAttribute("hidden", "");
+    else icon.removeAttribute("hidden");
+  }
 
   function syncUI() {
     var isPaused = audio.paused;
-    if (iconPlay) iconPlay.hidden = !isPaused;
-    if (iconPause) iconPause.hidden = isPaused;
+    hideIcon(iconPlay, !isPaused);
+    hideIcon(iconPause, isPaused);
     var showCta = autoplayBlocked || audio.muted || audio.volume === 0;
-    if (label) { label.hidden = !showCta; label.textContent = "Ativar som"; }
+    var status = showCta ? "Ativar som" : mediaError ? "Tentar novamente" :
+      (playPending || buffering) ? "Carregando…" : isPaused ? "Pausado" : "Tocando";
+    if (label) { label.hidden = false; label.textContent = status; }
+    root.dataset.musicState = showCta ? "blocked" : mediaError ? "error" :
+      (playPending || buffering) ? "loading" : isPaused ? "paused" : "playing";
     if (playBtn) {
       playBtn.classList.toggle("is-cta", showCta);
       playBtn.setAttribute("aria-pressed", isPaused ? "false" : "true");
       playBtn.setAttribute("aria-label", showCta ? "Ativar som" : (isPaused ? "Tocar música" : "Pausar música"));
     }
-    if (iconVolHigh) iconVolHigh.hidden = audio.muted;
-    if (iconVolMute) iconVolMute.hidden = !audio.muted;
+    hideIcon(iconVolHigh, audio.muted);
+    hideIcon(iconVolMute, !audio.muted);
     if (muteBtn) {
       muteBtn.setAttribute("aria-pressed", audio.muted ? "true" : "false");
       muteBtn.setAttribute("aria-label", audio.muted ? "Desmutar" : "Mutar");
@@ -92,6 +104,8 @@
   function attemptPlay() {
     if (playPending) return;
     playPending = true;
+    mediaError = false;
+    syncUI();
     var p;
     try { p = audio.play(); } catch (e) { playPending = false; autoplayBlocked = true; syncUI(); return; }
     if (p && p.then) p.then(function () {
@@ -107,6 +121,7 @@
   }
 
   function activateSound() {
+    if (audio.error) audio.load();
     userPaused = false;
     userWantsMuted = false;
     audio.muted = false;
@@ -121,6 +136,10 @@
   }
 
   audio.addEventListener("play", syncUI);
+  audio.addEventListener("playing", function () { buffering = false; autoplayBlocked = false; syncUI(); });
+  audio.addEventListener("waiting", function () { buffering = true; syncUI(); });
+  audio.addEventListener("canplay", function () { buffering = false; syncUI(); });
+  audio.addEventListener("error", function () { mediaError = true; playPending = false; buffering = false; syncUI(); });
   audio.addEventListener("pause", syncUI);
   audio.addEventListener("volumechange", syncUI);
 
@@ -225,9 +244,19 @@
     });
   }
 
+  function activateIntroSound() {
+    userWantsMuted = false;
+    userPaused = false;
+    audio.muted = false;
+    saveMuted(false);
+    if (audio.volume === 0) { audio.volume = DEFAULT_VOLUME; saveVolume(audio.volume); }
+    unlockForIntro();
+  }
+
   window.SG.music = {
     audio: audio,
     unlockForIntro: unlockForIntro,
+    activateIntroSound: activateIntroSound,
     triggerCue: triggerCue,
     pauseForResync: pauseForResync,
     resumeFromResync: resumeFromResync,

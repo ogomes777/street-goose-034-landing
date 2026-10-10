@@ -379,7 +379,7 @@
     detachGlobalAudioUnlock();
     if (finished) return;
     if (soundBtn) soundBtn.hidden = true;
-    if (window.SG.music && window.SG.music.unlockForIntro) window.SG.music.unlockForIntro();
+    if (window.SG.music && window.SG.music.activateIntroSound) window.SG.music.activateIntroSound();
     if (introAudio) {
       introAudio.muted = false;
       introAudio.volume = cueFired ? MP4_DUCKED_VOLUME : MP4_VOLUME;
