@@ -22,18 +22,20 @@ export var ICONS = {
 };
 
 // fotos de campanha da marca (convite do mural vazio). new URL(): o Vite
-// empacota e versiona — caminho em string pura quebrava no build.
+// empacota e versiona — caminho em string pura quebrava no build. As fotos
+// são horizontais; pos enquadra cada uma no seu quadro (a 1ª é o quadro
+// alto: o corte vertical fica no rosto + óculos da menina da direita).
 var CAMPAIGN_PHOTOS = [
-  new URL("../assets/lifestyle/web/street-01.webp", import.meta.url).href,
-  new URL("../assets/lifestyle/web/street-02.webp", import.meta.url).href,
-  new URL("../assets/lifestyle/web/street-03.webp", import.meta.url).href,
+  { src: new URL("../assets/lifestyle/web/community-01.webp", import.meta.url).href, pos: "70% 30%" },
+  { src: new URL("../assets/lifestyle/web/community-02.webp", import.meta.url).href, pos: "50% 40%" },
+  { src: new URL("../assets/lifestyle/web/community-03.webp", import.meta.url).href, pos: "50% 45%" },
 ];
 
 /** convite "seja o primeiro visual" — ctaHtml é o botão/link de postar */
 export function emptyStateHtml(ctaHtml, extraClass) {
   return '<div class="sgc-empty' + (extraClass ? " " + extraClass : "") + '">' +
     '<div class="sgc-empty-art" aria-hidden="true">' +
-      CAMPAIGN_PHOTOS.map(function (src) { return '<img src="' + src + '" alt="" loading="lazy" decoding="async">'; }).join("") +
+      CAMPAIGN_PHOTOS.map(function (p) { return '<img src="' + p.src + '" alt="" loading="lazy" decoding="async" style="object-position:' + p.pos + '">'; }).join("") +
       '<span class="sgc-empty-tag">SG / 034 — campanha</span>' +
     "</div>" +
     '<div class="sgc-empty-copy"><p class="kicker">O MURAL COMEÇA COM VOCÊ</p>' +
