@@ -6,10 +6,10 @@
    nunca deixamos o usuário preso numa tela preta. Dispara "sg:intro-complete"
    no fim, que popup.js (gatilho do drop) e music-player.js escutam.
 
-   Sincronização de áudio: o áudio interno do MP4 toca baixo (10%) desde o
-   início; no instante exato em que Kibão aperta o rádio (8.000s de vídeo —
+   Sincronização de áudio: o MP3 da intro toca baixo (10%) desde o início;
+   pouco antes de Kibão apertar o rádio (6.500s de vídeo —
    INTRO_MUSIC_CUE_SECONDS), a trilha global (window.SG.music) dispara e o
-   áudio do MP4 sofre ducking pra ~4-5%. O relógio do vídeo é a fonte de
+   áudio da intro sofre ducking pra ~4-5%. O relógio do vídeo é a fonte de
    verdade (requestVideoFrameCallback/rAF lendo video.currentTime), nunca
    setTimeout, pra não dessincronizar com buffering/perda de frame.
 
@@ -26,7 +26,10 @@
   var introEl = document.querySelector("[data-intro-loader]");
   if (!introEl) return;
 
-  var INTRO_MUSIC_CUE_SECONDS = 8.0;
+  var INTRO_MUSIC_CUE_SECONDS = 6.5;
+  // O MP3 tem quase 3,7 s de silêncio no começo. Pular 2 s desse silêncio
+  // faz a trilha da intro aparecer antes, mantendo o início do áudio alinhado.
+  var INTRO_AUDIO_LEAD_SECONDS = 2.0;
   var MP4_VOLUME = 0.10;
   var MP4_DUCKED_VOLUME = 0.045;
   var DUCK_MS = 300;
@@ -89,6 +92,13 @@
   var video = introEl.querySelector("[data-intro-video]");
   var introAudio = introEl.querySelector("[data-intro-audio]");
   var skipBtn = introEl.querySelector("[data-intro-skip]");
+  function introAudioTimeFor(videoTime) {
+    var target = Math.max(0, videoTime + INTRO_AUDIO_LEAD_SECONDS);
+    if (introAudio && isFinite(introAudio.duration) && introAudio.duration > 0) {
+      target = Math.min(target, Math.max(0, introAudio.duration - 0.05));
+    }
+    return target;
+  }
   var reduced = window.SG.prefersReducedMotion();
   if (window.__sgIntroSkipRequested === true || window.SG.introComplete === true) {
     introEl.hidden = true;
@@ -158,7 +168,7 @@
   if (!video && introAudio) {
     var audioIntroCueFired = false;
     function fireAudioIntroCue() {
-      if (audioIntroCueFired || finished || introAudio.currentTime < INTRO_MUSIC_CUE_SECONDS) return;
+      if (audioIntroCueFired || finished || introAudio.currentTime < INTRO_MUSIC_CUE_SECONDS + INTRO_AUDIO_LEAD_SECONDS) return;
       audioIntroCueFired = true;
       var startVolume = introAudio.volume;
       var startedAt = null;
@@ -173,6 +183,7 @@
       else window.SG.musicCuePending = true;
     }
     introAudio.volume = MP4_VOLUME;
+    try { introAudio.currentTime = INTRO_AUDIO_LEAD_SECONDS; } catch (e) {}
     introAudio.addEventListener("timeupdate", fireAudioIntroCue);
     introAudio.addEventListener("ended", finish, { once: true });
     introAudio.addEventListener("error", finish, { once: true });
@@ -267,8 +278,9 @@
   }
   function onVideoResumed() {
     if (introAudio && !finished) {
-      var drift = Math.abs(introAudio.currentTime - video.currentTime);
-      if (drift > 0.15) { try { introAudio.currentTime = video.currentTime; } catch (e) {} }
+      var expectedAudioTime = introAudioTimeFor(video.currentTime);
+      var drift = Math.abs(introAudio.currentTime - expectedAudioTime);
+      if (drift > 0.15) { try { introAudio.currentTime = expectedAudioTime; } catch (e) {} }
       if (introAudio.paused && !introAudio.muted) introAudio.play().catch(function () { attachGlobalAudioUnlock(); });
     }
     if (!cueFired) return;
@@ -313,6 +325,7 @@
     if (introAudio) {
       introAudio.muted = true;
       introAudio.volume = MP4_VOLUME;
+      try { introAudio.currentTime = introAudioTimeFor(video.currentTime); } catch (e) {}
     }
     attachGlobalAudioUnlock();
     var p = video.play();
@@ -333,7 +346,7 @@
       if (!introAudio) return;
       introAudio.muted = false;
       introAudio.volume = MP4_VOLUME;
-      try { introAudio.currentTime = video.currentTime; } catch (e) {}
+      try { introAudio.currentTime = introAudioTimeFor(video.currentTime); } catch (e) {}
       var audioPlay = introAudio.play();
       if (audioPlay && audioPlay.catch) audioPlay.catch(function () {
         introAudio.muted = true;
@@ -367,6 +380,7 @@
     if (introAudio && introAudio.muted) {
       introAudio.muted = false;
       introAudio.volume = cueFired ? MP4_DUCKED_VOLUME : MP4_VOLUME;
+      try { introAudio.currentTime = introAudioTimeFor(video.currentTime); } catch (e) {}
       var audioPlay = introAudio.play();
       if (audioPlay && audioPlay.catch) audioPlay.catch(function () {});
     }

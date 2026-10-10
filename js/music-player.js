@@ -5,8 +5,8 @@
    "Ativar som" no próprio play/pause.
 
    O disparo da faixa NÃO é mais "quando a intro termina": js/intro-loader.js
-   chama window.SG.music.triggerCue() no instante exato em que Kibão aperta o
-   rádio (~8s de vídeo), sincronizado pelo relógio do próprio vídeo. Este
+   chama window.SG.music.triggerCue() pouco antes de Kibão apertar o rádio
+   (~6,5s de vídeo), sincronizado pelo relógio do próprio vídeo. Este
    módulo só expõe essa API + o fallback de reexibir o player quando a intro
    acaba (afterIntro) — sem nunca chamar play()/resetar currentTime uma
    segunda vez se a faixa já estiver tocando. */
@@ -18,6 +18,15 @@
 
   var audio = root.querySelector("[data-music-audio]");
   if (!audio) return;
+
+  // A intro dura menos de 19 s; começar a buscar a trilha enquanto o vídeo
+  // roda evita que o carregamento de 11 MB atrase o cue dos 6,5 s. Não baixa
+  // a faixa em visitas nas quais a intro já foi dispensada.
+  var introLoader = document.querySelector("[data-intro-loader]");
+  if (introLoader && !introLoader.hidden && !window.__sgIntroSkipRequested) {
+    audio.preload = "auto";
+    audio.load();
+  }
 
   var orb = root.querySelector("[data-music-orb]");
   var panel = root.querySelector("[data-music-panel]");
@@ -130,10 +139,10 @@
     playBtn && playBtn.focus();
   });
 
-  // ---- API usada pelo intro-loader (cue nos 8s do vídeo) ----
+  // ---- API usada pelo intro-loader (cue nos 6,5s do vídeo) ----
 
   // Dispara a faixa do zero exatamente uma vez por ciclo de intro. Chamado
-  // no cue dos 8s (fluxo normal), ou como fallback quando a intro termina
+  // no cue dos 6,5s (fluxo normal), ou como fallback quando a intro termina
   // sem ter disparado o cue (reduced-motion, bypass de teste, pular antes
   // dos 8s, ou timeout/erro do vídeo).
   function triggerCue() {
