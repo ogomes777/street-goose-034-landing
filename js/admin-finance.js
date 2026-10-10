@@ -130,41 +130,59 @@ export function mountFinance(panel, ctx) {
   function sub(key, text) { var el = q('[data-fin-sub="' + key + '"]'); if (el) el.textContent = text; }
   function signedBrl(v) { return (v < 0 ? "−" : "") + brl(Math.abs(v)); }
 
+  // dia vem do servidor como 'AAAA-MM-DD' no fuso local (0107): lido como
+  // data local, sem conversão de UTC (era isso que trocava o dia)
+  function localDay(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || ""));
+    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(s);
+  }
   function pointLabel(p) {
-    var d = new Date(p.d);
-    if (state.summary && state.summary.bucket === "month") return MONTHS[d.getUTCMonth()] + (state.period === "all" ? "/" + String(d.getUTCFullYear()).slice(2) : "");
-    return String(d.getUTCDate()).padStart(2, "0") + "/" + String(d.getUTCMonth() + 1).padStart(2, "0");
+    var d = localDay(p.d);
+    if (state.summary && state.summary.bucket === "month") return MONTHS[d.getMonth()] + (state.period === "all" ? "/" + String(d.getFullYear()).slice(2) : "");
+    return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0");
   }
   function pointLong(p) {
-    var d = new Date(p.d);
+    var d = localDay(p.d);
     var txt = state.summary && state.summary.bucket === "month"
-      ? MONTHS[d.getUTCMonth()] + " de " + d.getUTCFullYear()
-      : d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" }).replace(/\./g, "");
+      ? MONTHS[d.getMonth()] + " de " + d.getFullYear()
+      : d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" }).replace(/\./g, "");
     return txt.charAt(0).toUpperCase() + txt.slice(1);
   }
 
-  function renderChart(s) {
+  // cada bloco só redesenha quando o dado dele muda; atualização ao vivo
+  // (a cada 20 s) não reanima nada — anima ao abrir e ao trocar o período
+  var sig = {};
+  function changed(key, value) {
+    var s = JSON.stringify(value);
+    if (sig[key] === s) return false;
+    sig[key] = s;
+    return true;
+  }
+
+  function renderChart(s, animate, force) {
     var box = q("[data-fin-chart]");
+    if (!changed("chart", [s.bucket, s.series]) && !force) return;
     if (chartDestroy) chartDestroy();
-    // a série vem em UTC (date_trunc no servidor); rótulos lidos em UTC
-    chartDestroy = flowChart(box, s.series, pointLabel, pointLong);
+    chartDestroy = flowChart(box, s.series, pointLabel, pointLong, { animate: animate });
     q("[data-fin-legend]").innerHTML =
       '<span><i class="fin-dot fin-dot--in"></i>Entradas <b>' + brl(s.in_cents) + "</b></span>" +
       '<span><i class="fin-dot fin-dot--out"></i>Saídas <b>' + brl(s.out_cents) + "</b></span>";
   }
 
-  function renderCategories(s) {
+  function renderCategories(s, animate) {
+    if (!changed("cats", s.by_category)) return;
     var ins = s.by_category.filter(function (c) { return c.kind === "in"; });
     var outs = s.by_category.filter(function (c) { return c.kind === "out"; });
-    q("[data-fin-cats-out]").innerHTML = categoryBarsHtml(outs, "out", catLabel);
-    q("[data-fin-cats-in]").innerHTML = categoryBarsHtml(ins, "in", catLabel);
+    q("[data-fin-cats-out]").innerHTML = categoryBarsHtml(outs, "out", catLabel, animate);
+    q("[data-fin-cats-in]").innerHTML = categoryBarsHtml(ins, "in", catLabel, animate);
   }
 
-  function renderTop(s) {
+  function renderTop(s, animate) {
+    if (!changed("top", s.top_products)) return;
     var box = q("[data-fin-top]");
     if (!s.top_products.length) { box.innerHTML = '<p class="fin-muted">Nenhuma venda paga no período.</p>'; return; }
     var max = s.top_products[0].cents || 1;
-    box.innerHTML = '<ol class="fin-top">' + s.top_products.map(function (t, i) {
+    box.innerHTML = '<ol class="fin-top' + (animate === false ? " is-static" : "") + '">' + s.top_products.map(function (t, i) {
       var p = (window.SG_PRODUCTS || []).find(function (x) { return x.id === t.product_id; });
       var thumb = p && p.images && p.images[0] ? ((window.SG.thumbFor && window.SG.thumbFor(p.images[0])) || p.images[0]) : null;
       return '<li style="--i:' + i + '"><span class="fin-top-rank">' + (i + 1) + "</span>" +
@@ -175,17 +193,21 @@ export function mountFinance(panel, ctx) {
     }).join("") + "</ol>";
   }
 
-  async function loadSummary() {
+  async function loadSummary(live) {
     var n = ++seq;
     var r = rangeOf(state.period);
     var res = await ctx.svc.financeSummary(r.from, r.to, r.bucket);
     if (destroyed || n !== seq) return;
-    if (!res.ok) { q("[data-fin-cards]").innerHTML = '<div class="admin-state admin-state--error"><p>' + esc(res.message) + "</p></div>"; return; }
+    if (!res.ok) {
+      // falha na atualização ao vivo não apaga o que já está na tela
+      if (!live || !state.summary) q("[data-fin-cards]").innerHTML = '<div class="admin-state admin-state--error"><p>' + esc(res.message) + "</p></div>";
+      return;
+    }
     state.summary = res.data;
     renderCards(res.data);
-    renderChart(res.data);
-    renderCategories(res.data);
-    renderTop(res.data);
+    renderChart(res.data, !live);
+    renderCategories(res.data, !live);
+    renderTop(res.data, !live);
   }
 
   // ---------- livro-caixa ----------
@@ -219,14 +241,19 @@ export function mountFinance(panel, ctx) {
       (state.total > state.items.length ? '<p class="admin-note">Mostrando ' + state.items.length + " de " + state.total + " — refine o período ou a busca.</p>" : "");
   }
 
-  async function loadList() {
+  async function loadList(live) {
     var n = ++listSeq;
     var r = rangeOf(state.period);
     var res = await ctx.svc.listFinance({ from: r.from, to: r.to, kind: state.kind === "all" ? null : state.kind, search: state.search, limit: 200 });
     if (destroyed || n !== listSeq) return;
-    if (!res.ok) { q("[data-fin-list]").innerHTML = '<div class="admin-state admin-state--error"><p>' + esc(res.message) + "</p></div>"; return; }
+    if (!res.ok) {
+      if (!live || !state.items.length) q("[data-fin-list]").innerHTML = '<div class="admin-state admin-state--error"><p>' + esc(res.message) + "</p></div>";
+      return;
+    }
     state.items = res.data.items;
     state.total = res.data.total;
+    // ao vivo: só redesenha se mudou (não pisca, não perde o "Excluir?" aberto)
+    if (!changed("list", [res.data.total, res.data.items, state.confirmDelete]) && live) return;
     renderList();
   }
 
@@ -276,6 +303,7 @@ export function mountFinance(panel, ctx) {
   async function submitForm(form) {
     var amount = ctx.money.parseMoneyToCents(form.querySelector('[name="amount"]').value.trim());
     if (!amount || amount <= 0) { formError(form, "Informe um valor maior que zero."); form.querySelector('[name="amount"]').focus(); return; }
+    if (amount > 2000000000) { formError(form, "Valor acima do limite de R$ 20 milhões por lançamento."); form.querySelector('[name="amount"]').focus(); return; }
     var dateVal = form.querySelector('[name="date"]').value || todayInput();
     var parts = dateVal.split("-").map(Number);
     var when = dateVal === todayInput() ? new Date() : new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
@@ -295,7 +323,7 @@ export function mountFinance(panel, ctx) {
     if (!res.ok) { formError(form, res.message); return; }
     ctx.toast(state.editing === "new" ? (entry.kind === "in" ? "ENTRADA LANÇADA" : "SAÍDA LANÇADA") : "LANÇAMENTO ATUALIZADO");
     closeEditor();
-    refresh();
+    refresh(true);
     ctx.onChange();
   }
 
@@ -306,7 +334,7 @@ export function mountFinance(panel, ctx) {
     state.confirmDelete = null;
     if (!res.ok) { ctx.toast(res.message.toUpperCase()); renderList(); return; }
     ctx.toast("LANÇAMENTO EXCLUÍDO");
-    refresh();
+    refresh(true);
     ctx.onChange();
   }
 
@@ -380,22 +408,26 @@ export function mountFinance(panel, ctx) {
 
   // gráfico acompanha a largura (desktop ↔ celular, painel lateral aberto)
   if ("ResizeObserver" in window) {
-    var lastW = 0;
+    var chartBox = q("[data-fin-chart]");
+    var lastW = Math.round(chartBox.clientWidth);
+    var resizeRaf = 0;
     resizeObs = new ResizeObserver(function (entries) {
       var w = Math.round(entries[0].contentRect.width);
       if (!state.summary || Math.abs(w - lastW) < 24) return;
       lastW = w;
-      renderChart(state.summary);
+      cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(function () { if (!destroyed && state.summary) renderChart(state.summary, false, true); });
     });
-    resizeObs.observe(q("[data-fin-chart]"));
+    resizeObs.observe(chartBox);
   }
 
-  function refresh() { loadSummary(); loadList(); }
-  refresh();
+  // live = atualização ao vivo / depois de salvar: sem reanimar
+  function refresh(live) { loadSummary(!!live); loadList(!!live); }
+  refresh(false);
 
   return {
     /** atualização ao vivo (painel faz a cada ~20s): não mexe no formulário aberto */
-    refresh: refresh,
+    refresh: function () { refresh(true); },
     handleEscape: handleEscape,
     destroy: function () {
       destroyed = true;

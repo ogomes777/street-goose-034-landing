@@ -4,7 +4,7 @@
    dados é o banco (migration 0100): não-admin que forçasse as chamadas
    recebe 'forbidden' / zero linhas. Todo texto vindo de cliente (nome,
    legenda, endereço) passa por esc() — o painel roda com a sessão do dono. */
-import { countUp, sparkSvg, reducedMotion } from "./admin-viz.js";
+import { countUp, sparkSvg, reducedMotion, refitAll } from "./admin-viz.js";
 import { mountFinance } from "./admin-finance.js";
 
 export function mountAdminPage(root, _params, onClose) {
@@ -331,7 +331,13 @@ export function mountAdminPage(root, _params, onClose) {
     ink.style.transform = "translateX(" + active.offsetLeft + "px)";
     ink.classList.add("is-on");
   }
-  function onResize() { requestAnimationFrame(moveInk); }
+  var refitTimer = null;
+  function onResize() {
+    requestAnimationFrame(moveInk);
+    // números que encolheram para caber voltam ao tamanho (ou encolhem) na nova largura
+    clearTimeout(refitTimer);
+    refitTimer = setTimeout(function () { if (!destroyed) refitAll(bodyEl); }, 160);
+  }
   window.addEventListener("resize", onResize);
 
   function setBadge(tab, count) {
@@ -1951,6 +1957,7 @@ export function mountAdminPage(root, _params, onClose) {
     if (finance) { finance.destroy(); finance = null; }
     stopLive();
     window.removeEventListener("resize", onResize);
+    clearTimeout(refitTimer);
     robots.remove();
   };
 }

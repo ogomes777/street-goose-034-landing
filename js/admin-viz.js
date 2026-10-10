@@ -24,24 +24,49 @@ export function brlCompact(cents) {
   return sign + "R$ " + Math.round(v);
 }
 
+/** número nunca corta: se não couber no cartão, a fonte desce até caber
+ *  (R$ 20.999.990,00 num cartão estreito, celular) */
+export function fitText(el, min) {
+  if (!el || !el.isConnected) return;
+  el.style.fontSize = "";
+  if (el.scrollWidth <= el.clientWidth + 1) return;
+  var size = parseFloat(getComputedStyle(el).fontSize) || 16;
+  var floor = min || 12;
+  for (var i = 0; i < 30 && size > floor && el.scrollWidth > el.clientWidth + 1; i++) {
+    size -= 1;
+    el.style.fontSize = size + "px";
+  }
+}
+
+/** reajusta todos os números de um bloco (depois de mudar a largura) */
+export function refitAll(root) {
+  if (!root) return;
+  root.querySelectorAll("[data-fit]").forEach(function (el) { fitText(el); });
+}
+
 /** conta do valor atual até o novo; marca .is-updated quando muda depois do 1º */
 export function countUp(el, to, format) {
   if (!el) return;
   var fmt = format || brl;
   var from = typeof el.__v === "number" ? el.__v : null;
   el.__v = to;
-  if (from === to) { el.textContent = fmt(to); return; }
+  el.setAttribute("data-fit", "");
+  function done() { el.textContent = fmt(to); fitText(el); }
+  if (from === to) { done(); return; }
   if (from !== null) {
     el.classList.remove("is-updated");
     void el.offsetWidth;
     el.classList.add("is-updated");
   }
-  if (REDUCED) { el.textContent = fmt(to); return; }
+  if (REDUCED) { done(); return; }
   var start = from === null ? 0 : from;
   var dur = from === null ? 1100 : 750;
   var t0 = performance.now();
   cancelAnimationFrame(el.__raf);
   clearTimeout(el.__end);
+  // tamanho do valor final já na largura da contagem (não pula no fim)
+  el.textContent = fmt(to);
+  fitText(el);
   function step(now) {
     var t = Math.min(1, (now - t0) / dur);
     var e = 1 - Math.pow(1 - t, 3);
@@ -50,12 +75,13 @@ export function countUp(el, to, format) {
   }
   el.__raf = requestAnimationFrame(step);
   // aba em segundo plano não roda rAF: garante o valor final
-  el.__end = setTimeout(function () { cancelAnimationFrame(el.__raf); el.textContent = fmt(to); }, dur + 120);
+  el.__end = setTimeout(function () { cancelAnimationFrame(el.__raf); done(); }, dur + 120);
 }
 
 var uid = 0;
 /** mini-gráfico de área (valores >= 0 ou acumulado) */
-export function sparkSvg(values, color) {
+export function sparkSvg(rawValues, color) {
+  var values = (rawValues || []).map(function (v) { var x = Number(v); return isFinite(x) ? x : 0; });
   var n = values.length;
   if (!n) return "";
   var w = 120, h = 36, pad = 2;
@@ -99,46 +125,70 @@ function barPath(x, yBase, w, h, up) {
 
 /* series: [{d, in, out}] · labelOf(point) → texto do eixo/dica
    Monta o SVG no container e liga dica + teclado. Devolve destroy(). */
-export function flowChart(container, series, labelOf, longLabelOf) {
+/** marcas do eixo de um lado: no máximo 6, nunca um laço sem fim */
+function ticksFor(step, top) {
+  var out = [];
+  if (!(step > 0) || !(top > 0)) return out;
+  for (var k = 1; k <= 6 && k * step <= top * 1.0001; k++) out.push(k * step);
+  return out;
+}
+
+export function flowChart(container, rawSeries, labelOf, longLabelOf, opts) {
+  opts = opts || {};
+  // números sempre finitos e >= 0 (nada de NaN quebrando o desenho)
+  var series = (rawSeries || []).map(function (p) {
+    return { d: p.d, in: Math.max(0, Number(p.in) || 0), out: Math.max(0, Number(p.out) || 0) };
+  });
   var width = Math.max(280, Math.floor(container.clientWidth || 600));
-  var height = width < 520 ? 220 : 270;
-  var m = { l: 58, r: 10, t: 14, b: 30 };
+  var height = width < 520 ? 230 : 280;
+  var m = { l: 70, r: 10, t: 16, b: 30 };
   var pw = width - m.l - m.r, ph = height - m.t - m.b;
   var maxIn = 0, maxOut = 0;
   series.forEach(function (p) { maxIn = Math.max(maxIn, p.in); maxOut = Math.max(maxOut, p.out); });
-  if (!maxIn && !maxOut) {
+  if (!series.length || (!maxIn && !maxOut)) {
     container.innerHTML = '<div class="fin-chart-empty">Sem movimento no período.</div>';
     return function () {};
   }
-  var stepIn = niceStep(maxIn), stepOut = niceStep(maxOut);
-  var topIn = maxIn ? Math.ceil(maxIn / stepIn) * stepIn : 0;
-  var botOut = maxOut ? Math.ceil(maxOut / stepOut) * stepOut : 0;
-  if (!topIn) topIn = botOut * 0.25;
-  if (!botOut) botOut = topIn * 0.25;
-  var total = topIn + botOut;
-  var y0 = m.t + ph * (topIn / total);
-  function yIn(v) { return y0 - (v / total) * ph; }
-  function yOut(v) { return y0 + (v / total) * ph; }
+  // um eixo só, mesma escala para cima e para baixo; lado sem movimento
+  // ganha uma faixa fina própria (o zero não cola na borda)
+  var hasIn = maxIn > 0, hasOut = maxOut > 0;
+  var stepIn = hasIn ? niceStep(maxIn) : 0, stepOut = hasOut ? niceStep(maxOut) : 0;
+  var topIn = hasIn ? Math.ceil(maxIn / stepIn) * stepIn : 0;
+  var botOut = hasOut ? Math.ceil(maxOut / stepOut) * stepOut : 0;
+  var fracIn = hasIn && hasOut ? topIn / (topIn + botOut) : hasIn ? 0.86 : 0.14;
+  var y0 = m.t + ph * fracIn;
+  var pxIn = y0 - m.t, pxOut = m.t + ph - y0;
+  var perCent = hasIn && hasOut ? ph / (topIn + botOut) : hasIn ? pxIn / topIn : pxOut / botOut;
+  function yIn(v) { return y0 - v * perCent; }
+  function yOut(v) { return y0 + v * perCent; }
 
   var n = series.length;
   var band = pw / n;
   var bw = Math.max(2, Math.min(26, band * 0.62));
   var grid = "", axis = "";
-  for (var v = stepIn; v <= topIn + 1; v += stepIn) {
-    grid += '<line x1="' + m.l + '" x2="' + (width - m.r) + '" y1="' + yIn(v).toFixed(1) + '" y2="' + yIn(v).toFixed(1) + '"/>';
-    axis += '<text x="' + (m.l - 8) + '" y="' + (yIn(v) + 4).toFixed(1) + '">' + brlCompact(v) + "</text>";
+  // lado com pouca altura não ganha rótulos (não amontoa texto no zero)
+  if (hasIn && pxIn >= 26) {
+    ticksFor(stepIn, topIn).forEach(function (v) {
+      var y = yIn(v).toFixed(1);
+      grid += '<line x1="' + m.l + '" x2="' + (width - m.r) + '" y1="' + y + '" y2="' + y + '"/>';
+      axis += '<text x="' + (m.l - 8) + '" y="' + (yIn(v) + 4).toFixed(1) + '">' + brlCompact(v) + "</text>";
+    });
   }
-  for (var o = stepOut; o <= botOut + 1; o += stepOut) {
-    grid += '<line x1="' + m.l + '" x2="' + (width - m.r) + '" y1="' + yOut(o).toFixed(1) + '" y2="' + yOut(o).toFixed(1) + '"/>';
-    axis += '<text x="' + (m.l - 8) + '" y="' + (yOut(o) + 4).toFixed(1) + '">−' + brlCompact(o).replace("R$ ", "R$ ") + "</text>";
+  if (hasOut && pxOut >= 26) {
+    ticksFor(stepOut, botOut).forEach(function (v) {
+      var y = yOut(v).toFixed(1);
+      grid += '<line x1="' + m.l + '" x2="' + (width - m.r) + '" y1="' + y + '" y2="' + y + '"/>';
+      axis += '<text x="' + (m.l - 8) + '" y="' + (yOut(v) + 4).toFixed(1) + '">−' + brlCompact(v) + "</text>";
+    });
   }
   var bars = "", hits = "", xlab = "";
   var every = Math.max(1, Math.ceil(n / (width < 520 ? 4 : 7)));
   series.forEach(function (p, i) {
     var x = m.l + band * i + (band - bw) / 2;
     var delay = Math.min(i * 14, 520);
-    if (p.in > 0) bars += '<path class="fin-bar fin-bar--in" style="animation-delay:' + delay + 'ms" d="' + barPath(x, y0 - 1, bw, Math.max(1.5, y0 - 1 - yIn(p.in)), true) + '"/>';
-    if (p.out > 0) bars += '<path class="fin-bar fin-bar--out" style="animation-delay:' + delay + 'ms" d="' + barPath(x, y0 + 1, bw, Math.max(1.5, yOut(p.out) - y0 - 1), false) + '"/>';
+    // mínimo de 2px: valor pequeno ao lado de um gigante continua visível
+    if (p.in > 0) bars += '<path class="fin-bar fin-bar--in" style="animation-delay:' + delay + 'ms" d="' + barPath(x, y0 - 1, bw, Math.max(2, Math.min(pxIn - 1, p.in * perCent - 1)), true) + '"/>';
+    if (p.out > 0) bars += '<path class="fin-bar fin-bar--out" style="animation-delay:' + delay + 'ms" d="' + barPath(x, y0 + 1, bw, Math.max(2, Math.min(pxOut - 1, p.out * perCent - 1)), false) + '"/>';
     hits += '<rect class="fin-hit" data-i="' + i + '" x="' + (m.l + band * i) + '" y="' + m.t + '" width="' + band + '" height="' + ph + '"/>';
     if (i % every === 0 || i === n - 1 && n <= 12) {
       xlab += '<text x="' + (m.l + band * i + band / 2).toFixed(1) + '" y="' + (height - 8) + '">' + window.SG.esc(labelOf(p)) + "</text>";
@@ -147,7 +197,7 @@ export function flowChart(container, series, labelOf, longLabelOf) {
   var sumIn = series.reduce(function (s, p) { return s + p.in; }, 0);
   var sumOut = series.reduce(function (s, p) { return s + p.out; }, 0);
   container.innerHTML =
-    '<div class="fin-chart-wrap" tabindex="0" role="img" aria-label="Entradas ' + brl(sumIn) + " e saídas " + brl(sumOut) + ' no período. Use as setas para ver cada período.">' +
+    '<div class="fin-chart-wrap' + (opts.animate === false ? " is-static" : "") + '" tabindex="0" role="img" aria-label="Entradas ' + brl(sumIn) + " e saídas " + brl(sumOut) + ' no período. Use as setas para ver cada período.">' +
       '<svg class="fin-svg" viewBox="0 0 ' + width + " " + height + '" width="' + width + '" height="' + height + '" aria-hidden="true" focusable="false">' +
         '<g class="fin-grid">' + grid + "</g>" +
         '<rect class="fin-band" data-band x="0" y="' + m.t + '" width="' + band + '" height="' + ph + '" opacity="0"/>' +
@@ -205,11 +255,11 @@ export function flowChart(container, series, labelOf, longLabelOf) {
 }
 
 /** barras horizontais de uma série só (categorias), valor ao lado em texto */
-export function categoryBarsHtml(rows, kind, labelOf) {
+export function categoryBarsHtml(rows, kind, labelOf, animate) {
   if (!rows.length) return '<p class="fin-muted">Nada no período.</p>';
-  var max = Math.max.apply(null, rows.map(function (r) { return r.cents; })) || 1;
-  return '<ul class="fin-cats fin-cats--' + kind + '">' + rows.map(function (r, i) {
-    var pct = Math.max(2, (r.cents / max) * 100);
+  var max = Math.max.apply(null, rows.map(function (r) { return Number(r.cents) || 0; })) || 1;
+  return '<ul class="fin-cats fin-cats--' + kind + (animate === false ? " is-static" : "") + '">' + rows.map(function (r, i) {
+    var pct = Math.max(2, ((Number(r.cents) || 0) / max) * 100);
     return '<li style="--i:' + i + '"><span class="fin-cat-name">' + window.SG.esc(labelOf(r.category)) + "<small>" + r.count + (r.count === 1 ? " lançamento" : " lançamentos") + "</small></span>" +
       '<span class="fin-cat-bar" aria-hidden="true"><i style="width:' + pct.toFixed(1) + '%"></i></span>' +
       '<b class="fin-cat-value">' + brl(r.cents) + "</b></li>";

@@ -2205,3 +2205,23 @@ button.admin-post-media{position:relative;width:100%;padding:0;border:0;cursor:z
   .admin-body .admin-kpi .admin-kpi-spark{height:34px}
 }
 .admin-body .admin-kpi[data-kpi="receivable"]{padding-bottom:18px} /* sem mini-gráfico: sem espaço reservado */
+
+/* financeiro robusto: atualização ao vivo sem reanimar; número grande
+   (R$ 1.000.000,00, R$ 20 mi) encolhe para caber no cartão em vez de cortar */
+.fin-chart-wrap.is-static .fin-bar,.fin-cats.is-static li,.fin-cats.is-static .fin-cat-bar i,.fin-top.is-static li,.fin-top.is-static .fin-top-bar i{animation:none}
+.admin-body .admin-kpi,.fin-stat{container-type:inline-size}
+.admin-body .admin-kpi .admin-kpi-value{font-size:clamp(15px,10.5cqi,26px)}
+.admin-body .admin-kpi--hero .admin-kpi-value{font-size:clamp(24px,12cqi,44px)}
+.admin-body .admin-kpi--ops .admin-kpi-value{font-size:clamp(15px,11cqi,22px)}
+.fin-stat-value{font-size:clamp(16px,10.5cqi,24px)}
+.fin-stat--hero .fin-stat-value{font-size:clamp(28px,11.5cqi,58px)}
+.fin-row-amount{font-size:clamp(12.5px,1.1vw + 6px,14.5px)}
+@media (max-width:640px){
+  .admin-body .admin-kpi .admin-kpi-value{font-size:clamp(14px,10.5cqi,20px)}
+  .admin-body .admin-kpi--hero .admin-kpi-value{font-size:clamp(24px,12cqi,34px)}
+  .fin-stat-value{font-size:clamp(14px,10.5cqi,19px)}
+}
+@media (max-width:640px){
+  /* celular: rótulo e subtítulo quebram linha em vez de cortar com reticências */
+  .admin-body .admin-kpi .admin-kpi-label,.admin-body .admin-kpi .admin-kpi-sub,.fin-stat-label{white-space:normal;line-height:1.35}
+}
