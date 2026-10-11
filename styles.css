@@ -40,7 +40,7 @@
    tema global escolhido — um trailer não clareia com o dark mode do player.
    Ancora --text/--muted localmente pra valores claros fixos, senão o texto
    herdaria a cor escura do tema claro sobre um fundo que continua escuro */
-.hero,.scroll-film,.hero3d-film,.universe-stage,.category-page,.final-act,.site-header,.mobile-menu,.popup-card,.quickview-card{
+.hero,.scroll-film,.hero3d-film,.universe-stage,.category-page,.final-act,.site-header,.popup-card,.quickview-card{
   --text:#f4f4f2;--muted:#9b9b98;--text-2:#c8c8c4;--line:#242424;
   --border:rgba(255,255,255,.1);--border-strong:rgba(255,255,255,.35);
   --surface:#0a0a0a;--surface-2:#111;--surface-3:#161616;
@@ -240,7 +240,7 @@ img{max-width:100%;display:block}
 }
 
 /* ===== MOBILE MENU ===== */
-.mobile-menu{position:fixed;inset:0;z-index:150;background:rgba(5,5,5,.98);backdrop-filter:blur(14px);display:flex;flex-direction:column;padding:22px 26px;transform:translateX(100%);transition:transform var(--t-base) var(--ease);visibility:hidden}
+.mobile-menu{position:fixed;inset:0;z-index:150;background:var(--overlay-bg);color:var(--text);backdrop-filter:blur(14px);display:flex;flex-direction:column;padding:22px 26px;transform:translateX(100%);transition:transform var(--t-base) var(--ease);visibility:hidden}
 .mobile-menu.is-open{transform:translateX(0);visibility:visible}
 .mobile-menu-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:44px}
 .menu-close{width:40px;height:40px;border-radius:50%;border:1px solid #333;background:#0c0c0c;color:#fff;font-size:22px;cursor:pointer}
@@ -260,7 +260,7 @@ img{max-width:100%;display:block}
 /* ===== Menu lateral mobile: conta + preferências com os MESMOS componentes
    do desktop (js/mobile-account.js). .acct-panel = vidro do dropdown, mas
    estático (dentro do fluxo do menu). Menu sempre escuro: --panel fixo. */
-.mobile-menu{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(32px + env(safe-area-inset-bottom,0px));--panel:#0b0b0b}
+.mobile-menu{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}
 .mobile-menu>*{flex-shrink:0}
 .mobile-menu-account{margin-top:28px}
 .mobile-menu-prefs{margin-top:14px}
