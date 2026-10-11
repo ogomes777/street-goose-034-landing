@@ -62,6 +62,8 @@ export interface RankingRow {
   totalXp: number;
 }
 
+export interface RankingPage { rows: RankingRow[]; total: number; }
+
 export const RewardsService = {
   isConfigured(): boolean {
     return isSupabaseConfigured;
@@ -118,6 +120,19 @@ export const RewardsService = {
       level: r.level ?? 1,
       totalXp: Number(r.total_xp) || 0,
     }));
+  },
+
+  /** Public fields only; stable server ordering and no 50-person truncation. */
+  async getRankingPage(offset = 0, limit = 25): Promise<RankingPage> {
+    if (!supabase) return { rows: [], total: 0 };
+    const { data, error } = await supabase.rpc('get_ranking_page', {
+      p_offset: Math.max(0, Math.floor(offset)), p_limit: Math.max(1, Math.min(50, Math.floor(limit))),
+    });
+    if (error || !data) throw new Error('ranking_unavailable');
+    return { total: Number(data.total) || 0, rows: (data.rows ?? []).map((r: any) => ({
+      userId: r.user_id, handle: r.handle || 'Membro Street Goose', avatarUrl: r.avatar_url ?? null,
+      level: Number(r.level) || 1, totalXp: Number(r.total_xp) || 0,
+    })) };
   },
 
   /** Entra/sai do ranking com apelido (migration 0104: set_my_ranking). */

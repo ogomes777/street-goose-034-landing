@@ -225,4 +225,13 @@
   }
 })();
 
+const rankingPreview = document.querySelector('[data-ranking-preview]');
+if (rankingPreview) {
+  const observer = new IntersectionObserver(entries => {
+    if (!entries.some(entry => entry.isIntersecting) || document.querySelector('[data-app-page]:not([hidden])')) return;
+    observer.disconnect();
+    import('./ranking-home.js').then(mod => mod.mountRankingHome(rankingPreview)).catch(() => {});
+  }, { rootMargin: '200px' });
+  observer.observe(rankingPreview);
+}
 export {};
