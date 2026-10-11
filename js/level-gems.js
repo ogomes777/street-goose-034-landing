@@ -8,6 +8,8 @@ export const LEVEL_GEMS = [
   { name: 'Rubi', cut: 'trillion', meaning: 'A intensidade de quem inspira.', outline: '32,6 60,53 4,53', color: '#ff819e', sides: 3 },
   { name: 'Diamante', cut: 'brilliant', meaning: 'O legado lapidado pelo tempo.', outline: '17,10 47,10 61,27 32,60 3,27', color: '#e9e8ff', sides: 8 },
 ];
+// Podium symbols are distinct from the XP stone earned by each participant.
+export const PODIUM_GEM_LEVELS = Object.freeze([7, 6, 5]);
 export function levelGem(level) {
   return LEVEL_GEMS[Math.max(0, Math.min(LEVEL_GEMS.length - 1, (Number(level) || 1) - 1))];
 }

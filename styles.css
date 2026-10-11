@@ -2579,3 +2579,12 @@ button.admin-post-media{position:relative;width:100%;padding:0;border:0;cursor:z
 .ranking-medal { filter:drop-shadow(0 3px 2px #0008); }
 .ranking-medal b { font-weight:700; text-shadow:0 1px 0 #fff9,0 -1px 0 #52371488; }
 @media(prefers-reduced-motion:reduce) { .ranking-row .sg-level-gem svg,.ranking-me .sg-level-gem svg { animation:none; } }
+
+/* The podium celebrates places; participant stones retain their earned XP level. */
+.ranking-stage-member .ranking-stage-stone{font-size:8px;line-height:1.35;letter-spacing:.025em;color:#d4c3ed;white-space:normal}
+.ranking-stage-member--1 .ranking-stage-stone{color:#e9e8ff}.ranking-stage-member--2 .ranking-stage-stone{color:#ff9ab1}.ranking-stage-member--3 .ranking-stage-stone{color:#f3cf77}
+.ranking-stage{background:radial-gradient(ellipse at 50% 38%,#5f238a44,transparent 64%),linear-gradient(135deg,#110c23,#060812);box-shadow:0 25px 90px #0005,inset 0 1px 0 #fff1,0 0 65px #8d45ee25}
+.ranking-stage::before{border-color:#b892ff40;box-shadow:0 0 45px #9d55ff35,inset 0 0 45px #4dceff18}
+@media(max-width:480px){.ranking-stage-member{gap:4px}.ranking-stage-member .ranking-stage-stone{font-size:6.5px;max-width:100px}.ranking-stage-leaders{bottom:52px}}
+.ranking-stage-member>span:not(.ranking-medal){font-size:9px;line-height:1.5;color:#c2b6d0}
+@media(max-width:480px){.ranking-stage-member>span:not(.ranking-medal){font-size:8px;max-width:85px}}
