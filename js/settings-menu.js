@@ -86,10 +86,36 @@
   }
 
   var open = false;
+  // Keep mobile panels out of the transformed floating header.
+  var panelHome = dropdown.parentNode;
+  var mobilePanel = window.matchMedia("(max-width:640px)");
+  var mobileBackdrop = document.createElement("div");
+  mobileBackdrop.className = "header-menu-backdrop";
+  mobileBackdrop.hidden = true;
+  document.body.appendChild(mobileBackdrop);
+  function placePanel() {
+    if (mobilePanel.matches) {
+      document.body.appendChild(dropdown);
+      dropdown.classList.add("header-mobile-panel");
+      var header = btn.closest(".site-header");
+      var top = header ? header.getBoundingClientRect().bottom + 10 : 80;
+      dropdown.style.setProperty("--header-menu-top", Math.max(12, top) + "px");
+    } else {
+      panelHome.appendChild(dropdown);
+      dropdown.classList.remove("header-mobile-panel");
+      dropdown.style.removeProperty("--header-menu-top");
+    }
+    mobileBackdrop.hidden = !open || !mobilePanel.matches;
+  }
+  mobilePanel.addEventListener("change", function () { placePanel(); });
+  window.addEventListener("resize", function () { if (open) placePanel(); });
+  mobileBackdrop.addEventListener("click", function () { setOpen(false); btn.focus(); });
+
   function setOpen(v, keepFocus) {
     if (v === open) return;
     open = v;
     if (v) document.dispatchEvent(new CustomEvent("sg:menu-open", { detail: "settings" }));
+    placePanel();
     dropdown.hidden = !v;
     if (backdrop) backdrop.hidden = !v;
     btn.setAttribute("aria-expanded", String(v));
@@ -109,7 +135,7 @@
     if (themeBtn) { window.SG.theme.set(themeBtn.getAttribute("data-set-theme")); if (open) render(); syncFixedControls(); document.dispatchEvent(new CustomEvent("sg:prefs-change")); return; }
     var langBtn = e.target.closest("[data-set-lang]");
     if (langBtn && window.SG.i18n) { window.SG.i18n.set(langBtn.getAttribute("data-set-lang")); if (open) render(); syncFixedControls(); document.dispatchEvent(new CustomEvent("sg:prefs-change")); return; }
-    if (open && !wrap.contains(e.target)) setOpen(false, true);
+    if (open && !wrap.contains(e.target) && !dropdown.contains(e.target)) setOpen(false, true);
   });
   document.addEventListener("keydown", function (e) {
     if (open && e.key === "Escape") setOpen(false);

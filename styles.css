@@ -2203,3 +2203,115 @@ button.admin-post-media{position:relative;width:100%;padding:0;border:0;cursor:z
     transition:none;
   }
 }
+
+/* Mobile header panels: aligned to the viewport, with room below the bar. */
+.header-menu-backdrop{position:fixed;inset:0;z-index:140;background:rgba(0,0,0,.38)}
+.header-menu-backdrop[hidden]{display:none}
+@media(max-width:640px){
+  .header-mobile-panel.account-dropdown,.header-mobile-panel.settings-dropdown{position:fixed;z-index:141;top:var(--header-menu-top,80px);bottom:auto;left:16px;right:16px;width:auto;min-width:0;max-height:calc(100dvh - var(--header-menu-top,80px) - 16px - env(safe-area-inset-bottom,0px));padding:14px;border-radius:22px;overflow-y:auto;overscroll-behavior:contain;transform-origin:top center;animation:pref-panel-in .18s var(--ease) both;color:var(--text)}
+  .header-mobile-panel.settings-dropdown::before{display:none}
+  .header-mobile-panel .acct-head{gap:12px;padding:8px 6px 16px}
+  .header-mobile-panel .acct-name{font-size:15px;overflow-wrap:anywhere}
+  .header-mobile-panel .acct-level-xp{flex:none;white-space:nowrap}
+  .header-mobile-panel .acct-email{font-size:12px;overflow-wrap:anywhere}
+  .header-mobile-panel .acct-item{min-height:54px;padding:10px 8px}
+  .header-mobile-panel .acct-item-label{font-size:14px}
+  .header-mobile-panel .acct-item-hint{font-size:12px}
+  .header-mobile-panel .pref-panel-close{width:40px;height:40px}
+}
+
+/* Rewards: a member card, real progression, and a coupon wallet. */
+.is-rewards .app-page-body{max-width:1160px;width:100%;margin:0 auto;padding:32px clamp(18px,4vw,48px) 64px}
+.rw-eyebrow{margin:0;font-size:10px;font-weight:800;letter-spacing:.18em;color:var(--accent);text-transform:uppercase}
+.rw-intro{margin-bottom:26px;max-width:620px}
+.rw-intro h2{margin:10px 0 12px;font-size:clamp(32px,5vw,56px);line-height:1.05;letter-spacing:-.055em}
+.rw-intro>p:last-child{margin:0;color:var(--muted);font-size:14px;line-height:1.7;max-width:440px}
+.rw-membership{position:relative;overflow:hidden;padding:28px 32px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));border-radius:26px;background:radial-gradient(ellipse at 110% 0%,color-mix(in srgb,var(--accent) 18%,transparent),transparent 64%),linear-gradient(135deg,var(--surface-3),var(--panel) 62%);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--text) 10%,transparent),var(--shadow)}
+.rw-membership::before{content:"";position:absolute;right:-30px;top:10px;width:280px;height:280px;border:1px solid color-mix(in srgb,var(--accent) 15%,transparent);border-radius:50%;box-shadow:0 0 0 38px color-mix(in srgb,var(--accent) 3%,transparent),0 0 0 76px color-mix(in srgb,var(--accent) 2%,transparent);pointer-events:none}
+.rw-membership>*{position:relative}
+.rw-member-top{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.rw-member-top .rw-eyebrow{color:var(--text-2);font-size:9px;letter-spacing:.16em}
+.rw-member-seal{display:grid;place-items:center;flex:none;width:44px;height:44px;border:1px solid color-mix(in srgb,var(--accent) 50%,var(--border));border-radius:50%;font-size:13px;letter-spacing:.08em;font-weight:800;color:var(--accent)}
+.rw-member-caption{margin:20px 0 8px;font-size:9px;letter-spacing:.2em;color:var(--muted)}
+.rw-member-level{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.rw-member-level h2{margin:0;font-size:clamp(26px,4vw,38px);letter-spacing:-.045em;line-height:1.1}
+.rw-level-number{padding:5px 8px;border:1px solid var(--border-strong);border-radius:6px;font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--text-2)}
+.rw-xp-total{display:flex;align-items:baseline;gap:10px;margin:24px 0}
+.rw-xp-total>b{font-size:42px;font-weight:700;letter-spacing:-.055em;line-height:1;font-variant-numeric:tabular-nums}
+.rw-xp-total>span{font-size:12px;color:var(--muted)}
+.rw-progress-label{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--text-2);margin-bottom:10px}
+.rw-membership .xp-bar{height:5px;background:color-mix(in srgb,var(--text) 9%,transparent)}
+.rw-progress-note{margin:12px 0 20px;font-size:12px;line-height:1.6;color:var(--muted)}
+.rw-progress-note b{color:var(--text)}
+.rw-member-bottom{display:flex;justify-content:space-between;gap:16px;border-top:1px solid var(--border);padding-top:16px;font-size:8px;letter-spacing:.14em;color:var(--muted)}
+.rw-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:18px 0 36px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
+.rw-metrics>div,.rw-metrics>a{display:flex;flex-direction:column;justify-content:center;gap:6px;padding:18px 20px;min-width:0}
+.rw-metrics>:not(:last-child){border-right:1px solid var(--border)}
+.rw-metrics b{font-size:22px;font-variant-numeric:tabular-nums}
+.rw-metrics span{font-size:11px;color:var(--muted);line-height:1.4}
+.rw-metrics a>b{font-size:13px;color:var(--accent)}
+.rw-section{margin-top:32px}
+.rw-section-head{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px}
+.rw-section-head h2{font-size:22px;line-height:1.25;letter-spacing:-.035em;margin:7px 0 0}
+.rw-section-head>a{flex:none;font-size:11px}
+.rw-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:22px}
+.rw-tabs button{position:relative;display:flex;align-items:center;gap:8px;padding:14px 16px;min-height:48px;border:0;background:none;color:var(--muted);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.rw-tabs button[aria-selected="true"]{color:var(--text)}
+.rw-tabs button[aria-selected="true"]::after{content:"";position:absolute;bottom:-1px;left:16px;right:16px;height:2px;background:var(--accent)}
+.rw-tabs button>span{font-size:10px;background:var(--surface-3);padding:3px 6px;border-radius:5px;font-variant-numeric:tabular-nums}
+.is-rewards .rewards-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:16px}
+.is-rewards .reward-card{min-width:0;padding:22px;border-radius:20px;background:linear-gradient(160deg,var(--surface-2),var(--surface));display:flex;flex-direction:column}
+.is-rewards .reward-card.is-locked{opacity:1}
+.rw-reward-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.is-rewards .reward-kind{margin:0;font-size:9px;font-weight:800;letter-spacing:.16em;color:var(--accent)}
+.rw-reward-state{color:var(--muted);font-size:10px}
+.rw-reward-art{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;border-top:1px solid var(--border);border-bottom:1px dashed var(--border-strong);padding:22px 0;margin-bottom:22px;color:var(--text)}
+.rw-reward-art>b{font-size:48px;line-height:1;font-weight:800;letter-spacing:-.05em}
+.rw-reward-art small{font-size:24px;margin-left:3px}
+.rw-reward-art>span{font-size:8px;letter-spacing:.2em;color:var(--muted)}
+.is-rewards .reward-card h3{font-size:19px;letter-spacing:-.025em;overflow-wrap:anywhere}
+.is-rewards .reward-card>p{line-height:1.65}
+.is-rewards [data-reward-action]{margin-top:auto;padding-top:10px}
+.is-rewards [data-reward-action]>.btn{width:100%;min-height:46px;font-size:11px}
+.is-rewards .reward-coupon{display:flex;flex-wrap:wrap;align-items:center;gap:10px;line-height:1.6}
+.is-rewards .reward-coupon b{overflow-wrap:anywhere;user-select:all}
+.is-rewards [data-copy-coupon]{min-height:40px;padding:8px 10px;border:1px solid var(--border-strong);border-radius:8px;margin-left:auto}
+.rw-empty{display:flex;align-items:center;gap:24px;padding:26px;border:1px dashed var(--border-strong);border-radius:20px;background:var(--surface)}
+.rw-empty-mark{flex:none;width:64px;height:64px;display:grid;place-items:center;border:1px solid var(--border-strong);border-radius:16px;font-size:20px;font-weight:800;color:var(--accent);background:var(--surface-2)}
+.rw-empty h3{margin:0 0 10px;font-size:18px}
+.rw-empty p{margin:0 0 12px;color:var(--muted);font-size:12px;line-height:1.7}
+.rw-empty a{font-size:12px}
+.rw-levels{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px}
+.rw-level{padding:18px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
+.rw-level.is-current{border-color:color-mix(in srgb,var(--accent) 60%,var(--border));background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface))}
+.rw-level-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rw-level-index{font-size:13px;font-weight:800;color:var(--muted)}
+.rw-level.is-unlocked .rw-level-index{color:var(--accent)}
+.rw-level-state{font-size:9px;color:var(--muted)}
+.rw-level.is-current .rw-level-state{color:var(--accent)}
+.rw-level h3{font-size:15px;margin:20px 0 6px}
+.rw-level p,.rw-level li{font-size:11px;line-height:1.6;color:var(--muted)}
+.rw-level p{margin:0}
+.rw-level ul{padding-left:14px;margin:12px 0 0}
+.rw-earn{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-top:30px;margin-top:32px;border-top:1px solid var(--border)}
+.rw-earn>div{grid-column:1/-1}
+.rw-earn h2{font-size:22px;margin:8px 0 0;letter-spacing:-.035em}
+.rw-earn>a{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:20px;border:1px solid var(--border);border-radius:16px;background:var(--surface)}
+.rw-earn a>b{font-size:10px;letter-spacing:.1em;color:var(--accent)}
+.rw-earn a>b>span{margin-left:12px;color:var(--text-2);letter-spacing:0}
+.rw-earn strong{font-size:24px;letter-spacing:-.04em}
+.rw-earn small{font-size:11px;line-height:1.6;color:var(--muted)}
+@media(max-width:640px){
+  .is-rewards .app-page-head{padding:18px 20px}
+  .is-rewards .app-page-body{padding:24px 18px 40px}
+  .rw-membership{padding:22px;border-radius:22px}
+  .rw-member-top .rw-eyebrow{font-size:8px;letter-spacing:.12em;max-width:200px;line-height:1.6}
+  .rw-member-bottom{font-size:7px;letter-spacing:.1em}
+  .rw-metrics>div,.rw-metrics>a{padding:16px 12px}
+  .rw-metrics span{font-size:10px}
+  .rw-empty{align-items:flex-start;padding:20px;gap:16px}
+  .rw-empty-mark{width:44px;height:44px;border-radius:12px;font-size:15px}
+  .rw-section-head h2{font-size:20px}
+  .rw-levels{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rw-earn{grid-template-columns:1fr}
+}

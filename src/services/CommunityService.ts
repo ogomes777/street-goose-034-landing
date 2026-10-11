@@ -6,6 +6,7 @@
    assinada (uma chamada para o lote inteiro). Comentários e perfil público
    vêm da 0108 — sem ela no banco, essas chamadas só respondem "indisponível"
    e o resto do feed segue igual. */
+import { applyPhotoFilter } from "../lib/photo-filter";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 export type PostStatus = "pending" | "approved" | "rejected";
@@ -77,6 +78,7 @@ export interface PublishEdit {
   aspect: number | null; // largura/altura; null = original
   focusX: number; // 0..1
   focusY: number; // 0..1
+  zoom?: number; // 1..3; optional for existing callers
   filter: string | null; // valor CSS de filter (ex.: "grayscale(1) contrast(1.15)")
 }
 
@@ -206,7 +208,7 @@ function toBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promi
 /** Recorta (se pedido), aplica o filtro, reduz para no máximo MAX_EDGE,
  *  reencoda (some EXIF/GPS do celular) e devolve a proporção. Sem conseguir
  *  ler (HEIC fora do Safari), usa o arquivo original se couber no bucket. */
-async function prepareImage(file: File, edit?: PublishEdit | null): Promise<Result<{ blob: Blob; ext: string; width: number | null; height: number | null }>> {
+export async function prepareImage(file: File, edit?: PublishEdit | null): Promise<Result<{ blob: Blob; ext: string; width: number | null; height: number | null }>> {
   const decoded = await decode(file);
   if (!decoded) {
     if (file.size <= MAX_UPLOAD_BYTES) {
@@ -228,6 +230,13 @@ async function prepareImage(file: File, edit?: PublishEdit | null): Promise<Resu
       sy = Math.round((decoded.height - sh) * fy);
     }
   }
+  const zoom = Math.min(3, Math.max(1, edit?.zoom || 1));
+  if (zoom > 1) {
+    const zw = sw / zoom, zh = sh / zoom;
+    sx += (sw - zw) * Math.min(1, Math.max(0, edit?.focusX ?? .5));
+    sy += (sh - zh) * Math.min(1, Math.max(0, edit?.focusY ?? .5));
+    sw = zw; sh = zh;
+  }
   const scale = Math.min(1, MAX_EDGE / Math.max(sw, sh));
   const width = Math.max(1, Math.round(sw * scale));
   const height = Math.max(1, Math.round(sh * scale));
@@ -241,6 +250,11 @@ async function prepareImage(file: File, edit?: PublishEdit | null): Promise<Resu
   ctx.drawImage(decoded.source, sx, sy, sw, sh, 0, 0, width, height);
   ctx.filter = "none";
   decoded.release();
+  if (edit?.filter && !canvasFiltersWork()) {
+    const pixels = ctx.getImageData(0, 0, width, height);
+    applyPhotoFilter(pixels.data, edit.filter);
+    ctx.putImageData(pixels, 0, 0);
+  }
   let blob = await toBlob(canvas, "image/webp", 0.86);
   let ext = "webp";
   if (!blob || blob.type !== "image/webp") { blob = await toBlob(canvas, "image/jpeg", 0.88); ext = "jpg"; }
@@ -255,9 +269,9 @@ export const CommunityService = {
     return isSupabaseConfigured;
   },
 
-  /** filtros do compositor só aparecem onde o envio consegue aplicá-los */
+  /** CSS preview + pixel fallback keeps filters available on mobile Safari. */
   canFilter(): boolean {
-    return canvasFiltersWork();
+    return true;
   },
 
   validateFile(file: File): { ok: true } | { ok: false; message: string } {
@@ -445,7 +459,9 @@ export const CommunityService = {
     if (!valid.ok) return valid;
 
     onStage?.("optimizing");
-    const prepared = await prepareImage(file, edit);
+    let prepared;
+    try { prepared = await prepareImage(file, edit); }
+    catch { return { ok: false, reason: "unreadable", message: "Não deu para preparar a foto neste aparelho. Tente outra imagem." }; }
     if (!prepared.ok) return prepared;
 
     onStage?.("uploading");

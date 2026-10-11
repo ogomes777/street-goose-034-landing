@@ -671,3 +671,28 @@ button.sgc-profile-bio.is-empty{padding:0;border:0;background:none;color:var(--a
   .sgc-app::before,.sgc-brand-mark::after,.sgc-story,.sgc-story-ring::before,.sgc-ring--xl::before,.sgc-profile-cover img,.sgc-xp-bar span::after,.sgc-drop-icon{animation:none !important}
   .sgc-nav.is-ready .sgc-nav-ind{transition:none}
 }
+
+/* Complete photo tools, including Safari's pixel-filter fallback. */
+.sgc-crop img{position:absolute;left:0;top:0;max-width:none}
+.sgc-tool-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.sgc-tool-heading .sgc-tool-label{margin:0}
+.sgc-reset{min-height:32px;border:0;border-radius:8px;background:var(--surface-2);color:var(--text);font:inherit;font-size:11px;font-weight:700;padding:0 10px;cursor:pointer}
+.sgc-zoom{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text)}
+.sgc-zoom input{flex:1;min-width:0;height:32px;accent-color:var(--accent);cursor:pointer}
+.sgc-zoom output{min-width:32px;text-align:right;font-variant-numeric:tabular-nums}
+.sgc-zoom-tool small{display:block;margin-top:6px;font-size:11px;line-height:1.5;color:var(--muted)}
+@media(max-width:640px){
+  .sgc-composer-bar{padding-top:calc(8px + env(safe-area-inset-top,0px));grid-template-columns:44px minmax(0,1fr) auto}
+  .sgc-composer-title h2{font-size:15px}
+  .sgc-composer-next{padding:0 10px;font-size:13px}
+  .sgc-pane--edit{grid-template-rows:minmax(140px,1fr) auto;min-height:0;overflow:hidden}
+  .sgc-edit-tools{max-height:60dvh;min-height:0;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));gap:14px;overscroll-behavior:contain}
+  .sgc-tool-label{margin-bottom:10px;font-size:10px}
+  .sgc-chips{flex-wrap:nowrap;gap:7px}
+  .sgc-chip{min-height:40px;flex:1;padding:0 10px;font-size:12px}
+  .sgc-filter{flex-basis:62px;font-size:11px}
+  .sgc-filters{padding:3px 3px 4px;scroll-snap-type:x proximity}
+  .sgc-filter{scroll-snap-align:start}
+  .sgc-stage{padding:14px 16px 8px;gap:8px}
+  .sgc-stage-hint{font-size:10px;text-align:center}
+}

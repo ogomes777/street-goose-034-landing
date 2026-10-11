@@ -941,6 +941,7 @@ export function openPublisher(opts) {
           '<div class="sgc-tool"><p class="sgc-tool-label">Formato</p><div class="sgc-chips" role="radiogroup" aria-label="Formato" data-aspects>' +
             ASPECTS.map(function (a, i) { return '<button type="button" role="radio" class="sgc-chip" data-aspect="' + a.id + '" aria-checked="' + (i === 0) + '">' + a.label + "</button>"; }).join("") +
           "</div></div>" +
+          '<div class="sgc-tool sgc-zoom-tool"><div class="sgc-tool-heading"><p class="sgc-tool-label">Enquadramento</p><button type="button" class="sgc-reset" data-edit-reset>Centralizar</button></div><label class="sgc-zoom"><span>Zoom</span><input type="range" min="1" max="3" step="0.01" value="1" data-edit-zoom aria-label="Zoom da foto"><output data-zoom-value>1×</output></label><small>Arraste a foto para posicionar. Use dois dedos para ampliar.</small></div>' +
           '<div class="sgc-tool" data-filters-tool hidden><p class="sgc-tool-label">Filtro</p><div class="sgc-filters" role="radiogroup" aria-label="Filtro" data-filters></div></div>' +
         "</div>" +
       "</section>" +
@@ -1015,7 +1016,7 @@ export function openPublisher(opts) {
   var file = null;
   var previewUrl = null;
   var natural = { w: 0, h: 0 };
-  var edit = { aspect: null, aspectId: "original", focusX: 0.5, focusY: 0.5, filterId: "none" };
+  var edit = { aspect: null, aspectId: "original", focusX: 0.5, focusY: 0.5, zoom: 1, filterId: "none" };
   var busy = false;
   var closed = false;
   var svcRef = null;
@@ -1079,7 +1080,7 @@ export function openPublisher(opts) {
         if (previewUrl) URL.revokeObjectURL(previewUrl);
         previewUrl = url;
         natural = { w: probe.naturalWidth, h: probe.naturalHeight };
-        edit = { aspect: null, aspectId: "original", focusX: 0.5, focusY: 0.5, filterId: "none" };
+        edit = { aspect: null, aspectId: "original", focusX: 0.5, focusY: 0.5, zoom: 1, filterId: "none" };
         cropImg.src = url;
         overlay.querySelectorAll("[data-aspect]").forEach(function (b) { b.setAttribute("aria-checked", b.getAttribute("data-aspect") === "original" ? "true" : "false"); });
         renderFilters();
@@ -1102,7 +1103,7 @@ export function openPublisher(opts) {
 
   function currentAspect() {
     if (edit.aspect) return edit.aspect;
-    return natural.w && natural.h ? Math.min(2, Math.max(0.5, natural.w / natural.h)) : 0.8;
+    return natural.w && natural.h ? natural.w / natural.h : 0.8;
   }
 
   function layoutCrop() {
@@ -1112,7 +1113,7 @@ export function openPublisher(opts) {
     var maxW = stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     var maxH = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 34;
     var w = Math.min(maxW, maxH * ar);
-    crop.style.width = Math.max(120, Math.floor(w)) + "px";
+    crop.style.width = Math.max(1, Math.floor(w)) + "px";
     crop.style.aspectRatio = String(ar);
   }
 
@@ -1120,8 +1121,14 @@ export function openPublisher(opts) {
     var pos = (edit.focusX * 100).toFixed(2) + "% " + (edit.focusY * 100).toFixed(2) + "%";
     cropImg.style.objectPosition = pos;
     cropImg.style.filter = filterCss() || "none";
-    overlay.querySelector("[data-crop-hint]").hidden = !edit.aspect;
-    crop.classList.toggle("is-draggable", !!edit.aspect);
+    cropImg.style.width = (edit.zoom * 100) + "%";
+    cropImg.style.height = (edit.zoom * 100) + "%";
+    cropImg.style.left = (-(edit.zoom - 1) * edit.focusX * 100) + "%";
+    cropImg.style.top = (-(edit.zoom - 1) * edit.focusY * 100) + "%";
+    overlay.querySelector("[data-edit-zoom]").value = String(edit.zoom);
+    overlay.querySelector("[data-zoom-value]").textContent = edit.zoom.toFixed(1) + "×";
+    overlay.querySelector("[data-crop-hint]").hidden = !edit.aspect && edit.zoom === 1;
+    crop.classList.toggle("is-draggable", !!edit.aspect || edit.zoom > 1);
     layoutCrop();
   }
 
@@ -1133,6 +1140,8 @@ export function openPublisher(opts) {
     img.src = previewUrl || "";
     img.style.objectPosition = (edit.focusX * 100).toFixed(2) + "% " + (edit.focusY * 100).toFixed(2) + "%";
     img.style.filter = filterCss() || "none";
+    img.style.transform = "scale(" + edit.zoom + ")";
+    img.style.transformOrigin = (edit.focusX * 100) + "% " + (edit.focusY * 100) + "%";
     overlay.querySelector("[data-preview-caption]").textContent = caption.value.trim() || "Sua legenda aparece aqui.";
     updatePreviewTag(picker.value());
   }
@@ -1146,24 +1155,41 @@ export function openPublisher(opts) {
   // arrastar para enquadrar (só quando há recorte)
   var drag = null;
   crop.addEventListener("pointerdown", function (e) {
-    if (!edit.aspect || !natural.w) return;
+    if ((!edit.aspect && edit.zoom === 1) || !natural.w) return;
     drag = { x: e.clientX, y: e.clientY, fx: edit.focusX, fy: edit.focusY };
     crop.setPointerCapture(e.pointerId);
     crop.classList.add("is-dragging");
   });
   crop.addEventListener("pointermove", function (e) {
-    if (!drag) return;
+    if (!drag || pinch) return;
     var r = crop.getBoundingClientRect();
     var imgRatio = natural.w / natural.h;
     var dispW = Math.max(r.width, r.height * imgRatio), dispH = Math.max(r.height, r.width / imgRatio);
-    var overX = dispW - r.width, overY = dispH - r.height;
+    var overX = dispW * edit.zoom - r.width, overY = dispH * edit.zoom - r.height;
     if (overX > 1) edit.focusX = Math.min(1, Math.max(0, drag.fx - (e.clientX - drag.x) / overX));
     if (overY > 1) edit.focusY = Math.min(1, Math.max(0, drag.fy - (e.clientY - drag.y) / overY));
-    cropImg.style.objectPosition = (edit.focusX * 100).toFixed(2) + "% " + (edit.focusY * 100).toFixed(2) + "%";
+    applyEdit();
   });
   function endDrag() { drag = null; crop.classList.remove("is-dragging"); }
   crop.addEventListener("pointerup", endDrag);
   crop.addEventListener("pointercancel", endDrag);
+  var pinch = null;
+  crop.addEventListener("touchstart", function (e) {
+    if (e.touches.length !== 2) return;
+    endDrag();
+    pinch = { distance: Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY), zoom: edit.zoom };
+  }, { passive: true });
+  crop.addEventListener("touchmove", function (e) {
+    if (!pinch || e.touches.length !== 2) return;
+    e.preventDefault();
+    var distance = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    edit.zoom = Math.min(3, Math.max(1, pinch.zoom * distance / Math.max(1, pinch.distance)));
+    applyEdit();
+  }, { passive: false });
+  crop.addEventListener("touchend", function () { pinch = null; endDrag(); });
+
+  overlay.querySelector("[data-edit-zoom]").addEventListener("input", function (e) { edit.zoom = Number(e.target.value); applyEdit(); });
+  overlay.querySelector("[data-edit-reset]").addEventListener("click", function () { edit.focusX = edit.focusY = .5; edit.zoom = 1; applyEdit(); });
 
   input.addEventListener("change", function () { setFile(input.files && input.files[0]); input.value = ""; });
   ["dragenter", "dragover"].forEach(function (t) {
@@ -1198,7 +1224,7 @@ export function openPublisher(opts) {
     var res = await svc.publish(file, caption.value, picker.value(), function (stage) {
       var s = STAGES[stage];
       if (s) { label.textContent = s[0]; bar.style.width = s[1] + "%"; }
-    }, natural.w ? { aspect: edit.aspect, focusX: edit.focusX, focusY: edit.focusY, filter: filterCss() || null } : null);
+    }, natural.w ? { aspect: edit.aspect, focusX: edit.focusX, focusY: edit.focusY, zoom: edit.zoom, filter: filterCss() || null } : null);
     busy = false;
     if (closed) return;
     if (!res.ok) {

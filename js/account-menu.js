@@ -143,6 +143,31 @@
 
   var session = null;
   var open = false;
+  // Keep mobile panels out of the transformed floating header.
+  var panelHome = dropdown.parentNode;
+  var mobilePanel = window.matchMedia("(max-width:640px)");
+  var mobileBackdrop = document.createElement("div");
+  mobileBackdrop.className = "header-menu-backdrop";
+  mobileBackdrop.hidden = true;
+  document.body.appendChild(mobileBackdrop);
+  function placePanel() {
+    if (mobilePanel.matches) {
+      document.body.appendChild(dropdown);
+      dropdown.classList.add("header-mobile-panel");
+      var header = btn.closest(".site-header");
+      var top = header ? header.getBoundingClientRect().bottom + 10 : 80;
+      dropdown.style.setProperty("--header-menu-top", Math.max(12, top) + "px");
+    } else {
+      panelHome.appendChild(dropdown);
+      dropdown.classList.remove("header-mobile-panel");
+      dropdown.style.removeProperty("--header-menu-top");
+    }
+    mobileBackdrop.hidden = !open || !mobilePanel.matches;
+  }
+  mobilePanel.addEventListener("change", function () { placePanel(); });
+  window.addEventListener("resize", function () { if (open) placePanel(); });
+  mobileBackdrop.addEventListener("click", function () { setOpen(false); btn.focus(); });
+
   function isOpen() { return open; }
   function paint() { window.SG.accountPanel.fill(dropdown, session, isOpen); }
 
@@ -153,6 +178,7 @@
   function setOpen(v) {
     if (v === open) return;
     open = v;
+    placePanel();
     dropdown.hidden = !v;
     btn.setAttribute("aria-expanded", String(v));
     if (v) {
@@ -209,7 +235,7 @@
     if (open && e.detail !== "account") setOpen(false);
   });
   document.addEventListener("click", function (e) {
-    if (open && !wrap.contains(e.target)) setOpen(false);
+    if (open && !wrap.contains(e.target) && !dropdown.contains(e.target)) setOpen(false);
   });
   document.addEventListener("keydown", function (e) {
     if (open && e.key === "Escape") { setOpen(false); btn.focus(); }
