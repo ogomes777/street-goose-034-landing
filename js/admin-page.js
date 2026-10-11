@@ -45,6 +45,7 @@ export function mountAdminPage(root, _params, onClose) {
 
   var svc = null, money = null, csv = null, imageLib = null;
   var destroyed = false;
+  var photoQueue = Promise.resolve();
   var unsubscribeAuth = null;
   var currentUserId; // undefined = ainda não checado
   var searchTimer = null;
@@ -128,6 +129,7 @@ export function mountAdminPage(root, _params, onClose) {
   function field(form, name) { return form.querySelector('[name="' + name + '"]'); }
   function setBusy(form, busy) {
     form.querySelectorAll("button").forEach(function (b) { b.disabled = busy; });
+    form.querySelectorAll("[data-photo-input]").forEach(function (input) { input.disabled = busy; });
   }
 
   async function loadDeps() {
@@ -863,6 +865,7 @@ export function mountAdminPage(root, _params, onClose) {
         (i === 0
           ? "<figcaption>Capa</figcaption>"
           : '<button type="button" class="admin-photo-cover" data-action="photo-cover" data-id="' + esc(p.id) + '" data-index="' + i + '">Usar como capa</button>') +
+        photoCutoutHtml(ph, p.id, i) +
         '<button type="button" class="admin-photo-remove" data-action="photo-remove" data-id="' + esc(p.id) + '" data-index="' + i + '" aria-label="Remover foto ' + (i + 1) + '">×</button>' +
       "</figure>";
     }).join("");
@@ -875,7 +878,7 @@ export function mountAdminPage(root, _params, onClose) {
         '<div class="admin-prod-photos"><h3>Fotos</h3>' +
           '<div class="admin-photo-grid" data-photo-grid="' + esc(p.id) + '">' + photosHtml(p) + "</div>" +
           '<label class="admin-photo-add"><input type="file" accept="image/jpeg,image/png,image/webp" multiple data-photo-input="' + esc(p.id) + '"><span>+ Adicionar fotos</span></label>' +
-          "<small>JPG, PNG ou WEBP. A primeira é a capa no site. O tamanho é otimizado automaticamente.</small>" +
+          "<small>JPG, PNG ou WEBP. A primeira é a capa no site. O fundo é removido automaticamente. Confira o recorte; você pode usar a original antes de salvar.</small>" +
         "</div>" +
         '<div class="admin-prod-fields">' +
           '<label class="admin-field">Descrição<textarea name="description" rows="3" maxlength="600">' + esc(p.desc) + "</textarea></label>" +
@@ -978,21 +981,23 @@ export function mountAdminPage(root, _params, onClose) {
     if (bad) { setFormError(form, bad); return; }
     var draft = photoDraft(p);
     if (!draft.length) { setFormError(form, "Deixe pelo menos uma foto: sem foto o produto não aparece no site."); return; }
+    if (draft.some(function (ph) { return ph.processing; })) { setFormError(form, "Aguarde o recorte das fotos ou escolha Usar original."); return; }
     if (draft.length > 8) { setFormError(form, "No máximo 8 fotos por produto."); return; }
 
     setBusy(form, true);
-    var uploaded = [];
+    var uploaded = [], refs = [];
     for (var i = 0; i < draft.length; i++) {
-      if (!draft[i].file) continue;
-      var blob = await imageLib.optimizeImage(draft[i].file);
-      if (blob.size > imageLib.MAX_IMAGE_BYTES) { setBusy(form, false); setFormError(form, "Uma das fotos passou de 8MB mesmo otimizada."); return; }
-      var up = await svc.uploadProductImage(id, blob);
+      if (!draft[i].file) { refs.push(draft[i].ref); continue; }
+      var blob = draft[i].useCutout ? draft[i].cutout : await imageLib.optimizeImage(draft[i].file);
+      var original = draft[i].useCutout ? await imageLib.optimizeImage(draft[i].file) : null;
+      if (blob.size > imageLib.MAX_IMAGE_BYTES) { setBusy(form, false); setFormError(form, "Uma das fotos passou de 8MB mesmo otimizada."); await svc.removeProductImages(uploaded); return; }
+      if (original && original.size > imageLib.MAX_IMAGE_BYTES) { setBusy(form, false); setFormError(form, "A foto original passou de 8MB. Escolha uma foto menor."); await svc.removeProductImages(uploaded); return; }
+      var up = await svc.uploadProductImage(id, blob, original);
       if (destroyed) return;
       if (!up.ok) { setBusy(form, false); setFormError(form, up.message); await svc.removeProductImages(uploaded); return; }
       uploaded.push(up.data);
-      draft[i] = { ref: up.data, url: draft[i].url };
+      refs.push(up.data);
     }
-    var refs = draft.map(function (ph) { return ph.ref; });
     var factory = window.SG.catalogFactory ? window.SG.catalogFactory(id) : null;
     var isFactoryDefault = !!factory && refs.length === factory.images.length && refs.every(function (r, k) { return r === "base:" + k; });
     var row = {
@@ -1011,6 +1016,7 @@ export function mountAdminPage(root, _params, onClose) {
     // fotos do bucket que saíram da lista: apagar de verdade
     var dropped = previous.filter(function (ref) { return !/^base:/.test(ref) && refs.indexOf(ref) === -1; });
     if (dropped.length) await svc.removeProductImages(dropped);
+    draft.forEach(releasePhoto);
     delete state.photoDraft[id];
     if (row.category !== p.category) state.prodCategory = row.category;
     await afterProductChange("PRODUTO SALVO — " + p.name.toUpperCase());
@@ -1036,6 +1042,7 @@ export function mountAdminPage(root, _params, onClose) {
     if (!res.ok) { toast(res.message.toUpperCase()); return; }
     var files = ((row && row.images) || []).filter(function (ref) { return !/^base:/.test(ref); });
     if (files.length) await svc.removeProductImages(files);
+    (state.photoDraft[id] || []).forEach(releasePhoto);
     delete state.photoDraft[id];
     await afterProductChange("ORIGINAL RESTAURADO");
   }
@@ -1055,6 +1062,7 @@ export function mountAdminPage(root, _params, onClose) {
     await svc.clearPrices([id]);
     var files = ((row && row.images) || []).filter(function (ref) { return !/^base:/.test(ref); });
     if (files.length) await svc.removeProductImages(files);
+    (state.photoDraft[id] || []).forEach(releasePhoto);
     delete state.photoDraft[id];
     state.openProdId = null;
     await afterProductChange("PRODUTO EXCLUÍDO");
@@ -1074,7 +1082,7 @@ export function mountAdminPage(root, _params, onClose) {
         '<label class="admin-field admin-field--wide">Descrição<textarea name="description" rows="2" maxlength="600" placeholder="Opcional"></textarea></label>' +
       "</div>" +
       '<div class="admin-photo-grid" data-new-photos>' + newPhotosHtml() + "</div>" +
-      '<label class="admin-photo-add"><input type="file" accept="image/jpeg,image/png,image/webp" multiple data-photo-input="__new"><span>+ Fotos (a primeira é a capa)</span></label>' +
+      '<label class="admin-photo-add"><input type="file" accept="image/jpeg,image/png,image/webp" multiple data-photo-input="__new"><span>+ Fotos (recorte automático; a primeira é a capa)</span></label>' +
       '<p class="admin-form-error" data-form-error role="alert" hidden></p>' +
       '<div class="admin-form-actions"><button class="btn btn-ghost" type="button" data-action="prod-new-cancel">Cancelar</button><button class="btn btn-primary" type="submit">Criar produto</button></div>' +
     "</form>";
@@ -1083,13 +1091,14 @@ export function mountAdminPage(root, _params, onClose) {
     return state.newPhotos.map(function (ph, i) {
       return '<figure class="admin-photo' + (i === 0 ? " is-cover" : "") + '"><img src="' + esc(ph.url) + '" alt="Foto ' + (i + 1) + '">' +
         (i === 0 ? "<figcaption>Capa</figcaption>" : "") +
+        photoCutoutHtml(ph, "__new", i) +
         '<button type="button" class="admin-photo-remove" data-action="photo-remove" data-id="__new" data-index="' + i + '" aria-label="Remover foto ' + (i + 1) + '">×</button></figure>';
     }).join("");
   }
   function openNewProduct() {
     var box = bodyEl.querySelector("[data-prod-new]");
     if (!box) return;
-    state.newPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
+    state.newPhotos.forEach(releasePhoto);
     state.newPhotos = [];
     box.innerHTML = newProductHtml();
     box.querySelector('[name="name"]').focus();
@@ -1107,15 +1116,19 @@ export function mountAdminPage(root, _params, onClose) {
     if (bad) { setFormError(form, bad); return; }
     if (raw && (cents === null || cents <= 0)) { setFormError(form, "Preço no formato 197,00 (ou deixe vazio)."); return; }
     if (!state.newPhotos.length) { setFormError(form, "Adicione pelo menos uma foto."); return; }
+    if (state.newPhotos.some(function (ph) { return ph.processing; })) { setFormError(form, "Aguarde o recorte das fotos ou escolha Usar original."); return; }
     if (state.newPhotos.length > 8) { setFormError(form, "No máximo 8 fotos por produto."); return; }
 
     var id = category + "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
     setBusy(form, true);
     var uploaded = [];
     for (var i = 0; i < state.newPhotos.length; i++) {
-      var blob = await imageLib.optimizeImage(state.newPhotos[i].file);
+      var ph = state.newPhotos[i];
+      var blob = ph.useCutout ? ph.cutout : await imageLib.optimizeImage(ph.file);
+      var original = ph.useCutout ? await imageLib.optimizeImage(ph.file) : null;
       if (blob.size > imageLib.MAX_IMAGE_BYTES) { setBusy(form, false); setFormError(form, "Uma das fotos passou de 8MB mesmo otimizada."); await svc.removeProductImages(uploaded); return; }
-      var up = await svc.uploadProductImage(id, blob);
+      if (original && original.size > imageLib.MAX_IMAGE_BYTES) { setBusy(form, false); setFormError(form, "A foto original passou de 8MB. Escolha uma foto menor."); await svc.removeProductImages(uploaded); return; }
+      var up = await svc.uploadProductImage(id, blob, original);
       if (destroyed) return;
       if (!up.ok) { setBusy(form, false); setFormError(form, up.message); await svc.removeProductImages(uploaded); return; }
       uploaded.push(up.data);
@@ -1127,7 +1140,7 @@ export function mountAdminPage(root, _params, onClose) {
     if (!res.ok) { setBusy(form, false); setFormError(form, res.message); await svc.removeProductImages(uploaded); return; }
     if (cents) await svc.setPrices([{ productId: id, priceCents: cents }]);
     if (destroyed) return;
-    state.newPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
+    state.newPhotos.forEach(releasePhoto);
     state.newPhotos = [];
     bodyEl.querySelector("[data-prod-new]").innerHTML = "";
     state.prodCategory = category;
@@ -1136,42 +1149,95 @@ export function mountAdminPage(root, _params, onClose) {
     await afterProductChange("PRODUTO CRIADO — " + name.toUpperCase());
   }
 
-  // fotos escolhidas no input (produto aberto ou formulário de novo)
+  function photoCutoutHtml(ph, id, i) {
+    if (!ph.file) return ph.ref && /-cutout\.(webp|png)$/.test(ph.ref)
+      ? '<a class="admin-photo-original" href="' + esc(ph.url + ".original") + '" target="_blank" rel="noopener">Ver original</a>' : "";
+    var status = ph.processing ? (ph.status || "Preparando recorte…") : ph.useCutout ? "Sem fundo — confira o recorte" : "Original";
+    var button = ph.cutout && !ph.useCutout ? "Usar sem fundo" : "Usar original";
+    return '<span class="admin-photo-status" role="status">' + esc(status) + '</span>' +
+      (ph.processing || ph.cutout ? '<button class="admin-photo-original" type="button" data-action="photo-original" data-id="' + esc(id) + '" data-index="' + i + '">' + button + '</button>' : "") +
+      (ph.cutoutError ? '<span class="admin-photo-warning">Recorte indisponível; original mantida.</span>' : "");
+  }
+
+  function releasePhoto(ph) {
+    ph.skipCutout = true;
+    if (ph.cutoutAbort) ph.cutoutAbort.abort();
+    if (ph.originalUrl) URL.revokeObjectURL(ph.originalUrl);
+    if (ph.cutoutUrl) URL.revokeObjectURL(ph.cutoutUrl);
+    if (!ph.originalUrl && ph.file) URL.revokeObjectURL(ph.url);
+  }
+
+  function currentPhotos(id) {
+    if (id === "__new") return state.newPhotos;
+    return state.photoDraft[id] || [];
+  }
+
+  function repaintPhotos(id) {
+    if (destroyed) return;
+    var grid = id === "__new" ? bodyEl.querySelector("[data-new-photos]") : bodyEl.querySelector('[data-photo-grid="' + id + '"]');
+    var p = id === "__new" ? null : findProd(id);
+    if (grid) grid.innerHTML = id === "__new" ? newPhotosHtml() : p ? photosHtml(p) : "";
+  }
+
+  function preparePhoto(ph, id) {
+    photoQueue = photoQueue.catch(function () {}).then(async function () {
+      if (destroyed || ph.skipCutout || currentPhotos(id).indexOf(ph) === -1) return;
+      try {
+        var remover = await import("../src/lib/product-cutout");
+        ph.cutoutAbort = new AbortController();
+        var blob = await remover.removeProductBackground(ph.file, function (status) {
+          if (!ph.skipCutout) { ph.status = status; repaintPhotos(id); }
+        }, ph.cutoutAbort.signal);
+        if (destroyed || ph.skipCutout || currentPhotos(id).indexOf(ph) === -1) return;
+        if (blob === ph.file) { ph.processing = false; repaintPhotos(id); return; }
+        if (blob.size > imageLib.MAX_IMAGE_BYTES) throw new Error("Recorte muito grande.");
+        ph.cutout = blob;
+        ph.cutoutUrl = URL.createObjectURL(blob);
+        ph.url = ph.cutoutUrl;
+        ph.useCutout = true;
+      } catch (error) {
+        if (!ph.skipCutout) ph.cutoutError = true;
+      } finally {
+        ph.processing = false;
+        repaintPhotos(id);
+      }
+    });
+  }
+
+  // Automatic cutout is a draft: originals stay available until the admin saves.
   function addPhotos(input) {
     var id = input.getAttribute("data-photo-input");
+    var form = input.closest("form");
     var files = Array.prototype.slice.call(input.files || []);
     input.value = "";
     var problems = files.map(function (f) { return imageLib.imageProblem(f); }).filter(Boolean);
     var ok = files.filter(function (f) { return !imageLib.imageProblem(f); });
-    var form = input.closest("form");
+    var p = id === "__new" ? null : findProd(id);
+    if (id !== "__new" && !p) return;
+    var draft = id === "__new" ? state.newPhotos : photoDraft(p);
+    if (draft.length + ok.length > 8) problems.push("No máximo 8 fotos por produto.");
+    ok = ok.slice(0, Math.max(0, 8 - draft.length));
     if (problems.length) setFormError(form, problems[0]);
-    if (id === "__new") {
-      ok.forEach(function (f) { state.newPhotos.push({ file: f, url: URL.createObjectURL(f) }); });
-      bodyEl.querySelector("[data-new-photos]").innerHTML = newPhotosHtml();
-      return;
-    }
-    var p = findProd(id);
-    if (!p) return;
-    var draft = photoDraft(p);
-    ok.forEach(function (f) { draft.push({ file: f, url: URL.createObjectURL(f) }); });
-    var grid = bodyEl.querySelector('[data-photo-grid="' + id + '"]');
-    if (grid) grid.innerHTML = photosHtml(p);
+    ok.forEach(function (file) {
+      var url = URL.createObjectURL(file);
+      var ph = { file: file, url: url, originalUrl: url, processing: true, status: "Preparando recorte…" };
+      draft.push(ph);
+      preparePhoto(ph, id);
+    });
+    repaintPhotos(id);
   }
 
   function photoAction(action, id, index) {
-    if (id === "__new") {
-      var removed = state.newPhotos.splice(index, 1)[0];
-      if (removed) URL.revokeObjectURL(removed.url);
-      bodyEl.querySelector("[data-new-photos]").innerHTML = newPhotosHtml();
-      return;
-    }
-    var p = findProd(id);
-    if (!p) return;
-    var draft = photoDraft(p);
-    if (action === "photo-remove") draft.splice(index, 1);
-    else if (action === "photo-cover") draft.unshift(draft.splice(index, 1)[0]);
-    var grid = bodyEl.querySelector('[data-photo-grid="' + id + '"]');
-    if (grid) grid.innerHTML = photosHtml(p);
+    var draft = currentPhotos(id), ph = draft[index];
+    if (!ph) return;
+    if (action === "photo-original") {
+      if (ph.processing) { ph.skipCutout = true; ph.processing = false; if (ph.cutoutAbort) ph.cutoutAbort.abort(); }
+      ph.useCutout = ph.cutout && !ph.useCutout;
+      ph.url = ph.useCutout ? ph.cutoutUrl : ph.originalUrl;
+    } else if (action === "photo-remove") {
+      draft.splice(index, 1); releasePhoto(ph);
+    } else if (action === "photo-cover") draft.unshift(draft.splice(index, 1)[0]);
+    repaintPhotos(id);
   }
 
   function resetBulk(form) {
@@ -1821,17 +1887,18 @@ export function mountAdminPage(root, _params, onClose) {
     else if (action === "prod-toggle") {
       var previous = state.openProdId;
       state.openProdId = previous === id ? null : id;
+      (state.photoDraft[id] || []).forEach(releasePhoto);
       delete state.photoDraft[id];
       if (previous && previous !== id) rerenderProd(previous);
       rerenderProd(id);
     }
     else if (action === "prod-new") { openNewProduct(); }
     else if (action === "prod-new-cancel") {
-      state.newPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
+      state.newPhotos.forEach(releasePhoto);
       state.newPhotos = [];
       bodyEl.querySelector("[data-prod-new]").innerHTML = "";
     }
-    else if (action === "photo-remove" || action === "photo-cover") { photoAction(action, id, Number(btn.getAttribute("data-index"))); }
+    else if (action === "photo-remove" || action === "photo-cover" || action === "photo-original") { photoAction(action, id, Number(btn.getAttribute("data-index"))); }
     else if (action === "prod-move") { btn.disabled = true; moveProduct(id, Number(btn.getAttribute("data-dir"))); }
     else if (action === "prod-restore") { btn.disabled = true; restoreProduct(id); }
     else if (action === "prod-delete") { deleteProduct(id, btn); }
@@ -1945,6 +2012,7 @@ export function mountAdminPage(root, _params, onClose) {
 
   return function destroy() {
     destroyed = true;
+    Object.values(state.photoDraft).forEach(function (photos) { photos.forEach(releasePhoto); });
     clearTimeout(searchTimer);
     if (unsubscribeAuth) unsubscribeAuth();
     document.removeEventListener("keydown", onKeydown, true);
@@ -1952,7 +2020,7 @@ export function mountAdminPage(root, _params, onClose) {
     root.removeEventListener("submit", onSubmit);
     root.removeEventListener("input", onInput);
     root.removeEventListener("change", onChange);
-    state.newPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
+    state.newPhotos.forEach(releasePhoto);
     if (zoomEl) { zoomEl.remove(); zoomEl = null; }
     if (finance) { finance.destroy(); finance = null; }
     stopLive();

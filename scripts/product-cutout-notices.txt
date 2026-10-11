@@ -1,0 +1,19 @@
+Product background removal uses U2-Net-p (U²-Net), Xuebin Qin et al., 2020.
+Qin, Xuebin; Zhang, Zichen; Huang, Chenyang; Dehghan, Masood;
+Zaiane, Osmar; Jagersand, Martin. U2-Net: Going Deeper with Nested
+U-Structure for Salient Object Detection. Pattern Recognition 106, 107404.
+Model/paper: https://github.com/xuebinqin/U-2-Net (Apache-2.0).
+ONNX model distributed by rembg: https://github.com/danielgatis/rembg (MIT).
+Pinned mirror: edgetools/u2netp, revision 25dee37ab19c5b6ad64ba6578eba63f1ae07720c.
+Model SHA-256: 309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8.
+Runtime: Microsoft ONNX Runtime Web 1.20.1 (MIT), https://github.com/microsoft/onnxruntime.
+Licenses: https://www.apache.org/licenses/LICENSE-2.0
+https://github.com/microsoft/onnxruntime/blob/v1.20.1/LICENSE
+
+The model runs only in a worker in the administrator's browser.
+The original product photo is not sent to a third-party inference API.
+New cutouts have a paired uncut, optimized backup at <photo-path>.original.
+Backups are not included in the public catalog's image list. The existing
+products bucket remains public; backups have the same access as product photos.
+The photo editor retains the original on cancellation, unsupported browsers,
+model loading failure, timeout, or invalid masks. Existing photos are unchanged.

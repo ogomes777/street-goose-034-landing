@@ -1378,6 +1378,10 @@ footer>small{grid-column:1/-1;border-top:1px solid var(--line);padding-top:24px;
 .admin-photo:hover .admin-photo-cover,.admin-photo-cover:focus-visible{opacity:1}
 .admin-photo-remove{position:absolute;top:6px;right:6px;width:28px;height:28px;border:0;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;font-size:16px;line-height:1;cursor:pointer;transition:background var(--t-fast)}
 .admin-photo-remove:hover,.admin-photo-remove:focus-visible{background:var(--admin-danger)}
+.admin-photo-status{position:absolute;top:6px;left:6px;right:40px;padding:4px 6px;border-radius:6px;background:rgba(0,0,0,.8);color:#fff;font-size:10px;line-height:1.3}
+.admin-photo-original{position:absolute;bottom:34px;left:6px;right:6px;min-height:32px;padding:4px 6px;border:1px solid rgba(255,255,255,.3);border-radius:8px;background:rgba(0,0,0,.85);color:#fff;font:inherit;font-size:11px;cursor:pointer}
+.admin-photo-original:focus-visible{outline:2px solid var(--accent)}
+.admin-photo-warning{position:absolute;bottom:34px;left:6px;right:6px;padding:4px 6px;border-radius:6px;background:rgba(0,0,0,.85);color:#fff;font-size:10px;line-height:1.3}
 .admin-photo-add{position:relative;display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 16px;border:1px dashed var(--border-strong);border-radius:12px;color:var(--text-2);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:border-color var(--t-fast),color var(--t-fast)}
 .admin-photo-add:hover,.admin-photo-add:focus-within{border-color:var(--accent);color:var(--accent)}
 .admin-photo-add input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}

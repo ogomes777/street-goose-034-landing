@@ -19,3 +19,6 @@ supabase/.temp
 !/assets/heroes/web/*.mp4
 *.mov
 *.webm
+
+# Generated and verified during prebuild/predev
+public/product-cutout/

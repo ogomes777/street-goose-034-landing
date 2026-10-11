@@ -8,11 +8,14 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "prebuild": "node scripts/prepare-product-cutout.mjs",
+    "predev": "node scripts/prepare-product-cutout.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
     "gsap": "3.12.5",
+    "onnxruntime-web": "1.20.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "three": "0.128.0"

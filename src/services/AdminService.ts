@@ -504,19 +504,29 @@ export const AdminService = {
   },
 
   /** Sobe uma foto já otimizada para products/<id>/... e devolve o caminho. */
-  async uploadProductImage(productId: string, blob: Blob): Promise<AdminResult<string>> {
+  async uploadProductImage(productId: string, blob: Blob, original?: Blob | null): Promise<AdminResult<string>> {
     if (!supabase) return fail("not_configured");
     const ext = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
-    const path = productId + "/" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + "." + ext;
+    const path = productId + "/" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + (original ? "-cutout" : "") + "." + ext;
+    // Paired backup is never added to the catalog's image list. Keep its key
+    // derivable from the selected photo, without changing product records.
+    if (original) {
+      const backup = await supabase.storage.from("products").upload(path + ".original", original, { contentType: original.type, upsert: false });
+      if (backup.error) return fail("upload_failed", "Falha ao guardar a original: " + backup.error.message);
+    }
     const { error } = await supabase.storage.from("products").upload(path, blob, { contentType: blob.type, upsert: false });
-    if (error) return fail("upload_failed", "Falha ao enviar a foto: " + error.message);
+    if (error) {
+      if (original) await supabase.storage.from("products").remove([path + ".original"]);
+      return fail("upload_failed", "Falha ao enviar a foto: " + error.message);
+    }
     return { ok: true, data: path };
   },
 
   async removeProductImages(paths: string[]): Promise<AdminResult<null>> {
     if (!supabase) return fail("not_configured");
     if (!paths.length) return { ok: true, data: null };
-    const { error } = await supabase.storage.from("products").remove(paths);
+    const pairedPaths = paths.flatMap((path) => [path, path + ".original"]);
+    const { error } = await supabase.storage.from("products").remove(pairedPaths);
     if (error) return fail("upload_failed", "Falha ao apagar fotos: " + error.message);
     return { ok: true, data: null };
   },
