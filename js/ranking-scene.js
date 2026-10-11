@@ -70,6 +70,33 @@ export async function mountRankingScene(host, leaders) {
       const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, .012, 5, 100), new THREE.MeshBasicMaterial({ color: 0xa991d4, transparent: true, opacity: .25 }));
       ring.rotation.x = Math.PI / 2; ring.position.y = -.015; group.add(ring);
     });
+    // A single procedural nebula texture adds depth without bloom or asset downloads.
+    const nebulaCanvas = document.createElement('canvas'); nebulaCanvas.width = nebulaCanvas.height = 512;
+    const nebulaCtx = nebulaCanvas.getContext('2d');
+    for (let i = 0; i < 110; i++) {
+      const angle = i * .13, radius = 14 + i * 1.65;
+      const x = 256 + Math.cos(angle) * radius, y = 256 + Math.sin(angle) * radius * .52;
+      const cloud = nebulaCtx.createRadialGradient(x, y, 0, x, y, 38);
+      cloud.addColorStop(0, i % 3 ? '#7844ac22' : '#438dbb28'); cloud.addColorStop(1, '#00000000');
+      nebulaCtx.fillStyle = cloud; nebulaCtx.fillRect(x - 38, y - 38, 76, 76);
+    }
+    const nebulaTexture = new THREE.CanvasTexture(nebulaCanvas); textures.push(nebulaTexture);
+    const nebula = new THREE.Mesh(new THREE.PlaneGeometry(20, 14), new THREE.MeshBasicMaterial({ map: nebulaTexture, transparent: true, opacity: .85, blending: THREE.AdditiveBlending, depthWrite: false }));
+    nebula.position.set(0, 3, -7); nebula.rotation.z = -.28; scene.add(nebula);
+    const galaxyGeometry = new THREE.BufferGeometry(), galaxyPositions = new Float32Array(1100 * 3), galaxyColors = new Float32Array(1100 * 3);
+    for (let i = 0; i < 1100; i++) {
+      const radius = .3 + Math.sqrt(Math.random()) * 5.8, angle = radius * .82 + (i % 3) * Math.PI * 2 / 3 + (Math.random() - .5) * .32;
+      galaxyPositions.set([Math.cos(angle) * radius, (Math.random() - .5) * .18, Math.sin(angle) * radius], i * 3);
+      const color = new THREE.Color().lerpColors(new THREE.Color('#ffeac1'), new THREE.Color('#8865e8'), radius / 6); galaxyColors.set([color.r, color.g, color.b], i * 3);
+    }
+    galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPositions, 3)); galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
+    const galaxy = new THREE.Points(galaxyGeometry, new THREE.PointsMaterial({ map: glowTexture, size: .085, vertexColors: true, transparent: true, opacity: .85, blending: THREE.AdditiveBlending, depthWrite: false }));
+    galaxy.position.set(0, 3.4, -5); galaxy.rotation.set(.48, 0, -.22); scene.add(galaxy);
+    const planet = new THREE.Group(); planet.position.set(3.5, 4.7, -5); planet.rotation.z = -.35; scene.add(planet);
+    planet.add(new THREE.Mesh(new THREE.SphereGeometry(.72, 24, 16), new THREE.MeshStandardMaterial({ color: 0x30264e, metalness: .35, roughness: .8 })));
+    const planetRing = new THREE.Mesh(new THREE.RingGeometry(.95, 1.38, 64), new THREE.MeshBasicMaterial({ color: 0xb0a1ee, side: THREE.DoubleSide, transparent: true, opacity: .28, depthWrite: false }));
+    planetRing.rotation.x = 1.15; planet.add(planetRing);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0x8267ed, opacity: .24, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); halo.scale.set(2.8, 2.8, 1); halo.position.z = -.5; planet.add(halo);
     const positions = new Float32Array(800 * 3), colors = new Float32Array(800 * 3);
     const palette = [new THREE.Color('#dabdff'), new THREE.Color('#fff0cd'), new THREE.Color('#89bcff')];
     for (let i = 0; i < 800; i++) {
@@ -80,7 +107,7 @@ export async function mountRankingScene(host, leaders) {
     const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); starGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     const starBase = positions.slice();
     const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({ map: glowTexture, size: .14, vertexColors: true, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false })); scene.add(stars);
-    let animationTime = 0, frame = 0, visible = true, paused = matchMedia('(prefers-reduced-motion: reduce)').matches, last = 0;
+    let contextLost = false, animationTime = 0, frame = 0, visible = true, paused = matchMedia('(prefers-reduced-motion: reduce)').matches, last = 0;
     const media = matchMedia('(prefers-reduced-motion: reduce)');
     const button = host.querySelector('[data-scene-toggle]');
     function syncButton() {
@@ -89,7 +116,7 @@ export async function mountRankingScene(host, leaders) {
       if (button) { button.textContent = paused ? 'Reproduzir animação' : 'Pausar animação'; button.setAttribute('aria-pressed', String(paused)); }
     }
     function draw(t) {
-      if (stopped) return;
+      if (stopped || contextLost) return;
       frame = 0;
       if (!visible || document.hidden || paused) return;
       if (t - last >= 32) {
@@ -107,6 +134,7 @@ export async function mountRankingScene(host, leaders) {
         rings.forEach((r, i) => { r.rotation.y = time * .4 + i; r.rotation.z = time * .22 + i; r.position.y = crystals[i].position.y; });
         for (let i = 0; i < 800; i++) { positions[i * 3 + 1] = starBase[i * 3 + 1] + Math.sin(time * .3 + i) * .24; }
         starGeometry.attributes.position.needsUpdate = true;
+        galaxy.rotation.y = time * .035; nebula.rotation.z = -.28 + Math.sin(time * .08) * .035; planet.position.y = 4.7 + Math.sin(time * .4) * .12;
         stars.rotation.y = time * .018; stars.rotation.z = time * .008;
         group.rotation.y = Math.sin(time * .25) * .09; group.position.y = Math.sin(time * .9) * .09;
         neon.material.opacity = .55 + (1 + Math.sin(time * 1.5)) * .18;
@@ -114,8 +142,9 @@ export async function mountRankingScene(host, leaders) {
       }
       frame = requestAnimationFrame(draw);
     }
-    function resume() { if (!stopped && !frame && visible && !document.hidden && !paused) { last = performance.now(); frame = requestAnimationFrame(draw); } }
+    function resume() { if (!stopped && !contextLost && !frame && visible && !document.hidden && !paused) { last = performance.now(); frame = requestAnimationFrame(draw); } }
     function resize() {
+      if (contextLost) return;
       const { width, height } = host.getBoundingClientRect(); if (!width || !height) return;
       renderer.setSize(width, height, false); camera.aspect = width / height;
       camera.position.z = 10.8 / Math.min(1, Math.max(.8, camera.aspect));
@@ -124,7 +153,7 @@ export async function mountRankingScene(host, leaders) {
     function toggle() { paused = !paused; syncButton(); if (paused) { cancelAnimationFrame(frame); frame = 0; } else resume(); }
     function motion(e) { paused = e.matches; syncButton(); cancelAnimationFrame(frame); frame = 0; resize(); resume(); }
     function visibility() { if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else resume(); }
-    function lost(e) { e.preventDefault(); cancelAnimationFrame(frame); frame = 0; host.classList.remove('has-webgl'); }
+    function lost(e) { e.preventDefault(); contextLost = true; cancelAnimationFrame(frame); frame = 0; host.classList.remove('has-webgl'); }
     const observer = new ResizeObserver(resize); observer.observe(host);
     const intersection = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; if (!visible) { cancelAnimationFrame(frame); frame = 0; } else resume(); }); intersection.observe(host);
     canvas.addEventListener('webglcontextlost', lost); document.addEventListener('visibilitychange', visibility); media.addEventListener('change', motion);

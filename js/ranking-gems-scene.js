@@ -14,7 +14,7 @@ export async function mountRankingGems(host) {
   renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .85;
   host.append(canvas);
   const views = slots.map((slot, i) => {
-    const scene = new THREE.Scene(), gem = levelGem(i + 1);
+    const scene = new THREE.Scene(), gem = levelGem(Number(slot.dataset.level) || i + 1);
     scene.add(new THREE.HemisphereLight(0xe3e4ff, 0x131324, .9));
     const light = new THREE.DirectionalLight(0xffffff, 1.3); light.position.set(-2, 3, 4); scene.add(light);
     const rim = new THREE.PointLight(gem.color, 2, 10); rim.position.set(2, 1, -2); scene.add(rim);

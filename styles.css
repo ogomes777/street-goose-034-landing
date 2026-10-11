@@ -2560,3 +2560,22 @@ button.admin-post-media{position:relative;width:100%;padding:0;border:0;cursor:z
 @media(max-width:480px){.ranking-gem-collection .sg-level-gem{width:62px;height:62px}.ranking-row .ranking-medal{width:33px;height:39px}.ranking-row .ranking-medal b{font-size:14px!important;transform:translateY(5px)}.ranking-stage .ranking-medal{width:33px;height:39px}.ranking-stage .ranking-medal b{font-size:14px!important;transform:translateY(5px)}}
 @media(prefers-reduced-motion:reduce){.sg-level-gem::before,.sg-level-gem::after,.sg-level-gem>svg,.ranking-medal::after,.ranking-stage::before,.is-ranking .ranking-hero-stats b,.ranking-stage-member,.is-ranking .ranking-row{animation:none!important}}
 .is-ranking .ranking-xp>b{font-weight:inherit;font-size:inherit}
+
+/* Cut-specific identities share the same real XP progression. */
+.is-ranking .ranking-gem-collection li { position:relative; background:radial-gradient(ellipse at 50% 15%,color-mix(in srgb,var(--gem-color) 12%,transparent),transparent 62%),linear-gradient(150deg,#211d2d,#15131d); }
+.is-ranking .ranking-gem-meaning { margin:10px 0 0; min-height:34px; font-size:10px; line-height:1.6; color:#b8b1c8; }
+.is-ranking .ranking-gem-collection .ranking-gem-state { margin-top:12px; font-size:8px; letter-spacing:.08em; color:#9c94ad; }
+.is-ranking .ranking-gem-collection .is-unlocked .ranking-gem-state,
+.is-ranking .ranking-gem-collection .is-current .ranking-gem-state { color:var(--gem-color); }
+.is-ranking .ranking-gem-collection .gem-cut-prism { border-radius:4px 4px 18px 18px; }
+.is-ranking .ranking-gem-collection .gem-cut-step { border-radius:4px; }
+.is-ranking .ranking-gem-collection .gem-cut-oval { border-radius:30px 30px 10px 10px; }
+.is-ranking .ranking-gem-collection .gem-cut-cluster { border-radius:8px 25px 8px 25px; }
+.is-ranking .ranking-gem-collection .gem-cut-pear { border-radius:35px 8px 35px 8px; }
+.is-ranking .ranking-gem-collection .gem-cut-trillion { border-radius:6px 6px 28px 28px; }
+.is-ranking .ranking-gem-collection .gem-cut-brilliant { border-radius:18px; }
+.ranking-row .sg-level-gem svg,.ranking-me .sg-level-gem svg { animation:sg-gem-emblem 6s ease-in-out infinite; }
+@keyframes sg-gem-emblem { 0%,100% { transform:translateY(0) rotate(-5deg); } 50% { transform:translateY(-2px) rotate(5deg); } }
+.ranking-medal { filter:drop-shadow(0 3px 2px #0008); }
+.ranking-medal b { font-weight:700; text-shadow:0 1px 0 #fff9,0 -1px 0 #52371488; }
+@media(prefers-reduced-motion:reduce) { .ranking-row .sg-level-gem svg,.ranking-me .sg-level-gem svg { animation:none; } }
