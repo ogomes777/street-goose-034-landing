@@ -2536,3 +2536,27 @@ button.admin-post-media{position:relative;width:100%;padding:0;border:0;cursor:z
 @media(prefers-reduced-motion:reduce){.is-ranking *,.sg-ranking-preview *{scroll-behavior:auto!important;transition:none!important}}
 
 .ranking-stage-leaders{isolation:isolate}.ranking-stage-leaders::before{content:"";position:absolute;inset:-12px -8% -38px;z-index:-1;background:linear-gradient(180deg,transparent,#09081266 35%,#090812bb 100%);pointer-events:none}.ranking-stage-member>span:last-child{color:#c2b6d0}.ranking-stage-bottom{color:#b3a3c9}.ranking-stage-bottom button{color:#d1bee7}
+
+/* Living gemstones, satin ribbons and polished medals. */
+.ranking-gem-collection{position:relative}.ranking-gems-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}.has-gem-webgl li .sg-level-gem>svg{visibility:hidden}
+.sg-level-gem{position:relative;isolation:isolate;perspective:350px}
+.sg-level-gem::before{content:"";position:absolute;inset:-22%;z-index:-1;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--gem-color) 25%,transparent),transparent 68%);animation:sg-gem-aura 3.8s ease-in-out infinite}
+.sg-level-gem::after{content:"";position:absolute;right:0;top:5%;width:10px;height:10px;background:#fff;clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);filter:drop-shadow(0 0 5px var(--gem-color));animation:sg-gem-sparkle 4s ease-in-out infinite;pointer-events:none}
+.sg-level-gem>svg{animation:sg-gem-float 4.8s ease-in-out infinite;transform-style:preserve-3d}
+.ranking-gem-collection .sg-level-gem{width:76px;height:76px;margin-bottom:19px}
+.ranking-gem-collection li{position:relative;overflow:visible;background:radial-gradient(ellipse at 50% 28%,#ffffff06,transparent 64%),linear-gradient(145deg,#ffffff05,#ffffff01)}
+.ranking-gem-collection li:nth-child(2n) .sg-level-gem::before{animation-delay:-1.2s}.ranking-gem-collection li:nth-child(3n) .sg-level-gem::after{animation-delay:-2.4s}.ranking-gem-collection li:nth-child(2n) .sg-level-gem>svg{animation-delay:-1.8s}
+.ranking-medal{width:40px;height:48px;filter:drop-shadow(0 4px 5px #0006)}.ranking-medal b{font-family:Georgia,serif;font-size:17px!important;transform:translateY(6px);text-shadow:0 1px 0 #ffffffa6,0 -1px 0 #0003;color:#6b3d0d!important}.ranking-medal--2 b{color:#465269!important}.ranking-medal--3 b{color:#733f2d!important}
+.ranking-stage .ranking-medal{width:40px;height:48px}.ranking-medal::after{content:"";position:absolute;inset:26% 0 5%;border-radius:50%;background:linear-gradient(115deg,transparent 30%,#ffffff75 45%,transparent 58%);background-size:300% 100%;mix-blend-mode:screen;animation:sg-medal-shine 6s ease-in-out infinite;pointer-events:none}
+.ranking-stage{box-shadow:0 30px 100px #0003,inset 0 1px 0 #fff1,0 0 65px #9252d315}.ranking-stage::before{animation:sg-world-aura 6s ease-in-out infinite}
+.is-ranking .ranking-hero-stats b,.ranking-stage-member,.is-ranking .ranking-row{animation:sg-rank-arrive .75s both}.ranking-stage-member--2{animation-delay:.12s}.ranking-stage-member--3{animation-delay:.24s}.is-ranking .ranking-row--2{animation-delay:.08s}.is-ranking .ranking-row--3{animation-delay:.16s}
+.ranking-motion-paused .sg-level-gem::before,.ranking-motion-paused .sg-level-gem::after,.ranking-motion-paused .sg-level-gem>svg,.ranking-motion-paused .ranking-medal::after,.ranking-motion-paused .ranking-stage::before{animation-play-state:paused}
+@keyframes sg-gem-aura{0%,100%{opacity:.45;transform:scale(.86)}50%{opacity:1;transform:scale(1.18)}}
+@keyframes sg-gem-sparkle{0%,35%,70%,100%{opacity:0;transform:scale(.3) rotate(0)}45%,55%{opacity:.9;transform:scale(1) rotate(90deg)}}
+@keyframes sg-gem-float{0%{transform:translateY(0) rotateY(0)}50%{transform:translateY(-4px) rotateY(180deg)}100%{transform:translateY(0) rotateY(360deg)}}
+@keyframes sg-medal-shine{0%,65%{background-position:130% 0;opacity:0}72%{opacity:.8}85%,100%{background-position:-80% 0;opacity:0}}
+@keyframes sg-world-aura{0%,100%{opacity:.5;transform:scale(.95)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes sg-rank-arrive{from{opacity:0;filter:blur(3px);translate:0 12px}to{opacity:1;filter:blur(0);translate:0 0}}
+@media(max-width:480px){.ranking-gem-collection .sg-level-gem{width:62px;height:62px}.ranking-row .ranking-medal{width:33px;height:39px}.ranking-row .ranking-medal b{font-size:14px!important;transform:translateY(5px)}.ranking-stage .ranking-medal{width:33px;height:39px}.ranking-stage .ranking-medal b{font-size:14px!important;transform:translateY(5px)}}
+@media(prefers-reduced-motion:reduce){.sg-level-gem::before,.sg-level-gem::after,.sg-level-gem>svg,.ranking-medal::after,.ranking-stage::before,.is-ranking .ranking-hero-stats b,.ranking-stage-member,.is-ranking .ranking-row{animation:none!important}}
+.is-ranking .ranking-xp>b{font-weight:inherit;font-size:inherit}

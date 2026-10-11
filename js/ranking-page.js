@@ -1,5 +1,7 @@
 import { gemHtml, levelGem, medalHtml } from './level-gems.js';
 import { mountRankingScene } from './ranking-scene.js';
+import { mountRankingGems } from './ranking-gems-scene.js';
+import { mountRankingNumbers } from './ranking-numbers.js';
 
 export function mountRankingPage(root, _params, onClose) {
   const esc = window.SG.esc;
@@ -7,7 +9,7 @@ export function mountRankingPage(root, _params, onClose) {
   root.classList.add('is-ranking');
   root.innerHTML = '<div class="ranking-galaxy" aria-hidden="true"></div><div class="app-page-head ranking-page-head"><div><p class="ranking-kicker">STREET GOOSE / CONSTELAÇÃO 034</p><h1>Ranking Street Goose</h1></div><button class="app-page-close" type="button" data-app-close aria-label="Fechar ranking"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="app-page-body ranking-page-body" data-ranking-body><div class="ranking-loading" role="status">Conectando ao universo 034…</div></div>';
   const body = root.querySelector('[data-ranking-body]');
-  let destroyed = false, version = 0, stopScene = null, unsubscribe = null, timer = null, svc = null;
+  let destroyed = false, version = 0, stopScene = null, stopGems = null, stopNumbers = null, unsubscribe = null, timer = null, svc = null;
   let rows = [], total = 0, levels = [], me = null, busy = false, session = null;
   function avatar(r) {
     let url = '';
@@ -29,7 +31,7 @@ export function mountRankingPage(root, _params, onClose) {
   function rowHtml(r, i) {
     const mine = session && r.userId === session.user.id;
     const name = (levels.find(l => l.levelNumber === r.level) || {}).name || 'Nível ' + r.level;
-    return '<li class="ranking-row ranking-row--' + (i + 1) + (mine ? ' is-me' : '') + '">' + medalHtml(i + 1) + avatar(r) + '<div class="ranking-person"><b>' + esc(r.handle) + (mine ? '<small>VOCÊ</small>' : '') + '</b><span>' + esc(name) + '</span></div><span class="ranking-level-gem">' + gemHtml(r.level) + '</span><span class="ranking-xp">' + fmt(r.totalXp) + '<small>XP</small></span></li>';
+    return '<li class="ranking-row ranking-row--' + (i + 1) + (mine ? ' is-me' : '') + '">' + medalHtml(i + 1) + avatar(r) + '<div class="ranking-person"><b>' + esc(r.handle) + (mine ? '<small>VOCÊ</small>' : '') + '</b><span>' + esc(name) + '</span></div><span class="ranking-level-gem">' + gemHtml(r.level) + '</span><span class="ranking-xp"><b data-rank-value="' + Number(r.totalXp) + '">' + fmt(r.totalXp) + '</b><small>XP</small></span></li>';
   }
   function listHtml() {
     return rows.length ? '<ol class="ranking-list" aria-label="Classificação por XP">' + rows.map(rowHtml).join('') + '</ol>' : '<div class="ranking-empty"><h3>A primeira estrela pode ser você.</h3><p>Novas contas entram automaticamente. Quem já tem conta pode ativar a participação em Minha conta.</p></div>';
@@ -38,17 +40,22 @@ export function mountRankingPage(root, _params, onClose) {
     return '<span role="status" data-ranking-count>' + rows.length + ' de ' + fmt(total) + ' participantes</span>' + (rows.length < total ? '<button type="button" class="ranking-soft-button" data-ranking-more>Carregar mais participantes ↓</button>' : '') + '<p data-ranking-list-error role="status"></p>';
   }
   function paint() {
-    body.innerHTML = '<div class="ranking-hero"><div class="ranking-lead"><p class="ranking-kicker">CADA CONQUISTA DEIXA UM RASTRO</p><h2>Estrelas em<br><em>ascensão.</em></h2><p>Seu estilo ganha presença. Sua presença vira legado. Conheça quem está no topo do universo 034.</p><div class="ranking-hero-stats"><div><b>' + fmt(total) + '</b><span>participantes</span></div><div><b>' + levels.length + '</b><span>níveis para conquistar</span></div></div><a class="ranking-soft-button" href="#ranking-completo">Explorar o ranking ↓</a></div>' + sceneHtml() + '</div>' + myHtml() + '<section class="ranking-board" id="ranking-completo"><div class="ranking-section-head"><div><p class="ranking-kicker">A CONSTELAÇÃO COMPLETA</p><h2>Cada nome. Uma trajetória.</h2></div><button type="button" class="ranking-soft-button" data-ranking-refresh>Atualizar ↻</button></div><p class="ranking-board-note">Ordenado por XP. Em empate, quem entrou primeiro vem antes.</p><div data-ranking-list>' + listHtml() + '</div><div class="ranking-pagination" data-ranking-pagination>' + paginationHtml() + '</div></section>' + (levels.length ? '<section class="ranking-gem-collection"><div class="ranking-section-head"><div><p class="ranking-kicker">SETE PEDRAS. UM LEGADO.</p><h2>Sua evolução tem uma assinatura.</h2></div><a class="ranking-soft-button" href="/recompensas">Ver benefícios ↗</a></div><ol>' + levels.map(l => '<li' + (me && me.level === l.levelNumber ? ' class="is-current"' : '') + '>' + gemHtml(l.levelNumber) + '<span>' + esc(levelGem(l.levelNumber).name) + '</span><b>' + esc(l.name) + '</b><small>' + fmt(l.xpRequired) + ' XP' + (me && me.level === l.levelNumber ? ' · SEU NÍVEL' : '') + '</small></li>').join('') + '</ol></section>' : '') + '<aside class="ranking-shop-cta"><div><p class="ranking-kicker">SUA PRÓXIMA CONQUISTA COMEÇA AQUI</p><h3>Seu estilo também<br>pode virar XP.</h3><p>Pedidos pagos e fotos aprovadas na comunidade fazem sua constelação crescer.</p></div><a class="ranking-shop-button" href="/categoria/lupas">Explorar coleção ↗</a></aside><p class="ranking-rules">Pedidos pagos: 1 XP por R$1, mínimo 50 XP. Foto aprovada: +30 XP. Reembolso reverte o XP. Você pode sair do ranking público nas configurações da sua conta.</p>';
+    body.innerHTML = '<div class="ranking-hero"><div class="ranking-lead"><p class="ranking-kicker">CADA CONQUISTA DEIXA UM RASTRO</p><h2>Estrelas em<br><em>ascensão.</em></h2><p>Seu estilo ganha presença. Sua presença vira legado. Conheça quem está no topo do universo 034.</p><div class="ranking-hero-stats"><div><b data-rank-value="' + Number(total) + '">' + fmt(total) + '</b><span>participantes</span></div><div><b data-rank-value="' + levels.length + '">' + levels.length + '</b><span>níveis para conquistar</span></div></div><a class="ranking-soft-button" href="#ranking-completo">Explorar o ranking ↓</a></div>' + sceneHtml() + '</div>' + myHtml() + '<section class="ranking-board" id="ranking-completo"><div class="ranking-section-head"><div><p class="ranking-kicker">A CONSTELAÇÃO COMPLETA</p><h2>Cada nome. Uma trajetória.</h2></div><button type="button" class="ranking-soft-button" data-ranking-refresh>Atualizar ↻</button></div><p class="ranking-board-note">Ordenado por XP. Em empate, quem entrou primeiro vem antes.</p><div data-ranking-list>' + listHtml() + '</div><div class="ranking-pagination" data-ranking-pagination>' + paginationHtml() + '</div></section>' + (levels.length ? '<section class="ranking-gem-collection"><div class="ranking-section-head"><div><p class="ranking-kicker">SETE PEDRAS. UM LEGADO.</p><h2>Sua evolução tem uma assinatura.</h2></div><a class="ranking-soft-button" href="/recompensas">Ver benefícios ↗</a></div><ol>' + levels.map(l => '<li' + (me && me.level === l.levelNumber ? ' class="is-current"' : '') + '>' + gemHtml(l.levelNumber) + '<span>' + esc(levelGem(l.levelNumber).name) + '</span><b>' + esc(l.name) + '</b><small>' + fmt(l.xpRequired) + ' XP' + (me && me.level === l.levelNumber ? ' · SEU NÍVEL' : '') + '</small></li>').join('') + '</ol></section>' : '') + '<aside class="ranking-shop-cta"><div><p class="ranking-kicker">SUA PRÓXIMA CONQUISTA COMEÇA AQUI</p><h3>Seu estilo também<br>pode virar XP.</h3><p>Pedidos pagos e fotos aprovadas na comunidade fazem sua constelação crescer.</p></div><a class="ranking-shop-button" href="/categoria/lupas">Explorar coleção ↗</a></aside><p class="ranking-rules">Pedidos pagos: 1 XP por R$1, mínimo 50 XP. Foto aprovada: +30 XP. Reembolso reverte o XP. Você pode sair do ranking público nas configurações da sua conta.</p>';
+    stopNumbers = mountRankingNumbers(body);
     const v = version;
     mountRankingScene(body.querySelector('[data-ranking-stage]'), rows.slice(0, 3)).then(dispose => {
       if (destroyed || v !== version) dispose(); else stopScene = dispose;
     });
+    const collection = body.querySelector('.ranking-gem-collection');
+    if (collection) mountRankingGems(collection).then(dispose => { if (destroyed || v !== version) dispose(); else stopGems = dispose; }).catch(() => {});
     body.querySelectorAll('.ranking-avatar img').forEach(img => img.addEventListener('error', () => { img.parentElement.textContent = 'G'; }, { once: true }));
   }
   async function load() {
     const v = ++version;
     busy = true;
     if (stopScene) { stopScene(); stopScene = null; }
+    if (stopGems) { stopGems(); stopGems = null; }
+    if (stopNumbers) { stopNumbers(); stopNumbers = null; }
     try {
       svc = (await import('../src/services/RewardsService.ts')).RewardsService;
       session = window.SG.auth ? await window.SG.auth.getSession() : null;
@@ -72,6 +79,8 @@ export function mountRankingPage(root, _params, onClose) {
       next.rows.forEach(r => { if (!ids.has(r.userId)) { rows.push(r); ids.add(r.userId); } });
       if (!next.rows.length && rows.length < total) { await load(); return; }
       body.querySelector('[data-ranking-list]').innerHTML = listHtml();
+      if (stopNumbers) stopNumbers();
+      stopNumbers = mountRankingNumbers(body);
       body.querySelector('[data-ranking-pagination]').innerHTML = paginationHtml();
     } catch (_) {
       if (!destroyed && v === version) { body.querySelector('[data-ranking-list-error]').textContent = 'Não carregou. Tente novamente.'; button.disabled = false; button.textContent = 'Tentar carregar mais ↓'; }
@@ -94,5 +103,5 @@ export function mountRankingPage(root, _params, onClose) {
   function key(e) { if (e.key === 'Escape') onClose(); }
   document.addEventListener('keydown', key);
   load();
-  return () => { destroyed = true; version++; clearTimeout(timer); if (stopScene) stopScene(); if (unsubscribe) unsubscribe(); document.removeEventListener('keydown', key); document.removeEventListener('visibilitychange', focusRefresh); root.classList.remove('is-ranking'); };
+  return () => { destroyed = true; version++; clearTimeout(timer); if (stopScene) stopScene(); if (stopGems) stopGems(); if (stopNumbers) stopNumbers(); if (unsubscribe) unsubscribe(); document.removeEventListener('keydown', key); document.removeEventListener('visibilitychange', focusRefresh); root.classList.remove('is-ranking', 'ranking-motion-paused'); };
 }
