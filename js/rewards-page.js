@@ -12,6 +12,7 @@ export function mountRewardsPage(root, _params, onClose) {
   var dataCache = null;
   var pending = new Set();
   var copiedCodes = new Set();
+  var memberLogo = new URL("../assets/logos/web/logo-street-goose-034.webp", import.meta.url).href;
   var KIND = { coupon: "CUPOM", gift: "BRINDE", discount: "DESCONTO" };
   var MESSAGES = {
     level_too_low: "Seu nível ainda não libera essa recompensa.",
@@ -30,7 +31,7 @@ export function mountRewardsPage(root, _params, onClose) {
   var destroyed = false;
 
   function couponHtml(code) {
-    return '<div class="rw-ticket"><span class="rw-ticket-label">SEU CUPOM</span><div class="rw-ticket-code"><b>' + esc(code) + '</b><button type="button" data-copy-coupon="' + esc(code) + '" aria-label="Copiar cupom ' + esc(code) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg><span>' + (copiedCodes.has(code) ? 'Copiado' : t('rewards.copyCoupon')) + '</span></button></div><span class="rw-copy-feedback" role="status" aria-live="polite">' + (copiedCodes.has(code) ? 'Código copiado. Pronto para usar no checkout.' : '') + '</span><p>Use no checkout, no campo Cupom.</p></div>';
+    return '<div class="rw-ticket"><span class="rw-ticket-label">SEU CUPOM</span><div class="rw-ticket-code"><b>' + esc(code) + '</b><button type="button" data-copy-coupon="' + esc(code) + '" aria-label="Copiar cupom ' + esc(code) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg><span>' + (copiedCodes.has(code) ? 'Copiado' : t('rewards.copyCoupon')) + '</span></button></div><span class="rw-copy-feedback" role="status" aria-live="polite">' + (copiedCodes.has(code) ? 'Código copiado. Pronto para usar no checkout.' : '') + '</span><p>Use no checkout, no campo Cupom.</p><span class="rw-ticket-signature" aria-hidden="true">MEMBER BENEFIT / SG — 034</span></div>';
   }
   function dateLabel(value) {
     var date = new Date(value);
@@ -80,7 +81,7 @@ export function mountRewardsPage(root, _params, onClose) {
     var redemptions = results[2];
     var available = rewards.filter(function (r) { return !redeemed[r.id] && (!r.requirementLevel || myLevel >= r.requirementLevel); }).length;
     var pct = status ? Math.max(0, Math.min(100, Number(status.progressPct) || 0)) : 0;
-    var hero = '<section class="rw-membership" aria-label="Seu nível e XP"><div class="rw-member-top"><span class="rw-eyebrow">STREET GOOSE / MEMBERS CLUB</span><span class="rw-member-seal" aria-hidden="true">034</span></div>' +
+    var hero = '<section class="rw-membership" aria-label="Seu nível e XP"><span class="rw-member-watermark" aria-hidden="true">034</span><div class="rw-member-top"><div class="rw-card-brand"><img src="' + memberLogo + '" alt="Street Goose 034" width="220" height="59"><span>MEMBERS CLUB</span></div><span class="rw-member-seal" aria-hidden="true">034</span></div>' +
       '<div class="rw-member-identity"><span class="rw-member-monogram" aria-hidden="true">' + esc(memberName.charAt(0).toUpperCase()) + '</span><div><span>MEMBERSHIP / 034</span><b>' + esc(session ? memberName : 'Seu próximo capítulo') + '</b></div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 8 4v6c0 5-8 10-8 10S4 17 4 12V6l8-4Z"/><path d="m8 12 3 3 5-6"/></svg></div>' +
       '<p class="rw-member-caption">' + (status ? 'SEU NÍVEL' : 'SEU ACESSO À STREET GOOSE') + '</p><div class="rw-member-level"><h2>' + (status ? esc(status.level.name) : 'Cada escolha conta.') + '</h2>' +
       (status ? '<span class="rw-level-number">LVL ' + status.level.levelNumber + '</span>' : '') + '</div>' +
@@ -112,7 +113,7 @@ export function mountRewardsPage(root, _params, onClose) {
       return '<article class="reward-card is-redeemed"><div class="rw-reward-top"><p class="reward-kind">MEU RESGATE</p><span class="rw-reward-state">Na sua conta</span></div><h3>' + esc(r.title) + '</h3>' + (r.couponCode ? couponHtml(r.couponCode) : '<p>A equipe entra em contato sobre seu benefício.</p>') + '<p class="reward-requirement">Resgate registrado · ' + esc(dateLabel(r.redeemedAt)) + '</p></article>';
     }).join('') : rewards.map(card).join('');
     var empty = '<div class="rw-empty"><span class="rw-empty-mark" aria-hidden="true">034</span><div><h3>' + (activeTab === 'wallet' ? 'Seus resgates ficam aqui.' : 'O próximo benefício começa aqui.') + '</h3><p>' + (activeTab === 'wallet' ? 'Resgate uma recompensa disponível para guardar seu cupom nesta área.' : 'Ainda não há recompensas publicadas. Continue acumulando XP; os benefícios aparecem quando a equipe liberar.') + '</p><a class="text-link" href="/comunidade">Explorar a comunidade ↗</a></div></div>';
-    bodyEl.innerHTML = '<div class="rw-intro"><p class="rw-eyebrow">SG / 034 — RECOMPENSAS</p><h2>Presença tem valor.</h2><p>Acumule XP. Evolua de nível. Aproveite o que a Street Goose preparou para você.</p></div>' + '<div class="rw-overview">' + hero + metrics + '</div>' +
+    bodyEl.innerHTML = '<div class="rw-intro"><p class="rw-eyebrow">SG / 034 — RECOMPENSAS</p><h2>Presença tem <em>valor.</em></h2><p>Acumule XP. Evolua de nível. Aproveite o que a Street Goose preparou para você.</p></div>' + '<div class="rw-overview">' + hero + metrics + '</div>' +
       '<section class="rw-section"><div class="rw-section-head"><div><p class="rw-eyebrow">SEUS BENEFÍCIOS</p><h2>Recompensas & cupons</h2></div></div><div class="rw-tabs" role="tablist" aria-label="Recompensas"><button type="button" role="tab" aria-controls="rw-benefits-panel" aria-selected="' + (activeTab === 'available') + '" data-reward-tab="available">Recompensas <span>' + rewards.length + '</span></button><button type="button" role="tab" aria-controls="rw-benefits-panel" aria-selected="' + (activeTab === 'wallet') + '" data-reward-tab="wallet">Meus resgates <span>' + redemptions.length + '</span></button></div><div id="rw-benefits-panel" role="tabpanel" aria-label="' + (activeTab === 'wallet' ? 'Meus resgates' : 'Recompensas') + '">' + (list ? '<div class="rewards-grid">' + list + '</div>' : empty) + '</div></section>' + roadmap + earn + xpHistory + guide;
     var selectedTab = bodyEl.querySelector('[data-reward-tab="' + activeTab + '"]');
     if (focusTab && selectedTab) selectedTab.focus({ preventScroll: true });
