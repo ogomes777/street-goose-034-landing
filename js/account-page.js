@@ -1,3 +1,4 @@
+import {attachAddressAssistant} from './address-assistant.js';
 /* Street Goose 034 — /conta e /conta/pedidos: área do cliente completa.
    Abas: Visão geral, Pedidos, Favoritos, Nível & XP, Cupons, Perfil,
    Preferências e Segurança — tudo com dado real do backend (RLS: cada
@@ -67,6 +68,7 @@ export function mountAccountPage(root, _params, onClose) {
   ];
 
   var destroyed = false;
+  var disposeAddress = function () {};
   var session = null, supa = null;
   var svc = {};
   var data = { xp: null, orders: null, redemptions: null, profile: null, levels: null, rewards: null, history: null, ranking: null, notif: null };
@@ -190,6 +192,7 @@ export function mountAccountPage(root, _params, onClose) {
   }
 
   function showTab(id, initial) {
+    disposeAddress();
     activeTab = id;
     bodyEl.querySelectorAll("[data-acp-tab].acp-tab").forEach(function (b) {
       var on = b.getAttribute("data-acp-tab") === id;
@@ -452,6 +455,8 @@ export function mountAccountPage(root, _params, onClose) {
             "<div><dt>Apelido no ranking</dt><dd>" + esc((data.profile && data.profile.publicHandle) || "—") + ' <button class="acp-link" type="button" data-acp-tab="level">Editar</button></dd></div>' +
           "</dl>") +
       "</div>";
+    disposeAddress();
+    disposeAddress = attachAddressAssistant(panel.querySelector("[data-profile-form]"));
   }
 
   async function tabPrefs(panel) {
@@ -724,6 +729,7 @@ export function mountAccountPage(root, _params, onClose) {
 
   return function destroy() {
     destroyed = true;
+    disposeAddress();
     root.classList.remove("is-account");
     document.removeEventListener("keydown", onKeydown, true);
     document.removeEventListener("sg:prefs-change", onPrefs);
