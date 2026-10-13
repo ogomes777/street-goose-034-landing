@@ -1,3 +1,4 @@
+import {premiumAddressPicker} from './premium-address-picker.js';
 import {lookupPostalCode,postalDigits,formatPostalCode} from '../src/services/AddressService.ts';
 import './address-assistant.css';
 let localitiesPromise,sequence=0;
@@ -22,6 +23,8 @@ export function attachAddressAssistant(form){
  state.closest('label').append(statePicker);city.closest('label').append(cityPicker);
  function option(value,label){const o=document.createElement('option');o.value=value;o.textContent=label;return o;}
  statePicker.append(option('','Escolher estado'));cityPicker.append(option('','Escolha um estado primeiro'));
+ const disposeStatePicker=premiumAddressPicker(statePicker,state,'state');
+ const disposeCityPicker=premiumAddressPicker(cityPicker,city,'city');
  function canonicalState(){const value=state.value.trim();if(!data)return value.toUpperCase();return Object.keys(data.states).find(uf=>normalize(uf)===normalize(value)||normalize(data.states[uf])===normalize(value))||value.toUpperCase();}
  function updateStateValidation(){const uf=canonicalState();if(data&&uf in data.states){state.value=uf;state.setCustomValidity('');statePicker.value=uf;}else if(state.value.trim())state.setCustomValidity('Escolha um estado brasileiro ou informe a sigla (UF).');else state.setCustomValidity('');return uf;}
  async function updateCities(clear=false){const request=++cityVersion;const uf=updateStateValidation();if(clear){city.value='';cityPicker.value='';}cityList.replaceChildren();cityPicker.replaceChildren(option('','Escolher cidade'));
@@ -42,5 +45,5 @@ export function attachAddressAssistant(form){
  function stateChange(){updateCities(true);}function stateChoice(){state.value=statePicker.value;updateCities(true);}function cityChoice(){if(cityPicker.value)city.value=cityPicker.value;}function cityChange(){cityPicker.value=city.value;}
  postal.addEventListener('input',postalInput);button.addEventListener('click',lookup);state.addEventListener('change',stateChange);state.addEventListener('input',()=>state.setCustomValidity(''));statePicker.addEventListener('change',stateChoice);cityPicker.addEventListener('change',cityChoice);city.addEventListener('change',cityChange);
  form.addEventListener('submit',updateStateValidation,true);
- return ()=>{disposed=true;version++;clearTimeout(timer);controller?.abort();};
+ return ()=>{disposeStatePicker();disposeCityPicker();disposed=true;version++;clearTimeout(timer);controller?.abort();};
 }
