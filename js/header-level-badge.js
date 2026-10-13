@@ -1,5 +1,5 @@
 import './header-level-badge.css';
-import { gemHtml, levelGem } from './level-gems.js';
+import { levelGem } from './level-gems.js';
 import { RewardsService } from '../src/services/RewardsService.ts';
 import { supabase } from '../src/lib/supabase.ts';
 
@@ -34,8 +34,8 @@ function renderLevel(level) {
     badge.dataset.level = String(level);
     badge.setAttribute('role', 'img');
     badge.setAttribute('aria-label', description);
-    badge.innerHTML = gemHtml(level) + `<b aria-hidden="true">${level}</b>`;
-    badge.firstElementChild.setAttribute('aria-hidden', 'true');
+    badge.style.setProperty('--gem-color', levelGem(level).color);
+    badge.innerHTML = `<img src="/brand/level-gems/level-${level}.png" width="96" height="112" alt="" aria-hidden="true" decoding="async"><b aria-hidden="true">${level}</b>`;
   });
 }
 

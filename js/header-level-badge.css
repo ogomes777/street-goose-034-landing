@@ -1,52 +1,20 @@
-/* Apenas o selo: as cores e os efeitos originais da navbar continuam intactos. */
+/* Selo transparente; preserva --hdr-tint e os efeitos originais da foto. */
 .account-btn .sg-header-avatar-wrap,
 .mobile-menu-account-btn .sg-header-avatar-wrap {
-  position: relative;
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
+ position:relative;display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;overflow:visible;
 }
 .sg-header-avatar-wrap .sg-header-level-badge {
-  position: absolute;
-  right: -5px;
-  bottom: -4px;
-  width: 20px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  border: 1px solid #d5b577;
-  border-radius: 7px;
-  background: linear-gradient(145deg, #242329, #08090c);
-  box-shadow: 0 1px 4px #0008, inset 0 1px 0 #fff2;
-  pointer-events: none;
-  line-height: 1;
-  z-index: 1;
+ position:absolute;right:-6px;bottom:-7px;width:22px;height:25px;display:grid;place-items:center;border:0;padding:0;background:transparent;box-shadow:none;pointer-events:none;line-height:1;z-index:1;perspective:100px;
 }
-.sg-header-level-badge .sg-level-gem {
-  color: var(--gem-color);
-  display: inline-flex;
-  width: 13px;
-  height: 14px;
-  padding: 0;
-  margin: 0;
-  animation: none;
-  transform: none;
-  filter: drop-shadow(0 0 2px var(--gem-color));
-}
-.sg-header-level-badge .sg-level-gem::before,
-.sg-header-level-badge .sg-level-gem::after { content: none; animation: none; }
-.sg-header-level-badge .sg-level-gem svg {
-  width: 13px;
-  height: 14px;
-  fill: none;
-  stroke: none;
-  animation: none;
+.sg-header-level-badge img {
+ width:22px;height:25px;display:block;object-fit:contain;border-radius:0;transform-origin:50% 65%;filter:drop-shadow(0 1px 1px #0009) drop-shadow(0 0 2px var(--gem-color));animation:sg-header-gem-float 5s ease-in-out infinite;
 }
 .sg-header-level-badge b {
-  color: #f6e3b9;
-  font: 700 8px/1 system-ui, sans-serif;
+ position:absolute;right:-1px;bottom:0;color:#fff1cc;font:800 8px/1 system-ui,sans-serif;text-shadow:0 1px 2px #000,1px 0 1px #000,-1px 0 1px #000;
 }
+@keyframes sg-header-gem-float {
+ 0%,100% {transform:translateY(0) rotateY(-16deg) rotateZ(-4deg)}
+ 45% {transform:translateY(-2px) rotateY(18deg) rotateZ(5deg)}
+ 65% {transform:translateY(-1px) rotateY(6deg) rotateZ(2deg)}
+}
+@media(prefers-reduced-motion:reduce){.sg-header-level-badge img{animation:none}}
