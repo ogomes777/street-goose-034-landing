@@ -1855,12 +1855,12 @@ export function mountAdminPage(root, _params, onClose) {
       btn.disabled = true;
       try {
         var client = (await import("../src/lib/supabase.ts")).supabase;
-        var detailResult = await client.from("customer_details").select("full_name,phone,birthday,postal_code,street,address_number,complement,neighborhood,city,state,updated_at").eq("user_id", id).maybeSingle();
+        var detailResult = await client.from("customer_details").select("full_name,cpf,phone,birthday,postal_code,street,address_number,complement,neighborhood,city,state,updated_at").eq("user_id", id).maybeSingle();
         if (detailResult.error) throw detailResult.error;
         if (destroyed || !btn.isConnected) return;
         var oldDetail = list("customers").querySelector(".admin-customer-detail"); if(oldDetail) oldDetail.remove();
         var d = detailResult.data;
-        var labels = {full_name:"Nome completo",phone:"Celular",birthday:"Nascimento",postal_code:"CEP",street:"Rua",address_number:"Número",complement:"Complemento",neighborhood:"Bairro",city:"Cidade",state:"UF"};
+        var labels = {full_name:"Nome completo",cpf:"CPF",phone:"Celular",birthday:"Nascimento",postal_code:"CEP",street:"Rua",address_number:"Número",complement:"Complemento",neighborhood:"Bairro",city:"Cidade",state:"UF"};
         btn.closest("tr").insertAdjacentHTML("afterend", '<tr class="admin-customer-detail"><td colspan="7"><div class="admin-private-card"><span class="admin-tag">FICHA PRIVADA · STREET GOOSE</span><h3>Conheça seu cliente</h3><p>Informações compartilhadas pelo cliente. Acesso exclusivo da equipe.</p>' + (d ? '<dl>' + Object.keys(labels).map(function(k){return '<div><dt>' + labels[k] + '</dt><dd>' + esc(d[k] || "Não informado") + '</dd></div>';}).join('') + '</dl>' : '<p>O cliente ainda não preencheu a ficha pessoal.</p>') + '</div></td></tr>');
       } catch(err) { toast("NÃO FOI POSSÍVEL CARREGAR A FICHA"); }
       finally { btn.disabled = false; }

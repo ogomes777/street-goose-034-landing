@@ -8,3 +8,9 @@ describe('private customer information',()=>{
  it('uses the authenticated identity and ignores injected ownership',async()=>{mocks.getUser.mockResolvedValue({data:{user:{id:'current-customer'}}});mocks.upsert.mockResolvedValue({error:null});expect(await CustomerService.saveMine({full_name:'  Cliente  ',birthday:'',user_id:'other-customer'} as never)).toBe(true);expect(mocks.upsert).toHaveBeenCalledWith(expect.objectContaining({user_id:'current-customer',full_name:'Cliente',birthday:null}));});
  it('reports persistence errors',async()=>{mocks.getUser.mockResolvedValue({data:{user:{id:'current-customer'}}});mocks.upsert.mockResolvedValue({error:{message:'denied'}});expect(await CustomerService.saveMine({})).toBe(false);});
 });
+
+import {validCpf} from './CustomerService';
+describe('CPF validation',()=>{
+ it('accepts formatted and unformatted check digits',()=>{expect(validCpf('529.982.247-25')).toBe(true);expect(validCpf('52998224725')).toBe(true);});
+ it('rejects repeated digits, invalid checks and incomplete numbers',()=>{for(const cpf of ['11111111111','52998224726','123']) expect(validCpf(cpf)).toBe(false);});
+});

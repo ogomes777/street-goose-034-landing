@@ -414,7 +414,7 @@ export function mountAccountPage(root, _params, onClose) {
     try { details = await svc.customer.getMine(); } catch (err) { panel.innerHTML = card("Dados pessoais", "Não foi possível carregar. Abra o perfil novamente para tentar."); return; }
     if (destroyed || activeTab !== "profile") return;
     data.details = details;
-    var privateFields = [["full_name", "Nome completo", "text", "name"], ["phone", "Celular / WhatsApp", "tel", "tel"], ["birthday", "Nascimento (opcional)", "date", "bday"], ["postal_code", "CEP", "text", "postal-code"], ["street", "Rua / avenida", "text", "address-line1"], ["address_number", "Número", "text", "off"], ["complement", "Complemento", "text", "address-line2"], ["neighborhood", "Bairro", "text", "off"], ["city", "Cidade", "text", "address-level2"], ["state", "Estado (UF)", "text", "address-level1"]];
+    var privateFields = [["full_name", "Nome completo", "text", "name"], ["cpf", "CPF (para identificação nos pedidos)", "text", "off"], ["phone", "Celular / WhatsApp", "tel", "tel"], ["birthday", "Nascimento (opcional)", "date", "bday"], ["postal_code", "CEP", "text", "postal-code"], ["street", "Rua / avenida", "text", "address-line1"], ["address_number", "Número", "text", "off"], ["complement", "Complemento", "text", "address-line2"], ["neighborhood", "Bairro", "text", "off"], ["city", "Cidade", "text", "address-level2"], ["state", "Estado (UF)", "text", "address-level1"]];
     var id = identity();
     var current = (data.profile && data.profile.displayName) || (session.user.user_metadata || {}).name || "";
     var handle = data.profile && data.profile.publicHandle;
@@ -432,7 +432,7 @@ export function mountAccountPage(root, _params, onClose) {
           '<form class="acp-form" data-profile-form novalidate>' +
             '<label class="acp-field"><span>Nome de exibição</span><input name="display_name" value="' + esc(current) + '" maxlength="80" autocomplete="name" required></label>' +
             '<label class="acp-field"><span>E-mail</span><input value="' + esc(id.email) + '" readonly aria-readonly="true"></label>' +
-            '<div class="acp-private-fields">' + privateFields.map(function (f) { return '<label class="acp-field"><span>' + f[1] + '</span><input name="' + f[0] + '" type="' + f[2] + '" autocomplete="' + f[3] + '" value="' + esc(details[f[0]] || '') + '"' + (f[0] === 'state' ? ' maxlength="2" pattern="[A-Za-z]{2}"' : f[0] === 'birthday' ? ' max="' + new Date().toISOString().slice(0,10) + '"' : ' maxlength="' + ({full_name:120,phone:25,postal_code:12,street:160,address_number:20,complement:100,neighborhood:100,city:100}[f[0]] || 100) + '"') + '></label>'; }).join('') + '</div>' +
+            '<div class="acp-private-fields">' + privateFields.map(function (f) { return '<label class="acp-field"><span>' + f[1] + '</span><input name="' + f[0] + '" type="' + f[2] + '" autocomplete="' + f[3] + '" value="' + esc(details[f[0]] || '') + '"' + (f[0] === 'state' ? ' maxlength="2" pattern="[A-Za-z]{2}"' : f[0] === 'birthday' ? ' max="' + new Date().toISOString().slice(0,10) + '"' : ' maxlength="' + ({full_name:120,cpf:14,phone:25,postal_code:12,street:160,address_number:20,complement:100,neighborhood:100,city:100}[f[0]] || 100) + '"') + '></label>'; }).join('') + '</div>' +
             '<small class="acp-help">O e-mail é o da sua forma de login e não muda por aqui.</small>' +
             '<p class="acp-form-msg" data-profile-msg role="status"></p>' +
             '<button class="acp-btn acp-btn--primary" type="submit">Salvar alterações</button>' +
@@ -621,6 +621,7 @@ export function mountAccountPage(root, _params, onClose) {
       if (!form.reportValidity()) return;
       btn.disabled = true;
       var customerInput = Object.fromEntries(new FormData(form));
+      if (customerInput.cpf && !(await import("../src/services/CustomerService.ts")).validCpf(String(customerInput.cpf))) { btn.disabled = false; pmsg.textContent = "Confira o CPF: informe os 11 números de um CPF válido."; return; }
       customerInput.state = String(customerInput.state || "").toUpperCase();
       var privateOk = false;
       try { privateOk = await svc.customer.saveMine(customerInput); } catch (err) {}
