@@ -5,6 +5,7 @@ export function mountInteractionGuide(host){
  const motion=matchMedia('(prefers-reduced-motion: reduce)');
  let contextLost=false,visible=false,sceneState,loading=false,disposed=false,frame=0,last=0;
  const fallback=host.querySelector('.sg-guide-fallback');
+ fallback.innerHTML='<svg viewBox="0 0 100 88" width="100" height="88" aria-hidden="true"><circle class="sg-guide-wave" cx="31" cy="24" r="11" fill="none" stroke="currentColor" stroke-width="1.5"/><path class="sg-guide-arrow" d="M31 19 L31 62 L43 51 L51 69 L59 65 L51 47 L66 47 Z" fill="currentColor" stroke="#7c5726" stroke-width="1"/><path class="sg-guide-highlight" d="M33 22 L33 56 L43 47 L52 47" fill="none" stroke="#ffe7ae" stroke-width="1.5"/></svg>';
  async function initialise(){
   if(loading||sceneState||disposed)return;loading=true;
   try{
