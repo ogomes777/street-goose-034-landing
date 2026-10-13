@@ -1,0 +1,52 @@
+/* Apenas o selo: as cores e os efeitos originais da navbar continuam intactos. */
+.account-btn .sg-header-avatar-wrap,
+.mobile-menu-account-btn .sg-header-avatar-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+.sg-header-avatar-wrap .sg-header-level-badge {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  width: 20px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border: 1px solid #d5b577;
+  border-radius: 7px;
+  background: linear-gradient(145deg, #242329, #08090c);
+  box-shadow: 0 1px 4px #0008, inset 0 1px 0 #fff2;
+  pointer-events: none;
+  line-height: 1;
+  z-index: 1;
+}
+.sg-header-level-badge .sg-level-gem {
+  color: var(--gem-color);
+  display: inline-flex;
+  width: 13px;
+  height: 14px;
+  padding: 0;
+  margin: 0;
+  animation: none;
+  transform: none;
+  filter: drop-shadow(0 0 2px var(--gem-color));
+}
+.sg-header-level-badge .sg-level-gem::before,
+.sg-header-level-badge .sg-level-gem::after { content: none; animation: none; }
+.sg-header-level-badge .sg-level-gem svg {
+  width: 13px;
+  height: 14px;
+  fill: none;
+  stroke: none;
+  animation: none;
+}
+.sg-header-level-badge b {
+  color: #f6e3b9;
+  font: 700 8px/1 system-ui, sans-serif;
+}

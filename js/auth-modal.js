@@ -4,6 +4,8 @@
    carrinho continuam funcionando como hoje, sem exigir login que não existe
    ainda. Quando configurado, ação some sem login e volta sozinha depois do
    OAuth (sessionStorage sobrevive ao redirect, funções não). */
+import { updateHeaderLevelSession } from './header-level-badge.js';
+
 (function () {
   "use strict";
 
@@ -25,6 +27,7 @@
   }
 
   function renderHeaderAccount() {
+    updateHeaderLevelSession(currentSession);
     var btn = document.querySelector("[data-open-account]");
     var label = document.querySelector("[data-account-label]");
     var avatar = document.querySelector("[data-account-avatar]");
