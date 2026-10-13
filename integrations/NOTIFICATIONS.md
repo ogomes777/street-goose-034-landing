@@ -30,3 +30,5 @@ Production build and service tests cover the frontend. Transactional SQL validat
 ## Community followers
 
 Public profile creation (first public handle), opt-in anonymous login and opted-in public profile edits are server events. Activity followers opt in through Account > Preferences. Private community notifications are grouped to one per account per 15 minutes, with push enabled and email disabled by default at the CRM control. This avoids broadcasting every cart gesture as an external interruption. Visitors can view the public feed without signing in; external delivery requires an account, channel consent and a subscribed device.
+
+Community follower fan-out uses a server-only queue and minute cron worker, keeping mass notification writes out of login, profile and shopping transactions. The public feed remains immediate; external activity notices are processed asynchronously, then sent by the push/email worker.
