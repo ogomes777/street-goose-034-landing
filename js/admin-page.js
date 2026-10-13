@@ -1282,7 +1282,7 @@ export function mountAdminPage(root, _params, onClose) {
     return '<div class="admin-toolbar">' +
       '<label class="admin-search"><span class="sr-only">Buscar clientes</span><input type="search" data-search="customers" placeholder="Nome, e-mail ou @apelido" value="' + esc(state.customerSearch) + '" autocomplete="off"></label>' +
       '<button class="btn btn-ghost admin-export" type="button" data-action="export-customers">Exportar CSV</button>' +
-    '<div data-notification-controls></div>' +
+    '<div data-notification-controls></div><form data-admin-campaign class="admin-private-card"><h3>Uma mensagem para sua comunidade</h3><p>Enviar aos clientes com conta verificada que escolheram receber novidades. E-mail e push respeitam as autorizações individuais.</p><label>Título<input name="title" required minlength="2" maxlength="80"></label><label>Mensagem<textarea name="body" required minlength="2" maxlength="1500" rows="4"></textarea></label><button class="btn btn-primary" type="submit">Enviar aos assinantes</button><p data-campaign-status role="status"></p></form>' +
     "</div>";
   }
 
@@ -1796,6 +1796,15 @@ export function mountAdminPage(root, _params, onClose) {
       toast("CONTROLE SALVO");
     } catch (_) {toggle.checked=!toggle.checked;toast("NÃO FOI POSSÍVEL SALVAR");}
     finally {toggle.disabled=false;}
+  });
+
+  bodyEl.addEventListener("submit",async function(e){
+    var form=e.target.closest("[data-admin-campaign]");if(!form)return;e.preventDefault();if(!form.reportValidity())return;
+    var button=form.querySelector('[type="submit"]'),status=form.querySelector("[data-campaign-status]");button.disabled=true;
+    var requestId=form.dataset.requestId || crypto.randomUUID();form.dataset.requestId=requestId;
+    try{var database=(await import("../src/lib/supabase.ts")).supabase;var result=await database.rpc("admin_send_notification_campaign",{p_id:requestId,p_title:form.elements.title.value.trim(),p_body:form.elements.body.value.trim()});if(result.error)throw result.error;status.textContent=result.data.recipients ? "Campanha registrada para "+result.data.recipients+" cliente(s). Os canais autorizados serão processados na fila." : "Nenhum cliente com conta verificada autorizou novidades ainda.";form.reset();delete form.dataset.requestId;}
+    catch(_){status.textContent="Não foi possível concluir. Confira se as campanhas estão ativadas e tente novamente.";}
+    finally{button.disabled=false;}
   });
 
   async function onClick(e) {

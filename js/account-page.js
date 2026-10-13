@@ -222,6 +222,9 @@ export function mountAccountPage(root, _params, onClose) {
     return typeof c === "number" ? c : 0;
   }
 
+  function onNotification() { if (!destroyed && activeTab === "prefs") showTab("prefs", true); }
+  document.addEventListener("sg:notification", onNotification);
+
   /* ---------------- abas ---------------- */
   function tabOverview(panel) {
     var orders = data.orders || [];
@@ -456,7 +459,7 @@ export function mountAccountPage(root, _params, onClose) {
     svc.push=(await import("../src/services/PushService.ts")).PushService;
     await svc.notif.refreshDeliveryStatus();
     var prefs = await svc.notif.getMine();
-    if (destroyed) return;
+    if (destroyed || activeTab !== "prefs") return;
     data.notif = prefs;
     panel.innerHTML =
       '<div class="acp-grid">' +
@@ -723,5 +726,6 @@ export function mountAccountPage(root, _params, onClose) {
     root.classList.remove("is-account");
     document.removeEventListener("keydown", onKeydown, true);
     document.removeEventListener("sg:prefs-change", onPrefs);
+    document.removeEventListener("sg:notification", onNotification);
   };
 }

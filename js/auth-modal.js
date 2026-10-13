@@ -319,6 +319,7 @@
     if (currentSession) { await runPendingAction(); setTimeout(function () { import("./customer-onboarding.js").then(function(m){return m.offerCustomerOnboarding(currentSession);}).catch(function(){}); }, 0); }
     svc.onAuthStateChange(function (_event, session) {
       currentSession = session;
+      if (!session) setTimeout(function(){import("../src/services/NotificationRealtime.ts").then(function(m){return m.watchCustomerNotifications(null);}).catch(function(){});},0);
       renderHeaderAccount();
       if (session) { runPendingAction(); if (_event === "SIGNED_IN") setTimeout(function () { import("./customer-onboarding.js").then(function(m){return m.offerCustomerOnboarding(session);}).catch(function(){}); }, 0); }
     });

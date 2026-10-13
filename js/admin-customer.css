@@ -2,3 +2,5 @@
 .admin-notification-control{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;margin:4px;border:1px solid #ba965340;border-radius:10px;font-size:12px}
 
 [data-notification-controls]{flex-basis:100%;width:100%}
+
+[data-admin-campaign]{flex-basis:100%;width:100%;box-sizing:border-box}[data-admin-campaign] label{display:grid;gap:8px;margin:14px 0;font-size:13px}[data-admin-campaign] input,[data-admin-campaign] textarea{border:1px solid var(--line,#8885);border-radius:10px;padding:12px;background:var(--panel,#111);color:var(--text,#fff);font:inherit;width:100%;box-sizing:border-box}
