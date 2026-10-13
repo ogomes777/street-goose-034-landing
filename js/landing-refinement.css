@@ -1,0 +1,179 @@
+/* Camada aditiva: só composição, tipografia e acabamento da landing.
+   Nenhuma regra altera navbar, loaders, áudio, visibilidade ou cenas fixadas. */
+@font-face {
+  font-family: 'SG Manrope';
+  src: url('@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SG Editorial';
+  src: url('@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+#top > :is(.hero,.intro,.campaign,.category-portals,.sgc-home,.sg-ranking-preview,.payment-terminal,.newsletter,.trust-strip),
+body > :is(.sg-live-activity,.sg-install) {
+  --sg-copy-font: 'SG Manrope', Inter, system-ui, sans-serif;
+  --sg-editorial-font: 'SG Editorial', Georgia, serif;
+  font-family: var(--sg-copy-font);
+  font-kerning: normal;
+}
+#top > :is(.intro,.campaign,.sgc-home,.sg-ranking-preview,.payment-terminal,.newsletter) h2 {
+  font-family: var(--sg-copy-font);
+  font-weight: 650;
+  letter-spacing: -.045em;
+  line-height: 1.07;
+  text-wrap: balance;
+}
+#top .hero-slide-content h1 {
+  font-family: var(--sg-copy-font);
+  font-weight: 800;
+  line-height: .94;
+  letter-spacing: -.055em;
+}
+#top .hero-track {
+  padding-inline: max(clamp(28px,5vw,80px),calc((100vw - var(--max))/2));
+}
+#top .hero-slide-content .lead {
+  max-width: 53ch;
+  line-height: 1.65;
+}
+#top :is(.intro-copy p,.campaign-copy > p:not(.kicker),.sgc-home-head p:not(.kicker),.sg-ranking-preview-head p:not(.kicker)) {
+  max-width: 58ch;
+  font-size: clamp(15px,1.2vw,18px);
+  line-height: 1.8;
+  letter-spacing: -.01em;
+}
+#top > .intro {
+  gap: clamp(36px,6vw,96px);
+  padding-block: clamp(88px,9vw,144px);
+}
+#top > .campaign {
+  gap: clamp(32px,5vw,72px);
+  padding-top: clamp(40px,5vw,72px);
+  padding-bottom: clamp(88px,9vw,144px);
+}
+#top > :is(.sgc-home,.category-portals) {
+  padding-block: clamp(80px,8vw,128px);
+}
+#top > .sg-ranking-preview {
+  padding-block: clamp(72px,7vw,112px);
+}
+#top .section-head { gap: clamp(24px,4vw,56px); }
+#top .kicker { line-height: 1.65; }
+#top .sgc-home-head h2 { margin-bottom: 18px; }
+#top :is(.culture-card,.sgc-tile,.portal-card) {
+  border-radius: 18px;
+  border-color: color-mix(in srgb,var(--text) 15%,transparent);
+  box-shadow: 0 16px 36px -28px #0008, inset 0 1px 0 #ffffff12;
+}
+#top .culture-card figcaption {
+  border-radius: 7px;
+  line-height: 1.5;
+}
+#top .sg-ranking-preview-card {
+  padding: 26px 22px;
+  border-radius: 20px;
+  box-shadow: 0 14px 34px -26px #0005, inset 0 1px 0 #ffffff12;
+}
+#top .sg-ranking-preview-card small { font-size: 12px; line-height: 1.6; }
+#top .sg-ranking-preview-head h2 em { font-family: var(--sg-editorial-font); font-weight: 500; }
+#top .sgc-empty {
+  border-color: color-mix(in srgb,var(--accent) 24%,var(--border));
+  box-shadow: 0 18px 42px -30px #0005, inset 0 1px 0 #ffffff12;
+}
+#top > .newsletter { gap: clamp(28px,5vw,64px); padding-block: clamp(56px,7vw,96px); }
+#top .newsletter form { gap: 12px; }
+#top .newsletter input[type=email] { font-family: var(--sg-copy-font); min-width: 0; }
+#top .payment-terminal-head p { line-height: 1.8; }
+#top .payment-terminal-head .payment-terminal-soon { font-size: 14px; line-height: 1.75; }
+body > :is(.sg-live-activity,.sg-install) {
+  max-width: 1160px;
+  margin-block: clamp(48px,6vw,80px);
+  padding: clamp(28px,3.5vw,48px);
+  border-radius: 30px;
+  border-color: color-mix(in srgb,#c9a567 55%,transparent);
+}
+body > :is(.sg-live-activity,.sg-install) h2 {
+  font-family: var(--sg-editorial-font);
+  font-size: clamp(34px,4vw,54px);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+body > :is(.sg-live-activity,.sg-install) :is(p,small) { line-height: 1.8; }
+body > .sg-install .sg-install-footnote,
+body > .sg-live-activity .sg-live-privacy { font-size: 12px; opacity: .84; }
+body > .sg-live-activity .sg-live-controls label {
+  border-radius: 18px;
+  padding: 22px;
+}
+body > .sg-install :is(.sg-install-actions button,.sg-install-actions > a) {
+  font-family: var(--sg-copy-font);
+  font-size: 13px;
+  min-height: 54px;
+  line-height: 1.5;
+  border-radius: 14px;
+}
+#top :is(.hero,.campaign,.sgc-home,.newsletter,.final-act) .btn,
+#top .sg-ranking-preview .ranking-soft-button {
+  min-height: 50px;
+  border-radius: 9px;
+  line-height: 1.5;
+  font-weight: 700;
+  translate: 0 var(--sg-polish-lift,0px);
+}
+body > .sg-install .sg-install-actions button {
+  translate: 0 var(--sg-polish-lift,0px);
+}
+#top :is(.hero,.campaign,.sgc-home,.newsletter,.final-act) .btn:active,
+#top .sg-ranking-preview .ranking-soft-button:active,
+body > .sg-install .sg-install-actions button:active { translate: 0 0; }
+@media(max-width:760px) {
+  #top .hero-track { padding-inline: 24px; }
+  #top .hero-slide-content h1 { font-size: clamp(42px,10.6vw,72px); line-height: .98; }
+  #top .hero-slide-content .lead { font-size: 16px; line-height: 1.65; max-width: 34ch; }
+  #top > :is(.intro,.campaign,.sgc-home,.category-portals,.sg-ranking-preview) {
+    padding-inline: 24px;
+    padding-block: 72px;
+  }
+  #top > :is(.intro,.campaign) { gap: 30px; }
+  #top > :is(.intro,.campaign,.sgc-home,.sg-ranking-preview,.payment-terminal,.newsletter) h2 {
+    font-size: clamp(32px,7.7vw,48px);
+    line-height: 1.12;
+    letter-spacing: -.035em;
+    overflow-wrap: break-word;
+  }
+  #top .sgc-home-head { gap: 24px; }
+  #top .sgc-home-actions { width: 100%; gap: 10px; }
+  #top .sgc-home-actions .btn { flex: 1 1 160px; }
+  #top .sg-ranking-preview-head { gap: 22px; }
+  #top .sg-ranking-preview-card { padding: 22px 18px; }
+  #top .culture-grid { gap: 10px; }
+  #top .culture-card figcaption { left: 10px; bottom: 10px; padding: 7px 8px; font-size: 9px; letter-spacing: .1em; }
+  #top > .newsletter { padding-inline: 24px; gap: 30px; margin-inline: 0; margin-bottom: 64px; }
+  body > :is(.sg-live-activity,.sg-install) { margin-inline: 16px; padding: 28px 24px; border-radius: 24px; }
+  body > :is(.sg-live-activity,.sg-install) h2 { font-size: clamp(34px,8.6vw,46px); }
+  body > .sg-install { gap: 32px; }
+  body > .sg-live-activity .sg-live-controls label { padding: 18px; }
+  body > .sg-live-activity [data-connection] { max-width: 100%; overflow-wrap: anywhere; }
+}
+@media(max-width:380px) {
+  #top .hero-track,
+  #top > :is(.intro,.campaign,.sgc-home,.category-portals,.sg-ranking-preview,.newsletter) { padding-inline: 20px; }
+  #top .hero-slide-content h1 { font-size: 39px; }
+  body > :is(.sg-live-activity,.sg-install) { padding-inline: 20px; }
+}
+@media(max-height:520px) and (orientation:landscape) {
+  #top .hero-slide-content h1 { font-size: clamp(32px,6.5vw,52px); line-height: .98; }
+  #top .hero-slide-content .lead { font-size: 14px; line-height: 1.55; }
+}
+@media(prefers-reduced-motion:reduce) {
+  #top :is(.hero,.campaign,.sgc-home,.newsletter,.final-act) .btn,
+  #top .sg-ranking-preview .ranking-soft-button,
+  body > .sg-install .sg-install-actions button { translate: none; }
+}

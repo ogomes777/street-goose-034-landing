@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import '../js/copy-typography.css';
+import '../js/landing-refinement.css';
 import { createRoot } from "react-dom/client";
 import { InteractiveCharacterHero } from "./components/interactive-character/InteractiveCharacterHero";
 
@@ -11,6 +12,7 @@ type StreetGooseWindow = Window &
   };
 
 async function bootstrap() {
+  void import('../js/landing-refinement.js').catch(() => {});
   const heroRoot = document.getElementById("interactive-character-root");
   if (heroRoot) {
     createRoot(heroRoot).render(
