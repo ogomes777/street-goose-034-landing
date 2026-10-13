@@ -8,6 +8,21 @@ import {supabase} from '../src/lib/supabase.ts';
 const seen=new Set();let busy=false;
 const fields=[['full_name','Nome completo','text','name',120],['cpf','CPF','text','off',14],['phone','Celular / WhatsApp','tel','tel',25],['birthday','Nascimento','date','bday',10],['postal_code','CEP','text','postal-code',12],['street','Rua / avenida','text','address-line1',160],['address_number','Número','text','off',20],['complement','Complemento','text','address-line2',100],['neighborhood','Bairro','text','off',100],['city','Cidade','text','address-level2',100],['state','UF','text','address-level1',2]];
 const esc=value=>String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export function waitForEntryOverlays(){
+ return new Promise(resolve=>{
+  function check(){
+   const introReady=!document.querySelector('[data-intro-loader]')||window.SG?.introComplete===true;
+   const popupReady=!document.querySelector('[data-popup]')||window.SG?.entryPopupSettled===true;
+   if(!introReady||!popupReady)return;
+   document.removeEventListener('sg:intro-complete',check);
+   document.removeEventListener('sg:entry-popup-settled',check);
+   resolve();
+  }
+  document.addEventListener('sg:intro-complete',check);
+  document.addEventListener('sg:entry-popup-settled',check);
+  check();
+ });
+}
 export async function offerCustomerOnboarding(session){
  watchCustomerNotifications(session?.user?.id || null).catch(()=>{});
  if(session&&supabase)supabase.rpc('touch_customer_activity').then(()=>{}).catch(()=>{});
@@ -16,6 +31,9 @@ export async function offerCustomerOnboarding(session){
  if(details.full_name&&details.phone){busy=false;return;}
  if((await supabase.auth.getSession()).data.session?.user.id!==session.user.id){busy=false;return;}
  const existingPrefs=await NotificationService.getMine();
+ await waitForEntryOverlays();
+ const latestSession=(await supabase.auth.getSession()).data.session;
+ if(latestSession?.user.id!==session.user.id){busy=false;if(latestSession)void offerCustomerOnboarding(latestSession);return;}
  const updateKeys=["orderUpdates","couponUnlocked","rewardUnlocked","levelUp","rankingUp","postApproved"];
  const initialUpdates=updateKeys.every(key=>existingPrefs[key]);
  const previous=document.activeElement;const dialog=document.createElement('dialog');dialog.className='sg-onboard';dialog.setAttribute('aria-labelledby','sg-onboard-title');

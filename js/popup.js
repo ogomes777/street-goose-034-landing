@@ -71,6 +71,10 @@
       document.removeEventListener("keydown", onKeydown);
       if (!opts.silent && lastFocused && lastFocused.focus) lastFocused.focus();
     }
+    if (el === popupEl) {
+      window.SG.entryPopupSettled = true;
+      document.dispatchEvent(new CustomEvent("sg:entry-popup-settled"));
+    }
   }
 
   function onKeydown(e) {
@@ -219,6 +223,8 @@
   // nunca no primeiro frame, e nunca de novo depois de fechado (por qualquer via).
   var SEEN_KEY = "sgPopupSeen";
   var triggered = sessionStorage.getItem(SEEN_KEY) === "1";
+  window.SG.entryPopupSettled = triggered || !popupEl;
+  if (window.SG.entryPopupSettled) document.dispatchEvent(new CustomEvent("sg:entry-popup-settled"));
   var timeTrigger;
   var introReady = !document.querySelector("[data-intro-loader]") || !!(window.SG && window.SG.introComplete);
   function markPopupSeen() {
