@@ -1,0 +1,155 @@
+@font-face {
+  font-family: 'SG Street Tag';
+  src: url('@fontsource/permanent-marker/files/permanent-marker-latin-400-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+/* Grafite e concreto só nesta ficha. Campos, leitura e controles ficam livres. */
+.sg-onboard.sg-onboard {
+  --street-paper: #141516;
+  --street-ink: #f2eee5;
+  --street-muted: #b4b1a9;
+  --street-field: #1b1c1e;
+  --street-line: #ffffff29;
+  --street-spray: #f38643;
+  --street-wash: #f3864312;
+  color: var(--street-ink);
+  background-color: var(--street-paper);
+  background-image:
+    radial-gradient(ellipse at 95% 0,var(--street-wash),transparent 40%),
+    repeating-linear-gradient(125deg,#80808004 0 1px,transparent 1px 6px);
+  border: 1px solid var(--street-line);
+  border-top: 3px solid var(--street-spray);
+  border-radius: 22px;
+  box-shadow: 0 32px 96px #0009,inset 0 1px 0 #ffffff10;
+  scrollbar-color: var(--street-spray) transparent;
+  font-family: 'SG Manrope',Inter,system-ui,sans-serif;
+}
+:root[data-theme=light] .sg-onboard.sg-onboard {
+  --street-paper: #f5f2ea;
+  --street-ink: #1d2022;
+  --street-muted: #585b5b;
+  --street-field: #fffdf8;
+  --street-line: #24272926;
+  --street-spray: #a44518;
+  --street-wash: #c45e1d0c;
+}
+@media(prefers-color-scheme:light) {
+  :root:not([data-theme=dark]) .sg-onboard.sg-onboard {
+    --street-paper:#f5f2ea;--street-ink:#1d2022;--street-muted:#585b5b;
+    --street-field:#fffdf8;--street-line:#24272926;--street-spray:#a44518;--street-wash:#c45e1d0c;
+  }
+}
+.sg-onboard.sg-onboard header {
+  position: relative;
+  border-color: var(--street-line);
+  padding-top: 8px;
+}
+.sg-onboard.sg-onboard header::before {
+  content: '034';
+  display: inline-block;
+  color: var(--street-spray);
+  font: 400 clamp(38px,7vw,56px)/1 'SG Street Tag',cursive;
+  letter-spacing: -.04em;
+  margin-bottom: 20px;
+  transform: rotate(-6deg);
+  text-shadow: 2px 2px 0 color-mix(in srgb,var(--street-ink) 10%,transparent);
+}
+.sg-onboard.sg-onboard header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 67px;
+  width: 94px;
+  height: 9px;
+  background: var(--street-spray);
+  opacity: .65;
+  clip-path: polygon(0 45%,82% 0,100% 22%,92% 59%,18% 100%);
+  transform: rotate(-5deg);
+  pointer-events: none;
+}
+.sg-onboard.sg-onboard header > span {
+  display: block;
+  color: var(--street-muted);
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.7;
+  letter-spacing: .16em;
+}
+.sg-onboard.sg-onboard h2 {
+  font-family: 'SG Manrope',Inter,system-ui,sans-serif;
+  font-weight: 800;
+  font-size: clamp(28px,4vw,40px);
+  line-height: 1.1;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+  color: var(--street-ink);
+}
+.sg-onboard.sg-onboard :is(p,.sg-address-note p) {
+  font-family: inherit;
+  color: var(--street-muted);
+  opacity: 1;
+  line-height: 1.8;
+}
+.sg-onboard.sg-onboard .sg-onboard-fields label { color: var(--street-ink); }
+.sg-onboard.sg-onboard input:not([type=checkbox]) {
+  color: var(--street-ink);
+  background: var(--street-field);
+  border-color: var(--street-line);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 #ffffff05;
+}
+.sg-onboard.sg-onboard input:not([type=checkbox]):focus {
+  border-color: var(--street-spray);
+  background: var(--street-field);
+  box-shadow: 0 0 0 3px var(--street-wash);
+}
+.sg-onboard.sg-onboard input::placeholder { color: var(--street-muted); opacity: .8; }
+.sg-onboard.sg-onboard :is(.sg-onboard-fields label:before,.sg-address-note:before,.sg-onboard-notifications:before) {
+  color: var(--street-spray);
+  letter-spacing: .16em;
+}
+.sg-onboard.sg-onboard :is(.sg-address-note,.sg-location-trigger,.sg-onboard-notifications) {
+  background: var(--street-wash);
+  border-color: var(--street-line);
+  border-radius: 14px;
+}
+.sg-onboard.sg-onboard .sg-location-trigger :is(small,.sg-location-icon) { color: var(--street-spray); }
+.sg-onboard.sg-onboard .sg-location-trigger strong { color: var(--street-ink); }
+.sg-onboard.sg-onboard .sg-onboard-notifications h3 {
+  font-family: inherit;
+  color: var(--street-ink);
+  font-weight: 750;
+  letter-spacing: -.02em;
+}
+.sg-onboard.sg-onboard .sg-onboard-notifications label {
+  background: var(--street-field);
+  border-color: var(--street-line);
+  color: var(--street-ink);
+}
+.sg-onboard.sg-onboard .sg-onboard-notifications label:has(input:checked) {
+  border-color: var(--street-spray);
+  background: var(--street-wash);
+}
+.sg-onboard.sg-onboard input[type=checkbox] { accent-color: var(--street-spray); }
+.sg-onboard.sg-onboard button:not(.sg-onboard-close) {
+  color: var(--street-ink);
+  border-color: var(--street-line);
+  font-weight: 650;
+}
+.sg-onboard.sg-onboard footer { border-color: var(--street-line); }
+.sg-onboard.sg-onboard footer button[type=submit] {
+  color: #fff9f1;
+  background: #ac4719;
+  border: 1px solid #de7941;
+  box-shadow: inset 0 1px 0 #ffffff26,0 8px 22px #ac47191f;
+}
+.sg-onboard.sg-onboard .sg-onboard-close { color: var(--street-ink); }
+.sg-onboard.sg-onboard :focus-visible { outline-color: var(--street-spray); }
+.sg-onboard.sg-onboard [data-status]:not(:empty) { background: var(--street-wash); }
+@media(max-width:540px) {
+  .sg-onboard.sg-onboard { border-radius: 18px; }
+  .sg-onboard.sg-onboard header::after { top: 54px; }
+  .sg-onboard.sg-onboard h2 { font-size: clamp(26px,7.4vw,34px); }
+}

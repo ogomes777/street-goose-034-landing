@@ -9,11 +9,11 @@
   var STORAGE_KEY = "sgTheme";
   var root = document.documentElement;
   var mq = matchMedia("(prefers-color-scheme: light)");
+  // A escolha vale durante esta abertura; recarregar sempre inicia no escuro.
+  var sessionMode = "dark";
 
   function current() {
-    var saved = null;
-    try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
-    return saved === "dark" || saved === "light" ? saved : "system";
+    return sessionMode;
   }
 
   function effective() {
@@ -32,6 +32,8 @@
   }
 
   function set(mode) {
+    if (mode !== "dark" && mode !== "light" && mode !== "system") return;
+    sessionMode = mode;
     try {
       if (mode === "system") localStorage.removeItem(STORAGE_KEY);
       else localStorage.setItem(STORAGE_KEY, mode);

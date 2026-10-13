@@ -1,6 +1,7 @@
 import {attachAddressAssistant} from './address-assistant.js';
 import {watchCustomerNotifications} from "../src/services/NotificationRealtime.ts";
 import './customer-onboarding.css';
+import './customer-onboarding-street.css';
 import {CustomerService,validCpf} from '../src/services/CustomerService.ts';
 import {NotificationService} from '../src/services/NotificationService.ts';
 import {PushService} from '../src/services/PushService.ts';
