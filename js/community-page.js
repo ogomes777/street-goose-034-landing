@@ -359,7 +359,7 @@ export function mountCommunityPage(root, _params, onClose) {
     if (isMe && mineSeg === "waiting") {
       gridHtml = '<div class="sgc-grid" data-list="waiting">' + waiting.map(function (m) {
         var st = STATUS[m.status] || ["", ""];
-        return '<button class="sgc-gridtile" type="button" data-mine-open="' + esc(m.id) + '" aria-label="' + esc("Seu visual — " + st[0]) + '">' +
+        return '<button class="sgc-gridtile" type="button" data-mine-open="' + esc(m.id) + '" aria-label="' + esc("Seu visual. " + st[0]) + '">' +
           (m.imageUrl ? '<img src="' + esc(m.imageUrl) + '" alt="" loading="lazy" decoding="async">' : "") +
           '<span class="sgc-status ' + st[1] + '">' + (m.status === "pending" ? ICONS.clock : "") + st[0] + "</span></button>";
       }).join("") + "</div>";
@@ -367,7 +367,7 @@ export function mountCommunityPage(root, _params, onClose) {
       gridHtml = '<div class="sgc-grid" data-list="profile">' + lists.profile.map(function (x) { return gridTileHtml(x); }).join("") + "</div>" + moreHtml(more.profile);
     } else {
       gridHtml = '<div class="sgc-profile-empty">' + ICONS.camera +
-        (isMe ? "<b>Seu primeiro visual começa aqui.</b><span>Poste usando a peça — a equipe aprova e você ganha +30 XP.</span><button class=\"btn btn-primary\" type=\"button\" data-community-publish>Postar visual</button>"
+        (isMe ? "<b>Seu primeiro visual começa aqui.</b><span>Poste usando a peça. a equipe aprova e você ganha +30 XP.</span><button class=\"btn btn-primary\" type=\"button\" data-community-publish>Postar visual</button>"
               : "<b>Nenhum visual no ar ainda.</b>") + "</div>";
     }
     var cover = lists.profile[0] && lists.profile[0].imageUrl;
@@ -381,7 +381,7 @@ export function mountCommunityPage(root, _params, onClose) {
             (isMe ? '<button class="sgc-ring-cam" type="button" data-edit-profile aria-label="' + (p.avatarUrl ? "Trocar foto" : "Adicionar foto") + '">' + ICONS.camera + "</button>" : "") + "</span>" +
           '<div class="sgc-profile-id">' +
             '<div class="sgc-profile-name"><h2>' + esc(p.name) + "</h2>" + levelChipHtml(p) + "</div>" +
-            '<p class="sgc-profile-sub">' + esc([p.handle && p.firstName ? p.firstName : null, p.levelName, sinceLabel(p.since)].filter(Boolean).join(" · ") || "Membro Street Goose") + "</p>" +
+            '<p class="sgc-profile-sub">' + esc([p.handle && p.firstName ? p.firstName : null, p.levelName, sinceLabel(p.since)].filter(Boolean).join(" ") || "Membro Street Goose") + "</p>" +
             (p.bio ? '<p class="sgc-profile-bio">' + esc(p.bio) + "</p>" : (isMe ? '<button class="sgc-profile-bio is-empty" type="button" data-edit-profile>+ Escrever uma bio</button>' : "")) +
             '<ul class="sgc-profile-stats">' +
               '<li><b data-count-to="' + p.posts + '">0</b><span>' + (p.posts === 1 ? "visual" : "visuais") + "</span></li>" +
@@ -797,7 +797,7 @@ export function mountCommunityPage(root, _params, onClose) {
     if (seg && !seg.disabled) { mineSeg = seg.getAttribute("data-seg"); renderProfile(); return; }
     var mineOpen = t.closest("[data-mine-open]");
     if (mineOpen) { openMineSheet(mineOpen.getAttribute("data-mine-open")); return; }
-    if (t.closest("[data-profile-share]") && profileData) { shareLink(profileUrl(profileData.id), "SG Community — Street Goose 034", profileData.name + " na SG Community", "LINK DO PERFIL COPIADO"); return; }
+    if (t.closest("[data-profile-share]") && profileData) { shareLink(profileUrl(profileData.id), "SG Community. Street Goose 034", profileData.name + " na SG Community", "LINK DO PERFIL COPIADO"); return; }
     var notice = t.closest("[data-notice-go]");
     if (notice) {
       var kind2 = notice.getAttribute("data-notice-go"), nid = notice.getAttribute("data-notice-id");

@@ -1,4 +1,5 @@
 import { StrictMode } from "react";
+import '../js/copy-typography.css';
 import { createRoot } from "react-dom/client";
 import { InteractiveCharacterHero } from "./components/interactive-character/InteractiveCharacterHero";
 

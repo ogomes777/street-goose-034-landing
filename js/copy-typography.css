@@ -1,0 +1,25 @@
+/* Refinamento apenas tipográfico das copys e dos painéis. */
+.sg-onboard h2,
+.sg-install h2,
+.sg-live-activity h2,
+.auth-modal-panel h2,
+.acp-card h2 {
+  font-family: 'Bodoni MT', Didot, 'Palatino Linotype', Georgia, serif;
+  font-weight: 500;
+  font-kerning: normal;
+}
+.sg-onboard p,
+.sg-install p,
+.sg-live-activity p,
+.auth-modal-panel p,
+.acp-card p {
+  font-family: 'Avenir Next', Inter, 'Segoe UI', sans-serif;
+  font-kerning: normal;
+}
+.sg-onboard h3,
+.sg-live-consent-heading h3,
+.sg-install-details strong {
+  font-family: 'Avenir Next', Inter, 'Segoe UI', sans-serif;
+  font-weight: 600;
+  font-kerning: normal;
+}

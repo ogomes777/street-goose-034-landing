@@ -215,7 +215,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
         return;
       }
       if (mode === "signUp" && fd.get("password") !== fd.get("confirmPassword")) {
-        showError(i18nT("auth.confirmPassword") + " — não confere.");
+        showError(i18nT("auth.confirmPassword") + ". não confere.");
         return;
       }
       if (mode === "signUp" && !fd.get("terms")) {
@@ -282,7 +282,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
     var handler = ACTION_HANDLERS[action.type];
     if (!handler) return;
     await handler(action.payload || {});
-    if (window.SG.toast) window.SG.toast("FEITO — AÇÃO CONCLUÍDA APÓS LOGIN");
+    if (window.SG.toast) window.SG.toast("FEITO. AÇÃO CONCLUÍDA APÓS LOGIN");
   }
 
   async function requireAuth(action) {

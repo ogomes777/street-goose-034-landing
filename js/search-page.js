@@ -15,33 +15,33 @@ export function mountSearchPage(root, _params, onClose) {
     "pt-BR": {
       placeholder: "Buscar peça, categoria, estilo…", clear: "Limpar", close: "Fechar", esc: "ESC fecha",
       recent: "Buscas recentes", clearHistory: "Limpar histórico", suggestions: "Sugestões",
-      categories: "Explorar categorias", highlights: "Seleção Street Goose", highlightsSub: "Peças que fecham o visual — escolhidas da coleção atual.",
+      categories: "Explorar categorias", highlights: "Seleção Street Goose", highlightsSub: "Peças que fecham o visual. escolhidas da coleção atual.",
       pieces: "peças", piece: "peça", all: "Todas",
       results: function (n, q) { return (n === 1 ? "1 peça para " : n + " peças para ") + "“" + q + "”"; },
       none: function (q) { return "Nada com “" + q + "” por aqui."; },
-      noneHint: "Tenta outra palavra — ou fala direto com a gente que a gente procura pra você.",
+      noneHint: "Tenta outra palavra. ou fala direto com a gente que a gente procura pra você.",
       ask: "Perguntar no WhatsApp", askMsg: function (q) { return "Olá! Procurei “" + q + "” no site da Street Goose 034. Vocês têm?"; },
       add: "Adicionar à sacola", consult: "Consultar no WhatsApp", soldOut: "Esgotado", fav: "Favoritar", see: "Ver"
     },
     en: {
       placeholder: "Search piece, category, style…", clear: "Clear", close: "Close", esc: "ESC to close",
       recent: "Recent searches", clearHistory: "Clear history", suggestions: "Suggestions",
-      categories: "Browse categories", highlights: "Street Goose selection", highlightsSub: "Pieces that complete the look — picked from the current collection.",
+      categories: "Browse categories", highlights: "Street Goose selection", highlightsSub: "Pieces that complete the look. picked from the current collection.",
       pieces: "pieces", piece: "piece", all: "All",
       results: function (n, q) { return (n === 1 ? "1 piece for " : n + " pieces for ") + "“" + q + "”"; },
       none: function (q) { return "Nothing for “" + q + "” here."; },
-      noneHint: "Try another word — or message us and we'll look for it.",
+      noneHint: "Try another word. or message us and we'll look for it.",
       ask: "Ask on WhatsApp", askMsg: function (q) { return "Hi! I searched for “" + q + "” on the Street Goose 034 site. Do you have it?"; },
       add: "Add to bag", consult: "Ask on WhatsApp", soldOut: "Sold out", fav: "Favorite", see: "View"
     },
     es: {
       placeholder: "Buscar pieza, categoría, estilo…", clear: "Limpiar", close: "Cerrar", esc: "ESC cierra",
       recent: "Búsquedas recientes", clearHistory: "Borrar historial", suggestions: "Sugerencias",
-      categories: "Explorar categorías", highlights: "Selección Street Goose", highlightsSub: "Piezas que cierran el look — elegidas de la colección actual.",
+      categories: "Explorar categorías", highlights: "Selección Street Goose", highlightsSub: "Piezas que cierran el look. elegidas de la colección actual.",
       pieces: "piezas", piece: "pieza", all: "Todas",
       results: function (n, q) { return (n === 1 ? "1 pieza para " : n + " piezas para ") + "“" + q + "”"; },
       none: function (q) { return "Nada con “" + q + "” por aquí."; },
-      noneHint: "Prueba otra palabra — o escríbenos y lo buscamos por ti.",
+      noneHint: "Prueba otra palabra. o escríbenos y lo buscamos por ti.",
       ask: "Preguntar por WhatsApp", askMsg: function (q) { return "¡Hola! Busqué “" + q + "” en el sitio de Street Goose 034. ¿Lo tienen?"; },
       add: "Agregar a la bolsa", consult: "Consultar por WhatsApp", soldOut: "Agotado", fav: "Favorito", see: "Ver"
     }
@@ -139,8 +139,8 @@ export function mountSearchPage(root, _params, onClose) {
     var action = p.soldOut
       ? '<span class="sp-card-sold">' + esc(t.soldOut) + "</span>"
       : p.consultWhatsApp
-        ? '<a class="sp-card-act sp-card-act--wa" href="' + esc(window.SG.waProductLink(p)) + '" target="_blank" rel="noopener" aria-label="' + esc(t.consult + " — " + p.name) + '">' + ICON.chat + "</a>"
-        : '<button class="sp-card-act" type="button" data-add-to-cart="' + esc(p.id) + '" aria-label="' + esc(t.add + " — " + p.name) + '">' + ICON.bag + "</button>";
+        ? '<a class="sp-card-act sp-card-act--wa" href="' + esc(window.SG.waProductLink(p)) + '" target="_blank" rel="noopener" aria-label="' + esc(t.consult + ". " + p.name) + '">' + ICON.chat + "</a>"
+        : '<button class="sp-card-act" type="button" data-add-to-cart="' + esc(p.id) + '" aria-label="' + esc(t.add + ". " + p.name) + '">' + ICON.bag + "</button>";
     return (
       '<article class="sp-card' + (p.soldOut ? " is-sold" : "") + '" style="--i:' + Math.min(i, 14) + ";--ca:" + esc(cat.a) + ";--cb:" + esc(cat.b) + '">' +
         '<a class="sp-card-hit" href="#" data-search-result data-open-quickview="' + esc(p.id) + '">' +
@@ -149,7 +149,7 @@ export function mountSearchPage(root, _params, onClose) {
           '<span class="sp-card-name">' + highlight(p.name, term) + "</span>" +
         "</a>" +
         '<div class="sp-card-foot"><span class="sp-card-price' + (p.price ? "" : " is-soft") + '">' + esc(p.priceLabel || "") + "</span>" + action + "</div>" +
-        '<button class="sp-card-fav favorite-btn' + (fav ? " is-active" : "") + '" type="button" data-favorite-toggle="' + esc(p.id) + '" aria-pressed="' + (fav ? "true" : "false") + '" aria-label="' + esc(t.fav + " — " + p.name) + '">' + ICON.heart + "</button>" +
+        '<button class="sp-card-fav favorite-btn' + (fav ? " is-active" : "") + '" type="button" data-favorite-toggle="' + esc(p.id) + '" aria-pressed="' + (fav ? "true" : "false") + '" aria-label="' + esc(t.fav + ". " + p.name) + '">' + ICON.heart + "</button>" +
       "</article>"
     );
   }

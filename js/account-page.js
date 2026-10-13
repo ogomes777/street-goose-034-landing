@@ -167,7 +167,7 @@ export function mountAccountPage(root, _params, onClose) {
           '<span class="acp-avatar-wrap"><span class="acp-avatar">' + (id.avatar ? '<img src="' + esc(id.avatar) + '" alt="" referrerpolicy="no-referrer">' : esc(id.name.charAt(0).toUpperCase())) + "</span>" +
             '<button class="acp-avatar-edit" type="button" data-acp-edit-public aria-label="Trocar foto do perfil"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.4-2h5.8l1.4 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.4"/></svg></button></span>' +
           '<div class="acp-hero-text">' +
-            '<p class="acp-kicker">STREET GOOSE 034 · MEMBRO</p>' +
+            "<p class=\"acp-kicker\">STREET GOOSE 034 MEMBRO</p>" +
             '<h2 class="acp-name">' + esc(id.name) + "</h2>" +
             '<p class="acp-email">' + esc(id.email) + "</p>" +
             '<div class="acp-chips">' +
@@ -251,7 +251,7 @@ export function mountAccountPage(root, _params, onClose) {
         card("Último pedido", last
           ? '<div class="acp-last">' +
               '<div class="acp-order-top"><b>#' + esc(String(last.id).slice(0, 8).toUpperCase()) + "</b>" + statusChip(last.status) + "</div>" +
-              '<p class="acp-muted">' + esc(fmtDate(last.created_at)) + " · " + itemsCount(last) + " " + (itemsCount(last) === 1 ? "item" : "itens") + "</p>" +
+              '<p class="acp-muted">' + esc(fmtDate(last.created_at)) + " " + itemsCount(last) + " " + (itemsCount(last) === 1 ? "item" : "itens") + "</p>" +
               '<p class="acp-big">' + (last.total_cents ? esc(money(last.total_cents)) : "A confirmar") + "</p>" +
               '<a class="acp-link" href="/pedido/' + encodeURIComponent(last.id) + '">Ver detalhes ' + ico("arrow") + "</a>" +
             "</div>"
@@ -289,7 +289,7 @@ export function mountAccountPage(root, _params, onClose) {
             return (
               '<article class="acp-order" style="--i:' + Math.min(i, 10) + '">' +
                 '<div class="acp-order-top"><b>#' + esc(String(o.id).slice(0, 8).toUpperCase()) + "</b>" + statusChip(o.status) + "</div>" +
-                '<p class="acp-muted">' + esc(fmtDate(o.created_at)) + " · " + n + " " + (n === 1 ? "item" : "itens") + (o.payment_method ? " · " + esc(o.payment_method === "whatsapp" ? "WhatsApp" : o.payment_method) : "") + "</p>" +
+                '<p class="acp-muted">' + esc(fmtDate(o.created_at)) + " " + n + " " + (n === 1 ? "item" : "itens") + (o.payment_method ? " " + esc(o.payment_method === "whatsapp" ? "WhatsApp" : o.payment_method) : "") + "</p>" +
                 '<dl class="acp-order-sums">' +
                   (o.discount_cents ? "<div><dt>Desconto" + (o.coupon_code ? " (" + esc(o.coupon_code) + ")" : "") + "</dt><dd>− " + esc(money(o.discount_cents)) + "</dd></div>" : "") +
                   (o.shipping_cents ? "<div><dt>Frete</dt><dd>" + esc(money(o.shipping_cents)) + "</dd></div>" : "") +
@@ -365,7 +365,7 @@ export function mountAccountPage(root, _params, onClose) {
   }
 
   function xpLabel(e) {
-    if (e.reason === "admin_adjustment") return e.refType === "order" ? "Ajuste de pedido" + (e.note ? " — " + e.note : "") : (e.note || "Bônus da equipe");
+    if (e.reason === "admin_adjustment") return e.refType === "order" ? "Ajuste de pedido" + (e.note ? ". " + e.note : "") : (e.note || "Bônus da equipe");
     return XP_REASONS[e.reason] || e.reason;
   }
 
@@ -377,7 +377,7 @@ export function mountAccountPage(root, _params, onClose) {
     var handle = (profile && profile.publicHandle) || "";
     box.innerHTML =
       '<div class="acp-card-head"><h3>Ranking</h3><a class="acp-link" href="/ranking">Ver ranking ' + ico("arrow") + "</a></div>" +
-      (me && me.optedIn && me.position ? '<p class="acp-rank-pos">Você está em <b>Nº ' + me.position + "</b> de " + me.participants + " · " + me.totalXp + " XP</p>" : "") +
+      (me && me.optedIn && me.position ? '<p class="acp-rank-pos">Você está em <b>Nº ' + me.position + "</b> de " + me.participants + " " + me.totalXp + " XP</p>" : "") +
       '<form class="acp-form" data-ranking-form novalidate>' +
         '<label class="acp-switch"><input type="checkbox" name="opt_in"' + (opted ? " checked" : "") + '><span class="acp-switch-ui" aria-hidden="true"></span>Aparecer no ranking público</label>' +
         '<label class="acp-field"><span>Apelido no ranking</span><input name="handle" value="' + esc(handle) + '" maxlength="24" autocomplete="off" placeholder="ex.: goose.rider"></label>' +
@@ -407,7 +407,7 @@ export function mountAccountPage(root, _params, onClose) {
             var locked = r.requirementLevel && level < r.requirementLevel;
             var done = redeemed[r.id];
             return '<article class="acp-reward' + (locked ? " is-locked" : "") + '">' +
-              '<p class="acp-reward-kind">' + esc(String(r.kind || "").toUpperCase()) + (r.discountPercent ? " · " + r.discountPercent + "% OFF" : "") + "</p>" +
+              '<p class="acp-reward-kind">' + esc(String(r.kind || "").toUpperCase()) + (r.discountPercent ? " " + r.discountPercent + "% OFF" : "") + "</p>" +
               "<h4>" + esc(r.title) + "</h4><p>" + esc(r.description) + "</p>" +
               (r.requirementLevel ? '<p class="acp-reward-req">' + ico("lock") + "Nível " + r.requirementLevel + "+</p>" : "") +
               (done ? '<span class="acp-btn acp-btn--done">' + ico("check") + "Resgatado</span>"
@@ -424,7 +424,7 @@ export function mountAccountPage(root, _params, onClose) {
     try { details = await svc.customer.getMine(); } catch (err) { panel.innerHTML = card("Dados pessoais", "Não foi possível carregar. Abra o perfil novamente para tentar."); return; }
     if (destroyed || activeTab !== "profile") return;
     data.details = details;
-    var privateFields = [["full_name", "Nome completo", "text", "name"], ["cpf", "CPF (para identificação nos pedidos)", "text", "off"], ["phone", "Celular / WhatsApp", "tel", "tel"], ["birthday", "Nascimento (opcional)", "date", "bday"], ["postal_code", "CEP", "text", "postal-code"], ["street", "Rua / avenida", "text", "address-line1"], ["address_number", "Número", "text", "off"], ["complement", "Complemento", "text", "address-line2"], ["neighborhood", "Bairro", "text", "off"], ["city", "Cidade", "text", "address-level2"], ["state", "Estado (UF)", "text", "address-level1"]];
+    var privateFields = [["full_name", "Nome completo", "text", "name"], ["cpf", "CPF (para identificação nos pedidos)", "text", "off"], ["phone", "Celular WhatsApp", "tel", "tel"], ["birthday", "Nascimento (opcional)", "date", "bday"], ["postal_code", "CEP", "text", "postal-code"], ["street", "Rua avenida", "text", "address-line1"], ["address_number", "Número", "text", "off"], ["complement", "Complemento", "text", "address-line2"], ["neighborhood", "Bairro", "text", "off"], ["city", "Cidade", "text", "address-level2"], ["state", "Estado (UF)", "text", "address-level1"]];
     var id = identity();
     var current = (data.profile && data.profile.displayName) || (session.user.user_metadata || {}).name || "";
     var handle = data.profile && data.profile.publicHandle;
@@ -451,8 +451,8 @@ export function mountAccountPage(root, _params, onClose) {
           '<dl class="acp-facts">' +
             "<div><dt>Login</dt><dd>" + esc(providerLabel(id.provider)) + "</dd></div>" +
             "<div><dt>Membro desde</dt><dd>" + esc(fmtDate(id.since)) + "</dd></div>" +
-            "<div><dt>Nível</dt><dd>" + esc(data.xp ? data.xp.level.levelNumber + " · " + data.xp.level.name : "—") + "</dd></div>" +
-            "<div><dt>Apelido no ranking</dt><dd>" + esc((data.profile && data.profile.publicHandle) || "—") + ' <button class="acp-link" type="button" data-acp-tab="level">Editar</button></dd></div>' +
+            "<div><dt>Nível</dt><dd>" + esc(data.xp ? data.xp.level.levelNumber + " " + data.xp.level.name : ". ") + "</dd></div>" +
+            "<div><dt>Apelido no ranking</dt><dd>" + esc((data.profile && data.profile.publicHandle) || ". ") + ' <button class="acp-link" type="button" data-acp-tab="level">Editar</button></dd></div>' +
           "</dl>") +
       "</div>";
     disposeAddress();
@@ -546,7 +546,7 @@ export function mountAccountPage(root, _params, onClose) {
       redeem.disabled = true;
       var res = await svc.rewards.redeem(redeem.getAttribute("data-acp-redeem"));
       if (destroyed) return;
-      var msgs = { level_too_low: "SEU NÍVEL AINDA NÃO LIBERA ESSA RECOMPENSA", already_redeemed: "VOCÊ JÁ RESGATOU ESSA RECOMPENSA", rate_limited: "MUITAS TENTATIVAS — TENTE EM INSTANTES" };
+      var msgs = { level_too_low: "SEU NÍVEL AINDA NÃO LIBERA ESSA RECOMPENSA", already_redeemed: "VOCÊ JÁ RESGATOU ESSA RECOMPENSA", rate_limited: "MUITAS TENTATIVAS. TENTE EM INSTANTES" };
       if (res.ok) { toast(res.couponCode ? "CUPOM " + res.couponCode + " LIBERADO" : "RECOMPENSA RESGATADA"); data.rewards = null; tabCoupons(bodyEl.querySelector("[data-acp-panel]")); }
       else { redeem.disabled = false; toast(msgs[res.reason] || "NÃO FOI POSSÍVEL RESGATAR AGORA"); }
       return;

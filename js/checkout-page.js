@@ -79,8 +79,8 @@ export function mountCheckoutPage(root, _params, onClose) {
   function reviewStepHtml() {
     return (
       '<div class="checkout-review">' +
-        '<h3>' + t("checkout.step.identification") + '</h3><p>' + window.SG.esc(formData.name + " — " + formData.email + " — " + formData.phone) + "</p>" +
-        '<h3>' + t("checkout.step.address") + '</h3><p>' + window.SG.esc(formData.street + ", " + formData.number + " — " + formData.neighborhood + ", " + formData.city + "/" + formData.state.toUpperCase() + " — " + formData.cep) + "</p>" +
+        '<h3>' + t("checkout.step.identification") + '</h3><p>' + window.SG.esc(formData.name + ". " + formData.email + ". " + formData.phone) + "</p>" +
+        '<h3>' + t("checkout.step.address") + '</h3><p>' + window.SG.esc(formData.street + ", " + formData.number + ". " + formData.neighborhood + ", " + formData.city + "/" + formData.state.toUpperCase() + ". " + formData.cep) + "</p>" +
         '<h3>' + t("checkout.step.payment") + '</h3><p>' + t("checkout.payment." + formData.payment) + "</p>" +
         '<h3>' + t("cart.title") + '</h3>' +
         rows.map(function (r) { return "<p>" + window.SG.esc(r.product.name) + " × " + window.SG.esc(r.qty) + " — <span data-price-for=\"" + window.SG.esc(r.product.id) + "\">" + window.SG.esc(r.product.priceLabel) + "</span></p>"; }).join("") +
@@ -172,7 +172,7 @@ export function mountCheckoutPage(root, _params, onClose) {
         (orderId ? '<p>Pedido <strong>#' + orderId.slice(0, 8).toUpperCase() + '</strong> salvo na sua conta.</p>' : "") +
         (orderSummary && orderSummary.couponCode && orderSummary.discountCents > 0
           ? "<p>Cupom <b>" + window.SG.esc(orderSummary.couponCode) + "</b> aplicado: −" + window.SG.formatPrice(orderSummary.discountCents) + ".</p>"
-          : (coupon && orderId ? "<p>O cupom não pôde ser aplicado no pedido — a equipe confere no atendimento.</p>" : "")) +
+          : (coupon && orderId ? "<p>O cupom não pôde ser aplicado no pedido. a equipe confere no atendimento.</p>" : "")) +
         '<p>A equipe Street Goose confirma disponibilidade e fecha o pagamento por lá.</p><a class="btn btn-primary" href="/">' + t("cart.continueShopping") + "</a></div>";
     }
     return '<div class="app-page-empty"><h2>' + t("checkout.payment.unavailable") + "</h2><p>Esse método ainda depende de um provedor de pagamento configurado.</p></div>";
@@ -205,7 +205,7 @@ export function mountCheckoutPage(root, _params, onClose) {
   function buildWhatsAppMessage() {
     var lines = ["Olá! Quero fechar esse pedido Street Goose 034:", ""];
     if (orderId) { lines[0] = "Olá! Quero fechar o pedido #" + orderId.slice(0, 8).toUpperCase() + " Street Goose 034:"; }
-    rows.forEach(function (r) { lines.push("• " + r.product.name + " (" + r.qty + "x) — " + r.product.priceLabel); });
+    rows.forEach(function (r) { lines.push(" " + r.product.name + " (" + r.qty + "x). " + r.product.priceLabel); });
     if (orderSummary && orderSummary.couponCode && orderSummary.discountCents > 0) {
       lines.push("Cupom: " + orderSummary.couponCode + " (−" + window.SG.formatPrice(orderSummary.discountCents) + ")");
       lines.push("Total: " + window.SG.formatPrice(orderSummary.totalCents) + (hasUnpriced() ? " + itens a consultar" : ""));
@@ -218,7 +218,7 @@ export function mountCheckoutPage(root, _params, onClose) {
     lines.push("Telefone: " + formData.phone);
     lines.push("E-mail: " + formData.email);
     lines.push("Endereço: " + formData.street + ", " + formData.number + (formData.complement ? " - " + formData.complement : "") +
-      " — " + formData.neighborhood + ", " + formData.city + "/" + formData.state.toUpperCase() + " — CEP " + formData.cep);
+      ". " + formData.neighborhood + ", " + formData.city + "/" + formData.state.toUpperCase() + ". CEP " + formData.cep);
     return lines.join("\n");
   }
 

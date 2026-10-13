@@ -37,7 +37,7 @@ import { service, avatarHtml, altFor, productFor, emptyStateHtml, ICONS } from "
 
   function ctaTileHtml(i) {
     return '<a class="sgc-tile sgc-tile--' + (i + 1) + ' sgc-tile--cta" href="/comunidade?postar=1">' +
-      ICONS.camera + "<b>Seu visual aqui</b><small>Poste usando a peça · +30 XP quando aprovar</small></a>";
+      ICONS.camera + "<b>Seu visual aqui</b><small>Poste usando a peça +30 XP quando aprovar</small></a>";
   }
 
   function emptyHtml() {
@@ -60,8 +60,8 @@ import { service, avatarHtml, altFor, productFor, emptyStateHtml, ICONS } from "
     mosaic.setAttribute("data-count", String(items.length));
     mosaic.innerHTML = items.map(tileHtml).join("") + (items.length < TILES ? ctaTileHtml(items.length) : "");
     if (statsEl) {
-      statsEl.textContent = res.stats.posts + (res.stats.posts === 1 ? " visual" : " visuais") + " · " +
-        res.stats.members + (res.stats.members === 1 ? " membro" : " membros") + " · " +
+      statsEl.textContent = res.stats.posts + (res.stats.posts === 1 ? " visual" : " visuais") + " " +
+        res.stats.members + (res.stats.members === 1 ? " membro" : " membros") + " " +
         res.stats.likes + (res.stats.likes === 1 ? " curtida" : " curtidas");
       statsEl.hidden = false;
     }
