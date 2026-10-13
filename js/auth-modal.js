@@ -12,6 +12,7 @@
   var authSvc = null, i18nT = function (k) { return (window.SG.i18n && window.SG.i18n.t(k)) || k; };
   var mode = "signIn"; // "signIn" | "signUp"
   var currentSession = null;
+  var codeEmail = "", resendAfter = 0;
 
   // logos oficiais inline (sem CDN externa, sem emoji) — silhueta preta da
   // Apple e o "G" multicolorido oficial do Google, cores/paths reais
@@ -65,6 +66,7 @@
   }
 
   function formHtml() {
+    if (mode === "emailCode") return '<div class="auth-modal-panel"><button class="popup-close" type="button" data-auth-close aria-label="Fechar">×</button><h2>Entrar por e-mail</h2><p>Use o código enviado para sua conta.</p><form class="auth-form" data-code-form><label>E-mail<input name="email" type="email" required autocomplete="email" value="' + window.SG.esc(codeEmail) + '"></label><label>Código<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" minlength="6" maxlength="8"></label><div data-auth-captcha></div><p class="auth-error" data-auth-error role="status" hidden></p><button class="btn btn-primary" type="button" data-send-code>Enviar código</button><button class="btn btn-primary" type="submit">Confirmar código</button></form><button class="text-link" data-code-back type="button">Voltar ao login</button></div>';
     var isSignUp = mode === "signUp";
     return (
       '<div class="auth-modal-panel">' +
@@ -87,6 +89,7 @@
         "</form>" +
         '<button class="text-link auth-switch" type="button" data-auth-switch>' + i18nT(isSignUp ? "auth.switchToSignIn" : "auth.switchToSignUp") + "</button>" +
         (!isSignUp ? '<button class="text-link auth-forgot" type="button" data-auth-forgot>' + i18nT("auth.forgotPassword") + "</button>" : "") +
+      (!isSignUp ? '<button class="text-link auth-switch" type="button" data-email-code>Entrar com código por e-mail</button>' : "") +
       "</div>"
     );
   }
@@ -115,7 +118,7 @@
 
   function render() {
     overlay.innerHTML = formHtml();
-    bindForm();
+    if (mode === "emailCode") bindCodeForm(); else bindForm();
     mountCaptchaWidget();
   }
 
@@ -130,12 +133,51 @@
     if (btn) { btn.disabled = isLoading; btn.textContent = isLoading ? i18nT("common.loading") : i18nT(mode === "signUp" ? "auth.submitSignUp" : "auth.submitSignIn"); }
   }
 
+  function bindCodeForm() {
+    overlay.querySelector("[data-auth-close]").addEventListener("click", close);
+    overlay.querySelector("[data-code-back]").addEventListener("click", function () { mode = "signIn"; render(); });
+    var form = overlay.querySelector("[data-code-form]");
+    var send = overlay.querySelector("[data-send-code]");
+    send.addEventListener("click", async function () {
+      var input = form.elements.email;
+      if (!input.reportValidity()) return;
+      if (Date.now() < resendAfter) { showError("Aguarde " + Math.ceil((resendAfter - Date.now()) / 1000) + " segundos para reenviar."); return; }
+      if (needsCaptcha()) return;
+      send.disabled = true;
+      try {
+        var svc = await loadAuthService();
+        var email = input.value.trim();
+        var res = await svc.sendEmailCode(email, captchaToken());
+        if (!res.ok) { showError(res.message); return; }
+        codeEmail = email; resendAfter = Date.now() + 60000;
+        showError("Se o e-mail estiver cadastrado, confira sua caixa de entrada e o spam.");
+        form.elements.code.focus();
+      } catch (err) { showError("Não foi possível enviar agora. Tente novamente."); }
+      finally { send.disabled = false; if (captcha) captcha.reset(); }
+    });
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var token = form.elements.code.value.trim();
+      if (!/^[0-9]{6,8}$/.test(token)) { showError("Digite o código recebido por e-mail."); return; }
+      if (form.elements.email.value.trim() !== codeEmail) { showError("Solicite um código para este e-mail primeiro."); return; }
+      var btn = form.querySelector('[type="submit"]'); btn.disabled = true;
+      try {
+        var svc = await loadAuthService(); var res = await svc.verifyEmailCode(codeEmail, token);
+        if (!res.ok) { showError(res.message); return; }
+        await runPendingAction(); close();
+      } catch (err) { showError("Não foi possível confirmar agora. Tente novamente."); }
+      finally { btn.disabled = false; }
+    });
+  }
+
   function bindForm() {
     overlay.querySelector("[data-auth-close]").addEventListener("click", close);
     overlay.querySelector("[data-auth-switch]").addEventListener("click", function () {
       mode = mode === "signIn" ? "signUp" : "signIn";
       render();
     });
+    var codeBtn = overlay.querySelector("[data-email-code]");
+    if (codeBtn) codeBtn.addEventListener("click", function () { mode = "emailCode"; render(); });
     var forgotBtn = overlay.querySelector("[data-auth-forgot]");
     if (forgotBtn) {
       forgotBtn.addEventListener("click", async function () {
@@ -185,8 +227,9 @@
       setLoading(false);
       if (captcha) captcha.reset();
       if (!res.ok) { showError(res.message); return; }
-      close();
+      if (res.confirmationRequired) { showError("Confira seu e-mail para confirmar sua conta antes de entrar."); return; }
       await runPendingAction();
+      close();
     });
   }
 
