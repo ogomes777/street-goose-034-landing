@@ -57,9 +57,10 @@
       var introVideo = document.querySelector("[data-intro-video]");
       var introAudio = document.querySelector("[data-intro-audio]");
       if (!intro || !skip) return;
-      var alreadySeen = false;
-      try { alreadySeen = sessionStorage.getItem("sgIntroSeen") === "1"; } catch (e) {}
-      var introShouldShow = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var introShouldShow = true;
+      window.addEventListener('pageshow', function(event){
+        if(event.persisted && window.matchMedia('(pointer: coarse)').matches) window.location.reload();
+      });
       if (introShouldShow) {
         var introScrollY = window.scrollY || window.pageYOffset || 0;
         window.__sgIntroScrollY = introScrollY;

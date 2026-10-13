@@ -10,6 +10,7 @@
    módulo só expõe essa API + o fallback de reexibir o player quando a intro
    acaba (afterIntro) — sem nunca chamar play()/resetar currentTime uma
    segunda vez se a faixa já estiver tocando. */
+import {createMobileAudioMixer} from './mobile-audio-mixer.js';
 (function () {
   "use strict";
 
@@ -60,6 +61,11 @@
 
   audio.volume = readVolume();
   audio.muted = readMuted();
+  var mobilePlayback = window.matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0;
+  var MobileContext = window.AudioContext || window.webkitAudioContext;
+  var mixer = mobilePlayback && MobileContext ? createMobileAudioMixer(audio, document.querySelector('[data-intro-audio]'), MobileContext) : null;
+  function volume(){return mixer?mixer.getMusicVolume():audio.volume;}
+  function setVolume(value){if(mixer)mixer.setMusicVolume(value);else audio.volume=value;}
 
   // vontade explícita do usuário — só ele pode religar o som depois de mutar;
   // autoplayBlocked (navegador) nunca deve ser confundido com isso
@@ -81,7 +87,7 @@
     var isPaused = audio.paused;
     hideIcon(iconPlay, !isPaused);
     hideIcon(iconPause, isPaused);
-    var showCta = autoplayBlocked || audio.muted || audio.volume === 0;
+    var showCta = autoplayBlocked || audio.muted || volume() === 0;
     var status = showCta ? "Ativar som" : mediaError ? "Tentar novamente" :
       (playPending || buffering) ? "Carregando…" : isPaused ? "Pausado" : "Tocando";
     if (label) { label.hidden = false; label.textContent = status; }
@@ -98,7 +104,7 @@
       muteBtn.setAttribute("aria-pressed", audio.muted ? "true" : "false");
       muteBtn.setAttribute("aria-label", audio.muted ? "Desmutar" : "Mutar");
     }
-    if (volumeSlider) volumeSlider.value = String(Math.round(audio.volume * 100));
+    if (volumeSlider) volumeSlider.value = String(Math.round(volume() * 100));
   }
 
   function attemptPlay() {
@@ -121,12 +127,13 @@
   }
 
   function activateSound() {
+    if(mixer){mixer.unlock();mixer.cue();}
     if (audio.error) audio.load();
     userPaused = false;
     userWantsMuted = false;
     audio.muted = false;
     saveMuted(false);
-    if (audio.volume === 0) { audio.volume = DEFAULT_VOLUME; saveVolume(audio.volume); }
+    if (volume() === 0) { setVolume(DEFAULT_VOLUME); saveVolume(volume()); }
     play();
   }
 
@@ -144,7 +151,7 @@
   audio.addEventListener("volumechange", syncUI);
 
   playBtn && playBtn.addEventListener("click", function () {
-    if (audio.paused || audio.muted || audio.volume === 0) activateSound();
+    if (audio.paused || audio.muted || volume() === 0) activateSound();
     else { userPaused = true; audio.pause(); }
   });
 
@@ -158,7 +165,7 @@
 
   volumeSlider && volumeSlider.addEventListener("input", function () {
     var v = Math.min(100, Math.max(0, parseInt(volumeSlider.value, 10) || 0)) / 100;
-    audio.volume = v;
+    setVolume(v);
     saveVolume(v);
     if (v > 0 && audio.muted) { audio.muted = false; userWantsMuted = false; saveMuted(false); }
     syncUI();
@@ -189,12 +196,14 @@
     if (cueTriggered) return;
     cueTriggered = true;
     try { audio.currentTime = 0; } catch (e) {}
+    if(mixer)mixer.cue();
     if (!userWantsMuted) play();
   }
 
   // Vídeo entrou em waiting/stalled ou pausou involuntariamente depois do
   // cue — pausa a faixa pra ela não correr sozinha na frente do vídeo.
   function pauseForResync() {
+    if(mobilePlayback)return;
     if (!cueTriggered || audio.paused) return;
     audio.pause();
   }
@@ -203,6 +212,7 @@
   // perceptível (>150ms) e retoma.
   function resumeFromResync(expectedTime) {
     if (!cueTriggered) return;
+    if(mobilePlayback){if(audio.paused&&!userWantsMuted&&!userPaused&&!autoplayBlocked)play();return;}
     if (isFinite(expectedTime) && expectedTime >= 0) {
       var diff = Math.abs(audio.currentTime - expectedTime);
       if (diff > 0.15) { try { audio.currentTime = expectedTime; } catch (e) {} }
@@ -230,6 +240,13 @@
   function unlockForIntro() {
     if (cueTriggered) { retryIfBlocked(); return; }
     if (userWantsMuted || playPending) return;
+    if(mixer&&mixer.unlock()){
+      playPending=true;
+      var mobilePlay;
+      try{mobilePlay=audio.play();}catch(_){playPending=false;autoplayBlocked=true;return;}
+      Promise.resolve(mobilePlay).then(function(){playPending=false;autoplayBlocked=false;if(cueTriggered)mixer.cue();syncUI();},function(){playPending=false;autoplayBlocked=true;syncUI();});
+      return; // Keep the authorized stream running silently until the cue.
+    }
     var savedVolume = audio.volume;
     audio.volume = 0;
     playPending = true;
@@ -245,11 +262,12 @@
   }
 
   function activateIntroSound() {
+    if(mixer)mixer.unlock();
     userWantsMuted = false;
     userPaused = false;
     audio.muted = false;
     saveMuted(false);
-    if (audio.volume === 0) { audio.volume = DEFAULT_VOLUME; saveVolume(audio.volume); }
+    if (volume() === 0) { setVolume(DEFAULT_VOLUME); saveVolume(volume()); }
     unlockForIntro();
   }
 
@@ -261,6 +279,8 @@
     pauseForResync: pauseForResync,
     resumeFromResync: resumeFromResync,
     retryIfBlocked: retryIfBlocked,
+    mobilePlayback: mobilePlayback,
+    setIntroVolume: function(value){if(mixer)mixer.setIntroVolume(value);else {var track=document.querySelector('[data-intro-audio]');if(track)track.volume=value;}},
   };
 
   // Um cue pode ter sido pedido antes deste módulo carregar (rede lenta) —

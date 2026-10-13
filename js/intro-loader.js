@@ -88,6 +88,8 @@
   var introAudio = introEl.querySelector("[data-intro-audio]");
   var skipBtn = introEl.querySelector("[data-intro-skip]");
   var soundBtn = introEl.querySelector("[data-intro-sound]");
+  var mobilePlayback = window.matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0;
+  function setIntroVolume(value){if(window.SG.music?.setIntroVolume)window.SG.music.setIntroVolume(value);else if(introAudio)introAudio.volume=value;}
   function introAudioTimeFor(videoTime) {
     var target = Math.max(0, videoTime + INTRO_AUDIO_LEAD_SECONDS);
     if (introAudio && isFinite(introAudio.duration) && introAudio.duration > 0) {
@@ -95,7 +97,6 @@
     }
     return target;
   }
-  var reduced = window.SG.prefersReducedMotion();
   if (window.__sgIntroSkipRequested === true || window.SG.introComplete === true) {
     introEl.hidden = true;
     notifyComplete();
@@ -172,7 +173,7 @@
       if (window.SG.music && window.SG.music.triggerCue) window.SG.music.triggerCue();
       else window.SG.musicCuePending = true;
     }
-    introAudio.volume = MP4_VOLUME;
+    setIntroVolume(MP4_VOLUME);
     try { introAudio.currentTime = INTRO_AUDIO_LEAD_SECONDS; } catch (e) {}
     introAudio.addEventListener("timeupdate", fireAudioIntroCue);
     introAudio.addEventListener("ended", finish, { once: true });
@@ -186,7 +187,7 @@
     return;
   }
 
-  if (reduced || !video) {
+  if (!video) {
     if (!video) {
       // Sem o MP4 da intro, o script inline controla o botão e o timeout.
       // Evita que o módulo chegue depois e encerre a abertura imediatamente.
@@ -200,6 +201,7 @@
   function duckVideoAudio() {
     var track = introAudio || video;
     if (!track || track.muted) return;
+    if(mobilePlayback && introAudio){setIntroVolume(MP4_DUCKED_VOLUME);return;}
     var startVol = track.volume;
     var targetVol = MP4_DUCKED_VOLUME;
     var t0 = null;
@@ -235,7 +237,7 @@
 
   function syncAudioClock(time) {
     if (video.paused || video.readyState < 3) return;
-    if (introAudio && Math.abs(introAudio.currentTime - introAudioTimeFor(time)) > 0.15) {
+    if (introAudio && !introAudio.paused && !introAudio.seeking && introAudio.readyState>=3 && Math.abs(introAudio.currentTime - introAudioTimeFor(time)) > (mobilePlayback?1.25:0.15)) {
       try { introAudio.currentTime = introAudioTimeFor(time); } catch (e) {}
     }
     if (cueFired && window.SG.music) {
@@ -264,6 +266,7 @@
 
   // ---------------- Buffering: vídeo é a fonte de verdade ----------------
   function onVideoInterrupted() {
+    if(mobilePlayback && !video.paused && video.readyState>=3)return;
     if (introAudio) introAudio.pause();
     if (!cueFired || finished) return;
     var music = window.SG.music;
@@ -280,7 +283,7 @@
     if (introAudio && !finished) {
       var expectedAudioTime = introAudioTimeFor(video.currentTime);
       var drift = Math.abs(introAudio.currentTime - expectedAudioTime);
-      if (drift > 0.15) { try { introAudio.currentTime = expectedAudioTime; } catch (e) {} }
+      if (drift > (mobilePlayback?1.25:0.15)) { try { introAudio.currentTime = expectedAudioTime; } catch (e) {} }
       if (introAudio.paused && !introAudio.muted) introAudio.play().catch(function () { attachGlobalAudioUnlock(); });
     }
     if (!cueFired) return;
@@ -324,7 +327,7 @@
     video.volume = 0;
     if (introAudio) {
       introAudio.muted = true;
-      introAudio.volume = MP4_VOLUME;
+      setIntroVolume(MP4_VOLUME);
       try { introAudio.currentTime = introAudioTimeFor(video.currentTime); } catch (e) {}
     }
     attachGlobalAudioUnlock();
@@ -345,7 +348,7 @@
       clearTimeout(stallTimer);
       if (!introAudio) return;
       introAudio.muted = false;
-      introAudio.volume = MP4_VOLUME;
+      setIntroVolume(MP4_VOLUME);
       try { introAudio.currentTime = introAudioTimeFor(video.currentTime); } catch (e) {}
       var audioPlay = introAudio.play();
       if (audioPlay && audioPlay.catch) audioPlay.catch(function () {
@@ -385,7 +388,7 @@
     if (window.SG.music && window.SG.music.activateIntroSound) window.SG.music.activateIntroSound();
     if (introAudio) {
       introAudio.muted = false;
-      introAudio.volume = cueFired ? MP4_DUCKED_VOLUME : MP4_VOLUME;
+      setIntroVolume(cueFired ? MP4_DUCKED_VOLUME : MP4_VOLUME);
       try { introAudio.currentTime = introAudioTimeFor(video.currentTime); } catch (e) {}
       var audioPlay = introAudio.play();
       if (audioPlay && audioPlay.catch) audioPlay.catch(attachGlobalAudioUnlock);
