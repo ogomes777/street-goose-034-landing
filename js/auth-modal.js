@@ -72,6 +72,7 @@
       '<div class="auth-modal-panel">' +
         '<button class="popup-close" type="button" data-auth-close aria-label="' + i18nT("common.close") + '">×</button>' +
         '<h2>' + i18nT(isSignUp ? "auth.title.signUp" : "auth.title.signIn") + "</h2>" +
+        '<p class="auth-entry-note">Escolha como entrar. Depois, personalize sua ficha e seus avisos.</p>' +
         '<div class="auth-oauth-row">' +
           '<button class="btn btn-ghost auth-oauth-btn" type="button" data-oauth="apple">' + APPLE_LOGO_SVG + "<span>" + i18nT("auth.appleContinue") + "</span></button>" +
           '<button class="btn btn-ghost auth-oauth-btn" type="button" data-oauth="google">' + GOOGLE_LOGO_SVG + "<span>" + i18nT("auth.googleContinue") + "</span></button>" +
@@ -315,11 +316,11 @@
     if (!svc.isConfigured()) { renderHeaderAccount(); return; }
     currentSession = await svc.getSession();
     renderHeaderAccount();
-    if (currentSession) await runPendingAction();
+    if (currentSession) { await runPendingAction(); setTimeout(function () { import("./customer-onboarding.js").then(function(m){return m.offerCustomerOnboarding(currentSession);}).catch(function(){}); }, 0); }
     svc.onAuthStateChange(function (_event, session) {
       currentSession = session;
       renderHeaderAccount();
-      if (session) runPendingAction();
+      if (session) { runPendingAction(); if (_event === "SIGNED_IN") setTimeout(function () { import("./customer-onboarding.js").then(function(m){return m.offerCustomerOnboarding(session);}).catch(function(){}); }, 0); }
     });
   })();
 

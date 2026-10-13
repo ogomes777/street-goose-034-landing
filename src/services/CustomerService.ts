@@ -21,11 +21,11 @@ export const CustomerService = {
   if (error) throw new Error("Não foi possível carregar seus dados pessoais.");
   return (data || {}) as CustomerDetails;
  },
- async saveMine(input: CustomerDetails): Promise<boolean> {
+ async saveMine(input: CustomerDetails, expectedUserId?: string): Promise<boolean> {
   if (!supabase) return false;
   if (input.cpf && !validCpf(input.cpf)) return false;
   const {data: {user}} = await supabase.auth.getUser();
-  if (!user) return false;
+  if (!user || (expectedUserId && user.id !== expectedUserId)) return false;
   const fields = Object.fromEntries(CUSTOMER_FIELDS.map(k => [k, k === "birthday" ? input[k] || null : String(input[k] || "").trim()]));
   fields.cpf = String(input.cpf || "").replace(/\D/g, "");
   const {error} = await supabase.from("customer_details").upsert({...fields, user_id:user.id, updated_at:new Date().toISOString()});

@@ -1299,10 +1299,10 @@ export function mountAdminPage(root, _params, onClose) {
     if (controls) {
       try {
         var supaControls = (await import("../src/lib/supabase.ts")).supabase;
-        var controlsResult = await supaControls.from("notification_controls").select("kind,enabled");
+        var controlsResult = await supaControls.from("notification_controls").select("kind,enabled,email_enabled,push_enabled");
         if (!stale("customers", n) && !controlsResult.error) {
-          var controlLabels = {orderUpdates:"Pedidos",levelUp:"Evolução de nível",rewardUnlocked:"Recompensas",couponUnlocked:"Cupons",postApproved:"Comunidade",newsletter:"Novidades"};
-          controls.innerHTML = '<p class="admin-note">Avisos na central do cliente · a escolha individual de cada cliente também é respeitada.</p>' + (controlsResult.data || []).map(function(c){return '<label class="admin-notification-control"><input type="checkbox" data-admin-notification="' + esc(c.kind) + '"' + (c.enabled ? ' checked' : '') + '> ' + esc(controlLabels[c.kind] || c.kind) + '</label>';}).join('');
+          var controlLabels = {orderUpdates:"Pedidos",levelUp:"Evolução de nível",rewardUnlocked:"Recompensas",couponUnlocked:"Cupons",postApproved:"Comunidade",newsletter:"Novidades",rankingUp:"Ranking",inactivity:"Retorno",adminAlerts:"Avisos do administrador"};
+          controls.innerHTML = '<p class="admin-note">Central, e-mail e push · as preferências individuais também são respeitadas.</p>' + (controlsResult.data || []).map(function(c){return '<label class="admin-notification-control"><input type="checkbox" data-admin-notification="' + esc(c.kind) + '"' + (c.enabled ? ' checked' : '') + '> ' + esc(controlLabels[c.kind] || c.kind) + '</label><label class="admin-notification-control"><input type="checkbox" data-admin-notification="' + esc(c.kind) + '" data-channel="email_enabled"' + (c.email_enabled ? ' checked' : '') + '> E-mail</label><label class="admin-notification-control"><input type="checkbox" data-admin-notification="' + esc(c.kind) + '" data-channel="push_enabled"' + (c.push_enabled ? ' checked' : '') + '> Push</label><br>';}).join('');
         }
       } catch (_) {}
     }
@@ -1791,7 +1791,7 @@ export function mountAdminPage(root, _params, onClose) {
     toggle.disabled = true;
     try {
       var db = (await import("../src/lib/supabase.ts")).supabase;
-      var savedControl = await db.from("notification_controls").update({enabled:toggle.checked}).eq("kind",toggle.getAttribute("data-admin-notification")).select("kind").single();
+      var savedControl = await db.from("notification_controls").update({[toggle.getAttribute("data-channel") || "enabled"]:toggle.checked}).eq("kind",toggle.getAttribute("data-admin-notification")).select("kind").single();
       if(savedControl.error) throw savedControl.error;
       toast("CONTROLE SALVO");
     } catch (_) {toggle.checked=!toggle.checked;toast("NÃO FOI POSSÍVEL SALVAR");}

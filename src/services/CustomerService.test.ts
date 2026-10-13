@@ -14,3 +14,9 @@ describe('CPF validation',()=>{
  it('accepts formatted and unformatted check digits',()=>{expect(validCpf('529.982.247-25')).toBe(true);expect(validCpf('52998224725')).toBe(true);});
  it('rejects repeated digits, invalid checks and incomplete numbers',()=>{for(const cpf of ['11111111111','52998224726','123']) expect(validCpf(cpf)).toBe(false);});
 });
+
+it('rejects saving stale profile data after an account switch',async()=>{
+ mocks.getUser.mockResolvedValue({data:{user:{id:'other-account'}}});
+ expect(await CustomerService.saveMine({full_name:'Old account'},'expected-account')).toBe(false);
+ expect(mocks.from).not.toHaveBeenCalled();
+});

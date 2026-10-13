@@ -54,6 +54,9 @@ export function mountAccountPage(root, _params, onClose) {
   var XP_REASONS = { order_paid: "Pedido pago", community_post_approved: "Foto aprovada na comunidade", review_approved: "Avaliação aprovada", promo: "Promoção" };
   var HANDLE_RE = /^[A-Za-z0-9_.]{3,24}$/;
   var NOTIF = [
+    {key:"emailEnabled",label:"Receber também por e-mail",hint:"Enviar os avisos escolhidos para o e-mail verificado da conta"},
+    {key:"rankingUp",label:"Evolução no ranking",hint:"Quando seus pontos levam você a uma posição maior"},
+    {key:"inactivity",label:"Lembrete de retorno",hint:"Um aviso após 14 dias sem acessar, quando autorizado"},
     { key: "orderUpdates", label: "Atualizações de pedido", hint: "Pagamento confirmado, envio e rastreio" },
     { key: "couponUnlocked", label: "Cupom liberado", hint: "Quando um cupom novo fica disponível pra você" },
     { key: "rewardUnlocked", label: "Recompensa desbloqueada", hint: "Quando seu nível libera um benefício" },
@@ -450,6 +453,8 @@ export function mountAccountPage(root, _params, onClose) {
   async function tabPrefs(panel) {
     var noticesResult = await supa.from("customer_notifications").select("id,title,body,created_at,read_at").order("created_at", {ascending:false}).limit(30);
     if (destroyed || activeTab !== "prefs") return;
+    svc.push=(await import("../src/services/PushService.ts")).PushService;
+    await svc.notif.refreshDeliveryStatus();
     var prefs = await svc.notif.getMine();
     if (destroyed) return;
     data.notif = prefs;
@@ -457,8 +462,9 @@ export function mountAccountPage(root, _params, onClose) {
       '<div class="acp-grid">' +
         card("Tema e idioma", '<div class="acp-prefs" data-acp-prefs>' + (window.SG.prefsPanel ? window.SG.prefsPanel.html() : "") + "</div>") +
         card("Sua central de avisos", noticesResult.error ? '<p>Não foi possível carregar os avisos agora.</p>' : (noticesResult.data || []).length ? '<div class="acp-notices">' + noticesResult.data.map(function(n) { return '<article><small>' + esc(fmtDate(n.created_at)) + '</small><h3>' + esc(n.title) + '</h3><p>' + esc(n.body) + '</p></article>'; }).join('') + '</div>' : '<p class="acp-muted">Seus próximos avisos de pedidos, evolução e recompensas aparecem aqui.</p>') +
+        card("Notificações neste dispositivo", '<p class="acp-muted">No iPhone, instale pelo Safari e abra pelo ícone antes de ativar.</p><button class="acp-btn acp-btn--primary" type="button" data-acp-push>Ativar neste dispositivo</button><button class="acp-btn" type="button" data-acp-push-off>Desativar push</button><p data-push-msg role="status"></p>') +
         card("Escolha seus avisos",
-          '<p class="acp-muted">Escolha quais avisos quer receber. A central funciona dentro da conta; push e avisos automáticos por e-mail ainda aguardam ativação do servidor.</p><button class="acp-btn acp-btn--primary" type="button" data-acp-enable-all>Ativar todos os avisos, incluindo novidades</button>' +
+          '<p class="acp-muted">Escolha quais avisos quer receber. Ative o e-mail para receber os tipos escolhidos. No celular, autorize o push neste dispositivo.</p><button class="acp-btn acp-btn--primary" type="button" data-acp-enable-all>Ativar todos os avisos, incluindo novidades</button>' +
           '<div class="acp-toggles">' + NOTIF.map(function (n) {
             return '<label class="acp-toggle"><span><b>' + esc(n.label) + "</b><small>" + esc(n.hint) + '</small></span><input type="checkbox" data-acp-notif="' + n.key + '"' + (prefs[n.key] ? " checked" : "") + '><span class="acp-switch-ui" aria-hidden="true"></span></label>';
           }).join("") + "</div>" +
@@ -571,6 +577,8 @@ export function mountAccountPage(root, _params, onClose) {
   });
 
   bodyEl.addEventListener("click", async function (e) {
+    var push=e.target.closest("[data-acp-push], [data-acp-push-off]");
+    if(push){push.disabled=true;try{var r=push.hasAttribute("data-acp-push-off")?{ok:await svc.push.disable(),message:""}:await svc.push.enable();var m=bodyEl.querySelector("[data-push-msg]");if(m)m.textContent=r.ok?r.message||"Push desativado nas preferências da conta.":r.message||"Não foi possível desativar agora.";}catch(_){toast("NÃO FOI POSSÍVEL ALTERAR AGORA");}finally{push.disabled=false;}return;}
     var all = e.target.closest("[data-acp-enable-all]");
     if (!all) return;
     all.disabled = true;
@@ -624,7 +632,7 @@ export function mountAccountPage(root, _params, onClose) {
       if (customerInput.cpf && !(await import("../src/services/CustomerService.ts")).validCpf(String(customerInput.cpf))) { btn.disabled = false; pmsg.textContent = "Confira o CPF: informe os 11 números de um CPF válido."; return; }
       customerInput.state = String(customerInput.state || "").toUpperCase();
       var privateOk = false;
-      try { privateOk = await svc.customer.saveMine(customerInput); } catch (err) {}
+      try { privateOk = await svc.customer.saveMine(customerInput,session.user.id); } catch (err) {}
       if (!privateOk) { btn.disabled = false; pmsg.textContent = "Não foi possível salvar seus dados. Tente novamente."; return; }
       var ok = await svc.profile.updatePreferences({ displayName: name });
       // espelha no login pra o header e o menu mostrarem o nome novo

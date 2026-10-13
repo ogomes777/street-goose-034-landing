@@ -1,0 +1,7 @@
+project_id = "street-goose-034"
+# Both functions authenticate explicitly in their bodies.
+# Push validates the private worker credential; export validates Google OAuth identity.
+[functions.notification-push]
+verify_jwt = false
+[functions.customer-sheet-export]
+verify_jwt = false
