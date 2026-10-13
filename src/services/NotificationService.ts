@@ -1,6 +1,6 @@
 import {supabase,isSupabaseConfigured} from '../lib/supabase';
-export interface NotificationPrefs {orderUpdates:boolean;couponUnlocked:boolean;rewardUnlocked:boolean;levelUp:boolean;postApproved:boolean;newsletter:boolean;emailEnabled:boolean;pushEnabled:boolean;rankingUp:boolean;inactivity:boolean;adminAlerts:boolean;}
-const DEFAULTS:NotificationPrefs={orderUpdates:true,couponUnlocked:true,rewardUnlocked:true,levelUp:true,postApproved:true,newsletter:false,emailEnabled:false,pushEnabled:false,rankingUp:true,inactivity:false,adminAlerts:true};
+export interface NotificationPrefs {orderUpdates:boolean;couponUnlocked:boolean;rewardUnlocked:boolean;levelUp:boolean;postApproved:boolean;newsletter:boolean;emailEnabled:boolean;pushEnabled:boolean;rankingUp:boolean;inactivity:boolean;adminAlerts:boolean;communityActivity:boolean;}
+const DEFAULTS:NotificationPrefs={orderUpdates:true,couponUnlocked:true,rewardUnlocked:true,levelUp:true,postApproved:true,newsletter:false,emailEnabled:false,pushEnabled:false,rankingUp:true,inactivity:false,adminAlerts:true,communityActivity:false};
 let emailConfigured=false;
 export const NotificationService={
  isConfigured:()=>isSupabaseConfigured,

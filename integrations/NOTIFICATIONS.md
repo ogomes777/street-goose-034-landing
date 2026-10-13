@@ -26,3 +26,7 @@ Account > Preferences > Activate on this device > Test notice on my account. The
 ## Validation
 
 Production build and service tests cover the frontend. Transactional SQL validation covers anonymous access, required sharing consent, duplicate throttling and rejection of unknown catalog products/action types; test transactions are rolled back. Actual cross-device reception and simultaneous customer sessions must be validated with subscribed devices and real authorized customer actions.
+
+## Community followers
+
+Public profile creation (first public handle), opt-in anonymous login and opted-in public profile edits are server events. Activity followers opt in through Account > Preferences. Private community notifications are grouped to one per account per 15 minutes, with push enabled and email disabled by default at the CRM control. This avoids broadcasting every cart gesture as an external interruption. Visitors can view the public feed without signing in; external delivery requires an account, channel consent and a subscribed device.

@@ -1301,7 +1301,7 @@ export function mountAdminPage(root, _params, onClose) {
         var supaControls = (await import("../src/lib/supabase.ts")).supabase;
         var controlsResult = await supaControls.from("notification_controls").select("kind,enabled,email_enabled,push_enabled");
         if (!stale("customers", n) && !controlsResult.error) {
-          var controlLabels = {orderUpdates:"Pedidos",levelUp:"Evolução de nível",rewardUnlocked:"Recompensas",couponUnlocked:"Cupons",postApproved:"Comunidade",newsletter:"Novidades",rankingUp:"Ranking",inactivity:"Retorno",adminAlerts:"Avisos do administrador"};
+          var controlLabels = {communityActivity:"Atividade pública da comunidade",orderUpdates:"Pedidos",levelUp:"Evolução de nível",rewardUnlocked:"Recompensas",couponUnlocked:"Cupons",postApproved:"Comunidade",newsletter:"Novidades",rankingUp:"Ranking",inactivity:"Retorno",adminAlerts:"Avisos do administrador"};
           controls.innerHTML = '<p class="admin-note">Central, e-mail e push · as preferências individuais também são respeitadas.</p>' + (controlsResult.data || []).map(function(c){return '<label class="admin-notification-control"><input type="checkbox" data-admin-notification="' + esc(c.kind) + '"' + (c.enabled ? ' checked' : '') + '> ' + esc(controlLabels[c.kind] || c.kind) + '</label><label class="admin-notification-control"><input type="checkbox" data-admin-notification="' + esc(c.kind) + '" data-channel="email_enabled"' + (c.email_enabled ? ' checked' : '') + '> E-mail</label><label class="admin-notification-control"><input type="checkbox" data-admin-notification="' + esc(c.kind) + '" data-channel="push_enabled"' + (c.push_enabled ? ' checked' : '') + '> Push</label><br>';}).join('');
         }
       } catch (_) {}

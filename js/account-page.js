@@ -54,6 +54,7 @@ export function mountAccountPage(root, _params, onClose) {
   var XP_REASONS = { order_paid: "Pedido pago", community_post_approved: "Foto aprovada na comunidade", review_approved: "Avaliação aprovada", promo: "Promoção" };
   var HANDLE_RE = /^[A-Za-z0-9_.]{3,24}$/;
   var NOTIF = [
+    {key:"communityActivity",label:"Atividade da comunidade",hint:"Avisos agrupados de escolhas, perfis e publicações públicas; até um a cada 15 minutos"},
     {key:"emailEnabled",label:"Receber também por e-mail",hint:"Enviar os avisos escolhidos para o e-mail verificado da conta"},
     {key:"rankingUp",label:"Evolução no ranking",hint:"Quando seus pontos levam você a uma posição maior"},
     {key:"inactivity",label:"Lembrete de retorno",hint:"Um aviso após 14 dias sem acessar, quando autorizado"},
