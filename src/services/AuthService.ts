@@ -7,7 +7,7 @@ import { supabase, isSupabaseConfigured } from "../lib/supabase";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 export type AuthResult =
-  | { ok: true }
+  | { ok: true; confirmationRequired?: boolean }
   | { ok: false; reason: "not_configured" | "invalid_credentials" | "email_taken" | "network_error" | "unknown"; message: string };
 
 export const AuthService = {
@@ -36,11 +36,25 @@ export const AuthService = {
 
   async signUpWithEmail(name: string, email: string, password: string, captchaToken?: string | null): Promise<AuthResult> {
     if (!supabase) return { ok: false, reason: "not_configured", message: "Cadastro ainda não configurado — falta VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY." };
-    const { error } = await supabase.auth.signUp({ email, password, options: { data: { name }, ...(captchaToken ? { captchaToken } : {}) } });
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + "/", data: { name }, ...(captchaToken ? { captchaToken } : {}) } });
     if (error) {
       const reason = /already registered|already exists/i.test(error.message) ? "email_taken" : "unknown";
       return { ok: false, reason, message: error.message };
     }
+    return { ok: true, confirmationRequired: !data.session };
+  },
+
+  async sendEmailCode(email: string, captchaToken?: string | null): Promise<AuthResult> {
+    if (!supabase) return { ok: false, reason: "not_configured", message: "Login por e-mail indisponível." };
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: window.location.origin + "/", ...(captchaToken ? { captchaToken } : {}) } });
+    if (error) return { ok: false, reason: "unknown", message: error.message };
+    return { ok: true };
+  },
+
+  async verifyEmailCode(email: string, token: string): Promise<AuthResult> {
+    if (!supabase) return { ok: false, reason: "not_configured", message: "Login por e-mail indisponível." };
+    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+    if (error || !data.session) return { ok: false, reason: "invalid_credentials", message: "Código inválido ou expirado. Solicite outro código." };
     return { ok: true };
   },
 
@@ -57,7 +71,7 @@ export const AuthService = {
   async resetPassword(email: string, captchaToken?: string | null): Promise<AuthResult> {
     if (!supabase) return { ok: false, reason: "not_configured", message: "Recuperação de senha ainda não configurada." };
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname,
+      redirectTo: window.location.origin + "/conta",
       ...(captchaToken ? { captchaToken } : {}),
     });
     if (error) return { ok: false, reason: "unknown", message: error.message };
