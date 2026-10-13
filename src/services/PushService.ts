@@ -1,6 +1,13 @@
 import {supabase} from '../lib/supabase';
 import {NotificationService} from './NotificationService';
 export const PushService={
+ async test():Promise<{ok:boolean;message:string}>{
+  if(!supabase)return {ok:false,message:'Entre na conta para testar.'};
+  const prefs=await NotificationService.getMine();
+  if(!prefs.pushEnabled||!prefs.orderUpdates)return {ok:false,message:'Ative o push neste aparelho e os avisos de pedidos antes de testar.'};
+  const {data,error}=await supabase.rpc('request_my_notification_test');
+  return !error&&data===true?{ok:true,message:'Teste na fila. Feche o site e aguarde até dois minutos. Confira a notificação do sistema; aparecer na conta não comprova entrega push.'}:{ok:false,message:'Não foi possível enfileirar. Confira a inscrição do aparelho e aguarde cinco minutos entre testes.'};
+ },
  async enable():Promise<{ok:boolean;message:string}>{
   if(!supabase)return {ok:false,message:'Entre na sua conta para ativar.'};
   if(!('Notification' in window)||!('PushManager' in window)||!('serviceWorker' in navigator))return {ok:false,message:'No iPhone, adicione pelo Safari à Tela de Início e abra pelo ícone. Este navegador pode não oferecer notificações push.'};

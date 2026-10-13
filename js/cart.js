@@ -42,6 +42,7 @@
     else items.push({ id: id, qty: Math.min(99, qty) });
     persist();
     render();
+    document.dispatchEvent(new CustomEvent("sg:store-intent", { detail: { kind: "cart", productId: id } }));
     return true;
   }
 

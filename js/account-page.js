@@ -465,7 +465,7 @@ export function mountAccountPage(root, _params, onClose) {
       '<div class="acp-grid">' +
         card("Tema e idioma", '<div class="acp-prefs" data-acp-prefs>' + (window.SG.prefsPanel ? window.SG.prefsPanel.html() : "") + "</div>") +
         card("Sua central de avisos", noticesResult.error ? '<p>Não foi possível carregar os avisos agora.</p>' : (noticesResult.data || []).length ? '<div class="acp-notices">' + noticesResult.data.map(function(n) { return '<article><small>' + esc(fmtDate(n.created_at)) + '</small><h3>' + esc(n.title) + '</h3><p>' + esc(n.body) + '</p></article>'; }).join('') + '</div>' : '<p class="acp-muted">Seus próximos avisos de pedidos, evolução e recompensas aparecem aqui.</p>') +
-        card("Notificações neste dispositivo", '<p class="acp-muted">No iPhone, instale pelo Safari e abra pelo ícone antes de ativar.</p><button class="acp-btn acp-btn--primary" type="button" data-acp-push>Ativar neste dispositivo</button><button class="acp-btn" type="button" data-acp-push-off>Desativar push</button><p data-push-msg role="status"></p>') +
+        card("Notificações neste dispositivo", '<p class="acp-muted">No iPhone, instale pelo Safari e abra pelo ícone antes de ativar.</p><button class="acp-btn acp-btn--primary" type="button" data-acp-push>Ativar neste dispositivo</button><button class="acp-btn" type="button" data-acp-push-off>Desativar push</button><button class="acp-btn" type="button" data-acp-push-test>Testar aviso na minha conta</button><p data-push-msg role="status"></p>') +
         card("Escolha seus avisos",
           '<p class="acp-muted">Escolha quais avisos quer receber. Ative o e-mail para receber os tipos escolhidos. No celular, autorize o push neste dispositivo.</p><button class="acp-btn acp-btn--primary" type="button" data-acp-enable-all>Ativar todos os avisos, incluindo novidades</button>' +
           '<div class="acp-toggles">' + NOTIF.map(function (n) {
@@ -580,8 +580,8 @@ export function mountAccountPage(root, _params, onClose) {
   });
 
   bodyEl.addEventListener("click", async function (e) {
-    var push=e.target.closest("[data-acp-push], [data-acp-push-off]");
-    if(push){push.disabled=true;try{var r=push.hasAttribute("data-acp-push-off")?{ok:await svc.push.disable(),message:""}:await svc.push.enable();var m=bodyEl.querySelector("[data-push-msg]");if(m)m.textContent=r.ok?r.message||"Push desativado nas preferências da conta.":r.message||"Não foi possível desativar agora.";}catch(_){toast("NÃO FOI POSSÍVEL ALTERAR AGORA");}finally{push.disabled=false;}return;}
+    var push=e.target.closest("[data-acp-push], [data-acp-push-off], [data-acp-push-test]");
+    if(push){push.disabled=true;try{var r=push.hasAttribute("data-acp-push-test")?await svc.push.test():push.hasAttribute("data-acp-push-off")?{ok:await svc.push.disable(),message:""}:await svc.push.enable();var m=bodyEl.querySelector("[data-push-msg]");if(m)m.textContent=r.ok?r.message||"Push desativado nas preferências da conta.":r.message||"Não foi possível desativar agora.";}catch(_){toast("NÃO FOI POSSÍVEL ALTERAR AGORA");}finally{push.disabled=false;}return;}
     var all = e.target.closest("[data-acp-enable-all]");
     if (!all) return;
     all.disabled = true;

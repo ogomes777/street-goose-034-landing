@@ -71,6 +71,7 @@
     var idx = ids.indexOf(id);
     if (idx === -1) {
       ids.push(id);
+      document.dispatchEvent(new CustomEvent("sg:store-intent", { detail: { kind: "favorite", productId: id } }));
       if (window.SG.toast) window.SG.toast("SALVO NOS FAVORITOS — " + p.name.toUpperCase());
     } else {
       ids.splice(idx, 1);

@@ -1,5 +1,6 @@
 import {PushService} from "../src/services/PushService.ts";
 import './install-app.css';
+import './live-activity.js';
 let installPrompt;
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 let registration;
@@ -9,7 +10,7 @@ window.addEventListener('appinstalled', refresh);
 const section = document.createElement('section');
 section.className = 'sg-install';
 section.setAttribute('aria-label', 'Street Goose na sua tela inicial');
-section.innerHTML = '<div><span class="sg-install-eyebrow">STREET GOOSE · SEMPRE PERTO</span><h2>Sua Street. Um toque de distância.</h2><p>Adicione o ícone à tela inicial para abrir sua conta, acompanhar pedidos e descobrir suas recompensas.</p></div><div class="sg-install-actions"><button type="button" data-install>Adicionar à tela inicial</button><button type="button" data-push>Ativar notificações neste dispositivo</button><a href="/conta">Escolher meus avisos por e-mail</a><p data-install-status role="status" aria-live="polite"></p></div>';
+section.innerHTML = '<div class="sg-install-story"><span class="sg-install-eyebrow">STREET GOOSE · SEU ACESSO EXCLUSIVO</span><div class="sg-install-emblem" aria-hidden="true"><span>034</span><i></i><i></i></div><h2>Sua Street.<br>Um toque de distância.</h2><p>Seu nível. Seus próximos drops. Cada conquista, mais perto de você.</p><ol class="sg-install-steps"><li><b>01</b><span>Adicione à tela inicial<small>Um ícone para abrir sua Street.</small></span></li><li><b>02</b><span>Autorize os avisos<small>Pedidos e conquistas, mesmo com o site fechado.</small></span></li><li><b>03</b><span>Escolha seus canais<small>Você decide quais avisos receber.</small></span></li></ol></div><div class="sg-install-actions"><span class="sg-install-eyebrow">SEU PRÓXIMO MOVIMENTO</span><button type="button" data-install>Adicionar à tela inicial <span aria-hidden="true">↗</span></button><button type="button" data-push>Ativar notificações neste dispositivo</button><a href="/conta">Escolher meus avisos por e-mail</a><p class="sg-install-footnote">No iPhone, adicione pelo Safari e abra pelo ícone. Em outros aparelhos, a instalação pode ser opcional para o push. A entrega depende da permissão e da conexão do dispositivo.</p><p data-install-status role="status" aria-live="polite"></p></div>';
 const footer = document.querySelector('footer');
 if (footer) footer.before(section); else document.body.append(section);
 function refresh() {
