@@ -30,9 +30,9 @@ export function attachAddressAssistant(form){
  localities().then(result=>{if(disposed)return;data=result;for(const [uf,name] of Object.entries(data.states).sort((a,b)=>a[1].localeCompare(b[1],'pt-BR'))){const o=option(uf,`${name} · ${uf}`);stateList.append(o);statePicker.append(option(uf,`${name} · ${uf}`));}updateCities();}).catch(()=>{if(!disposed){state.maxLength=2;state.pattern='[A-Za-z]{2}';state.placeholder='UF (ex.: MG)';}});
  async function lookup(){clearTimeout(timer);const cep=postalDigits(postal.value);controller?.abort();const request=++version;
   if(cep.length!==8){status.textContent='Informe os 8 dígitos do CEP, ou preencha o endereço manualmente.';button.disabled=false;return;}
-  controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),8000);const initial=Object.fromEntries(addressKeys.map(key=>[key,form.elements.namedItem(key)?.value||'']));
+  const requestController=new AbortController();controller=requestController;const timeout=setTimeout(()=>requestController.abort(),8000);const initial=Object.fromEntries(addressKeys.map(key=>[key,form.elements.namedItem(key)?.value||'']));
   status.textContent='Buscando endereço…';button.disabled=true;note.classList.add('is-loading');
-  try{const address=await lookupPostalCode(cep,controller.signal);if(disposed||request!==version||postalDigits(postal.value)!==cep)return;
+  try{const address=await lookupPostalCode(cep,requestController.signal);if(disposed||request!==version||postalDigits(postal.value)!==cep)return;
    for(const key of addressKeys){const input=form.elements.namedItem(key);if(input&&input.value===initial[key]){input.value=address[key];}}
    await updateCities();if(disposed||request!==version)return;status.textContent=address.street&&address.neighborhood?'Endereço encontrado. Confira os dados e informe o número.':'CEP encontrado. Complete a rua ou o bairro que não veio na consulta e informe o número.';
   }catch(error){if(!disposed&&request===version)status.textContent=error.name==='AbortError'?'A consulta demorou. Tente novamente ou preencha manualmente.':error.message||'Não foi possível consultar. Preencha manualmente.';}
