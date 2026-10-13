@@ -722,7 +722,7 @@ export function mountAccountPage(root, _params, onClose) {
 
   root.querySelector("[data-app-close]").addEventListener("click", onClose);
   // ESC com o editor de perfil (ou a quick view) aberto fecha só ele
-  function onKeydown(e) { if (e.key === "Escape" && !document.querySelector(".quickview.is-open, [data-pfe]")) onClose(); }
+  function onKeydown(e) { if (e.key === "Escape" && !bodyEl.querySelector('.sg-location-trigger[aria-expanded="true"]') && !document.querySelector(".quickview.is-open, [data-pfe]")) onClose(); }
   document.addEventListener("keydown", onKeydown, true);
 
   init();
