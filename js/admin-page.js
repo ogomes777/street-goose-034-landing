@@ -1,3 +1,4 @@
+import "./admin-customer.css";
 /* Street Goose 034 — /admin, painel do lojista: pedidos, clientes,
    moderação da comunidade, cupons/recompensas e newsletter.
    A UI só pergunta is_admin() para decidir o que mostrar — quem protege os
@@ -1281,6 +1282,7 @@ export function mountAdminPage(root, _params, onClose) {
     return '<div class="admin-toolbar">' +
       '<label class="admin-search"><span class="sr-only">Buscar clientes</span><input type="search" data-search="customers" placeholder="Nome, e-mail ou @apelido" value="' + esc(state.customerSearch) + '" autocomplete="off"></label>' +
       '<button class="btn btn-ghost admin-export" type="button" data-action="export-customers">Exportar CSV</button>' +
+    '<div data-notification-controls></div>' +
     "</div>";
   }
 
@@ -1293,6 +1295,17 @@ export function mountAdminPage(root, _params, onClose) {
     if (stale("customers", n)) return;
     if (!res.ok) { el.innerHTML = errorState(res.message, "customers"); return; }
     state.customers = res.data;
+    var controls = bodyEl.querySelector("[data-notification-controls]");
+    if (controls) {
+      try {
+        var supaControls = (await import("../src/lib/supabase.ts")).supabase;
+        var controlsResult = await supaControls.from("notification_controls").select("kind,enabled");
+        if (!stale("customers", n) && !controlsResult.error) {
+          var controlLabels = {orderUpdates:"Pedidos",levelUp:"Evolução de nível",rewardUnlocked:"Recompensas",couponUnlocked:"Cupons",postApproved:"Comunidade",newsletter:"Novidades"};
+          controls.innerHTML = '<p class="admin-note">Avisos na central do cliente · a escolha individual de cada cliente também é respeitada.</p>' + (controlsResult.data || []).map(function(c){return '<label class="admin-notification-control"><input type="checkbox" data-admin-notification="' + esc(c.kind) + '"' + (c.enabled ? ' checked' : '') + '> ' + esc(controlLabels[c.kind] || c.kind) + '</label>';}).join('');
+        }
+      } catch (_) {}
+    }
     if (!state.customers.length) { el.innerHTML = emptyState(state.customerSearch ? "Nenhum cliente encontrado." : "Nenhum cliente cadastrado ainda."); return; }
     var rows = state.customers.slice(0, MAX_ROWS);
     el.innerHTML =
@@ -1310,6 +1323,7 @@ export function mountAdminPage(root, _params, onClose) {
           '<td data-label="XP"><span class="admin-cell">' + c.total_xp + " <small>nível " + c.level + "</small></span></td>" +
           '<td data-label="Marcas" class="admin-table-tags"><span class="admin-cell">' + (tags.join("") || '<small>—</small>') + "</span></td>" +
           '<td data-label="Ações"><span class="admin-cell admin-cust-actions">' +
+            '<button class="admin-text-btn" type="button" data-action="cust-details" data-id="' + c.id + '">Ficha do cliente</button>' +
             '<button class="admin-text-btn" type="button" data-action="cust-orders" data-value="' + esc(c.email) + '">Pedidos</button>' +
             '<button class="admin-text-btn" type="button" data-action="cust-new-order" data-id="' + c.id + '">Novo pedido</button>' +
             '<button class="admin-text-btn" type="button" data-action="cust-xp" data-id="' + c.id + '">Ajustar XP</button>' +
@@ -1771,6 +1785,19 @@ export function mountAdminPage(root, _params, onClose) {
     if (panel && panel.scrollIntoView) panel.scrollIntoView({ block: "start", behavior: reducedMotion() ? "auto" : "smooth" });
   }
 
+  bodyEl.addEventListener("change", async function(e) {
+    var toggle = e.target.closest("[data-admin-notification]");
+    if(!toggle) return;
+    toggle.disabled = true;
+    try {
+      var db = (await import("../src/lib/supabase.ts")).supabase;
+      var savedControl = await db.from("notification_controls").update({enabled:toggle.checked}).eq("kind",toggle.getAttribute("data-admin-notification")).select("kind").single();
+      if(savedControl.error) throw savedControl.error;
+      toast("CONTROLE SALVO");
+    } catch (_) {toggle.checked=!toggle.checked;toast("NÃO FOI POSSÍVEL SALVAR");}
+    finally {toggle.disabled=false;}
+  });
+
   async function onClick(e) {
     var tabBtn = e.target.closest("[data-admin-tab]");
     if (tabBtn) { selectTab(tabBtn.getAttribute("data-admin-tab")); return; }
@@ -1823,6 +1850,20 @@ export function mountAdminPage(root, _params, onClose) {
       var cust = state.customers.find(function (c) { return c.id === id; });
       state.newOrderPrefill = cust ? { name: cust.display_name || "", email: cust.email || "", account: cust.email || "" } : null;
       selectTab("pedidos");
+    }
+    else if (action === "cust-details") {
+      btn.disabled = true;
+      try {
+        var client = (await import("../src/lib/supabase.ts")).supabase;
+        var detailResult = await client.from("customer_details").select("full_name,phone,birthday,postal_code,street,address_number,complement,neighborhood,city,state,updated_at").eq("user_id", id).maybeSingle();
+        if (detailResult.error) throw detailResult.error;
+        if (destroyed || !btn.isConnected) return;
+        var oldDetail = list("customers").querySelector(".admin-customer-detail"); if(oldDetail) oldDetail.remove();
+        var d = detailResult.data;
+        var labels = {full_name:"Nome completo",phone:"Celular",birthday:"Nascimento",postal_code:"CEP",street:"Rua",address_number:"Número",complement:"Complemento",neighborhood:"Bairro",city:"Cidade",state:"UF"};
+        btn.closest("tr").insertAdjacentHTML("afterend", '<tr class="admin-customer-detail"><td colspan="7"><div class="admin-private-card"><span class="admin-tag">FICHA PRIVADA · STREET GOOSE</span><h3>Conheça seu cliente</h3><p>Informações compartilhadas pelo cliente. Acesso exclusivo da equipe.</p>' + (d ? '<dl>' + Object.keys(labels).map(function(k){return '<div><dt>' + labels[k] + '</dt><dd>' + esc(d[k] || "Não informado") + '</dd></div>';}).join('') + '</dl>' : '<p>O cliente ainda não preencheu a ficha pessoal.</p>') + '</div></td></tr>');
+      } catch(err) { toast("NÃO FOI POSSÍVEL CARREGAR A FICHA"); }
+      finally { btn.disabled = false; }
     }
     else if (action === "cust-xp") { openXpForm(btn, id); }
     else if (action === "xp-cancel") { var xpRow = btn.closest(".admin-xp-row"); if (xpRow) xpRow.remove(); }

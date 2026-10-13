@@ -1,0 +1,4 @@
+.admin-private-card{padding:28px;border:1px solid #ba96534d;border-radius:20px;background:linear-gradient(130deg,#ba965312,transparent)}.admin-private-card h3{font-size:24px;margin:14px 0}.admin-private-card p{opacity:.7}.admin-private-card dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:24px}.admin-private-card dt{font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:.6}.admin-private-card dd{margin:6px 0;overflow-wrap:anywhere}@media(max-width:650px){.admin-private-card dl{grid-template-columns:1fr 1fr}.admin-private-card{padding:20px}}
+.admin-notification-control{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;margin:4px;border:1px solid #ba965340;border-radius:10px;font-size:12px}
+
+[data-notification-controls]{flex-basis:100%;width:100%}

@@ -233,6 +233,7 @@ export function mountAccountPage(root, _params, onClose) {
       { tab: "coupons", icon: "coupons", n: coupons, label: "Cupons" }
     ];
     panel.innerHTML =
+      '<div class="acp-onboarding"><div><small>SEU UNIVERSO STREET GOOSE</small><h2>Uma experiência com a sua assinatura.</h2><p>Complete sua ficha pessoal e escolha os avisos que fazem sentido para você.</p></div><div><button class="acp-btn acp-btn--primary" type="button" data-acp-tab="profile">Completar meus dados</button><button class="acp-btn" type="button" data-acp-tab="prefs">Configurar avisos</button></div></div>' +
       '<div class="acp-stats">' + stats.map(function (s, i) {
         return '<button class="acp-stat" type="button" data-acp-tab="' + s.tab + '" style="--i:' + i + '">' + ico(s.icon) + "<b>" + s.n + "</b><span>" + esc(s.label) + "</span></button>";
       }).join("") + "</div>" +
@@ -406,7 +407,14 @@ export function mountAccountPage(root, _params, onClose) {
         : '<p class="acp-muted">Nenhuma recompensa ativa no momento.</p>');
   }
 
-  function tabProfile(panel) {
+  async function tabProfile(panel) {
+    var customer = await import("../src/services/CustomerService.ts");
+    svc.customer = customer.CustomerService;
+    var details;
+    try { details = await svc.customer.getMine(); } catch (err) { panel.innerHTML = card("Dados pessoais", "Não foi possível carregar. Abra o perfil novamente para tentar."); return; }
+    if (destroyed || activeTab !== "profile") return;
+    data.details = details;
+    var privateFields = [["full_name", "Nome completo", "text", "name"], ["phone", "Celular / WhatsApp", "tel", "tel"], ["birthday", "Nascimento (opcional)", "date", "bday"], ["postal_code", "CEP", "text", "postal-code"], ["street", "Rua / avenida", "text", "address-line1"], ["address_number", "Número", "text", "off"], ["complement", "Complemento", "text", "address-line2"], ["neighborhood", "Bairro", "text", "off"], ["city", "Cidade", "text", "address-level2"], ["state", "Estado (UF)", "text", "address-level1"]];
     var id = identity();
     var current = (data.profile && data.profile.displayName) || (session.user.user_metadata || {}).name || "";
     var handle = data.profile && data.profile.publicHandle;
@@ -419,10 +427,12 @@ export function mountAccountPage(root, _params, onClose) {
               "<small>Foto, @ e bio que aparecem na SG Community, nos comentários e no ranking.</small></div>" +
             '<button class="acp-btn acp-btn--primary" type="button" data-acp-edit-public>Editar perfil público</button>' +
           "</div>") +
-        card("Dados pessoais",
+        card("Seu perfil, sua experiência",
+          '<p class="acp-muted">Uma experiência feita para você. Preencha apenas o que quiser compartilhar com a loja. Estes dados não aparecem no ranking público.</p>' +
           '<form class="acp-form" data-profile-form novalidate>' +
             '<label class="acp-field"><span>Nome de exibição</span><input name="display_name" value="' + esc(current) + '" maxlength="80" autocomplete="name" required></label>' +
             '<label class="acp-field"><span>E-mail</span><input value="' + esc(id.email) + '" readonly aria-readonly="true"></label>' +
+            '<div class="acp-private-fields">' + privateFields.map(function (f) { return '<label class="acp-field"><span>' + f[1] + '</span><input name="' + f[0] + '" type="' + f[2] + '" autocomplete="' + f[3] + '" value="' + esc(details[f[0]] || '') + '"' + (f[0] === 'state' ? ' maxlength="2" pattern="[A-Za-z]{2}"' : f[0] === 'birthday' ? ' max="' + new Date().toISOString().slice(0,10) + '"' : ' maxlength="' + ({full_name:120,phone:25,postal_code:12,street:160,address_number:20,complement:100,neighborhood:100,city:100}[f[0]] || 100) + '"') + '></label>'; }).join('') + '</div>' +
             '<small class="acp-help">O e-mail é o da sua forma de login e não muda por aqui.</small>' +
             '<p class="acp-form-msg" data-profile-msg role="status"></p>' +
             '<button class="acp-btn acp-btn--primary" type="submit">Salvar alterações</button>' +
@@ -438,13 +448,17 @@ export function mountAccountPage(root, _params, onClose) {
   }
 
   async function tabPrefs(panel) {
+    var noticesResult = await supa.from("customer_notifications").select("id,title,body,created_at,read_at").order("created_at", {ascending:false}).limit(30);
+    if (destroyed || activeTab !== "prefs") return;
     var prefs = await svc.notif.getMine();
     if (destroyed) return;
     data.notif = prefs;
     panel.innerHTML =
       '<div class="acp-grid">' +
         card("Tema e idioma", '<div class="acp-prefs" data-acp-prefs>' + (window.SG.prefsPanel ? window.SG.prefsPanel.html() : "") + "</div>") +
-        card("Notificações",
+        card("Sua central de avisos", noticesResult.error ? '<p>Não foi possível carregar os avisos agora.</p>' : (noticesResult.data || []).length ? '<div class="acp-notices">' + noticesResult.data.map(function(n) { return '<article><small>' + esc(fmtDate(n.created_at)) + '</small><h3>' + esc(n.title) + '</h3><p>' + esc(n.body) + '</p></article>'; }).join('') + '</div>' : '<p class="acp-muted">Seus próximos avisos de pedidos, evolução e recompensas aparecem aqui.</p>') +
+        card("Escolha seus avisos",
+          '<p class="acp-muted">Escolha quais avisos quer receber. A central funciona dentro da conta; push e avisos automáticos por e-mail ainda aguardam ativação do servidor.</p><button class="acp-btn acp-btn--primary" type="button" data-acp-enable-all>Ativar todos os avisos, incluindo novidades</button>' +
           '<div class="acp-toggles">' + NOTIF.map(function (n) {
             return '<label class="acp-toggle"><span><b>' + esc(n.label) + "</b><small>" + esc(n.hint) + '</small></span><input type="checkbox" data-acp-notif="' + n.key + '"' + (prefs[n.key] ? " checked" : "") + '><span class="acp-switch-ui" aria-hidden="true"></span></label>';
           }).join("") + "</div>" +
@@ -556,6 +570,18 @@ export function mountAccountPage(root, _params, onClose) {
     else toast("PREFERÊNCIA SALVA");
   });
 
+  bodyEl.addEventListener("click", async function (e) {
+    var all = e.target.closest("[data-acp-enable-all]");
+    if (!all) return;
+    all.disabled = true;
+    var allPrefs = Object.fromEntries(NOTIF.map(function(n) {return [n.key,true];}));
+    var saved = await svc.notif.updateMine(allPrefs);
+    if(destroyed) return;
+    all.disabled = false;
+    if(saved) { bodyEl.querySelectorAll("[data-acp-notif]").forEach(function(input){input.checked=true;}); toast("PREFERÊNCIAS ATIVADAS"); }
+    else toast("NÃO FOI POSSÍVEL SALVAR");
+  });
+
   bodyEl.addEventListener("submit", async function (e) {
     var rank = e.target.closest("[data-ranking-form]");
     var prof = e.target.closest("[data-profile-form]");
@@ -592,7 +618,13 @@ export function mountAccountPage(root, _params, onClose) {
       var pmsg = form.querySelector("[data-profile-msg]");
       var name = form.querySelector('[name="display_name"]').value.trim();
       if (name.length < 2 || name.length > 80 || /[<>]/.test(name)) { pmsg.textContent = "Use de 2 a 80 caracteres, sem < ou >."; return; }
+      if (!form.reportValidity()) return;
       btn.disabled = true;
+      var customerInput = Object.fromEntries(new FormData(form));
+      customerInput.state = String(customerInput.state || "").toUpperCase();
+      var privateOk = false;
+      try { privateOk = await svc.customer.saveMine(customerInput); } catch (err) {}
+      if (!privateOk) { btn.disabled = false; pmsg.textContent = "Não foi possível salvar seus dados. Tente novamente."; return; }
       var ok = await svc.profile.updatePreferences({ displayName: name });
       // espelha no login pra o header e o menu mostrarem o nome novo
       try { if (ok && supa) await supa.auth.updateUser({ data: { name: name } }); } catch (err) {}
