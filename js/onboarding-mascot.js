@@ -3,12 +3,19 @@ export function mountOnboardingMascot(dialog,figure) {
   const header=dialog.querySelector('header');
   const form=dialog.querySelector('form');
   const image=figure.querySelector('img');
+  const motion=document.createElement('span');motion.className='sg-goose-motion';
+  image.before(motion);motion.append(image);
+  const wing=image.cloneNode();wing.className='sg-goose-wing';wing.setAttribute('aria-hidden','true');
+  motion.append(wing);
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const fine=matchMedia('(hover: hover) and (pointer: fine)');
   const gsap=window.gsap;
   let disposed=false,visible=true,entered=false,gesture=null;
   const paused=()=>disposed||!visible||document.hidden||reduced.matches;
-  function syncPause(){figure.classList.toggle('is-paused',paused());}
+  function syncPause(){
+    figure.classList.toggle('is-paused',paused());
+    if(paused())gesture?.pause();else gesture?.resume();
+  }
   function enter(){
     if(disposed||entered||!image.complete||!image.naturalWidth)return;
     entered=true;
@@ -28,7 +35,10 @@ export function mountOnboardingMascot(dialog,figure) {
   function guide(){
     if(paused()||!gsap)return;
     gesture?.kill();
-    gesture=gsap.timeline().to(figure,{rotationY:-5,duration:.28,ease:'power2.out'}).to(figure,{rotationY:0,duration:.5,ease:'power3.out'});
+    gesture=gsap.timeline()
+      .to(wing,{'--goose-wing-nudge':'-9deg',duration:.35,ease:'power2.out'})
+      .to(wing,{'--goose-wing-nudge':'3deg',duration:.35,ease:'power2.inOut'})
+      .to(wing,{'--goose-wing-nudge':'0deg',duration:.55,ease:'power3.out'});
   }
   function fail(){if(disposed)return;figure.hidden=true;header.classList.add('sg-mascot-unavailable');}
   const observer='IntersectionObserver' in window?new IntersectionObserver(entries=>{
@@ -46,6 +56,7 @@ export function mountOnboardingMascot(dialog,figure) {
   return()=>{
     disposed=true;observer?.disconnect();gesture?.kill();
     gsap?.killTweensOf(figure);
+    gsap?.killTweensOf(wing);
     header.removeEventListener('pointermove',pointer);
     header.removeEventListener('pointerleave',reset);
     form.removeEventListener('focusin',guide);

@@ -217,8 +217,47 @@
 .sg-onboard.sg-onboard .sg-onboard-notifications,
 .sg-onboard.sg-onboard .sg-address-note { border-left: 3px solid var(--street-spray); }
 @keyframes sg-onboard-goose-float {
-  0%,100% { transform: translateY(0) rotate(-.5deg); }
-  50% { transform: translateY(-5px) rotate(.5deg); }
+  0%,100% { transform: translateY(2px) rotate(-1deg); }
+  50% { transform: translateY(-11px) rotate(1deg); }
+}
+
+/* O corpo flutua em uma camada; a asa aberta apresenta a ficha em outra. */
+.sg-onboard.sg-onboard .sg-goose-motion {
+  position: relative;
+  display: block;
+  animation: sg-onboard-goose-float 4.8s ease-in-out infinite;
+  transform-origin: 50% 85%;
+}
+.sg-onboard.sg-onboard .sg-goose-motion img { animation: none; }
+.sg-onboard.sg-onboard .sg-goose-wing { display: none; }
+@supports (clip-path: polygon(evenodd,0 0,100% 0,100% 100%,0 100%)) {
+  .sg-onboard.sg-onboard .sg-goose-motion > img:first-child {
+    clip-path: polygon(evenodd,0 0,100% 0,100% 100%,0 100%,0 0,1% 38%,8% 38%,15% 40%,23% 43%,23% 49%,17% 54%,0 55%,0 42%,1% 38%);
+  }
+  .sg-onboard.sg-onboard .sg-goose-motion .sg-goose-wing {
+    display: block;
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    max-height: none;
+    clip-path: polygon(1% 38%,8% 38%,15% 40%,23% 43%,23% 49%,17% 54%,0 55%,0 42%);
+    transform-origin: 22% 46%;
+    animation: sg-goose-present 5.8s ease-in-out infinite;
+    filter: none;
+  }
+}
+@keyframes sg-goose-present {
+  0%,45%,100% { transform: rotate(calc(var(--goose-wing-nudge,0deg) + 0deg)); }
+  57% { transform: rotate(calc(var(--goose-wing-nudge,0deg) - 8deg)); }
+  69% { transform: rotate(calc(var(--goose-wing-nudge,0deg) + 3deg)); }
+  81% { transform: rotate(calc(var(--goose-wing-nudge,0deg) - 5deg)); }
+  92% { transform: rotate(calc(var(--goose-wing-nudge,0deg) + 0deg)); }
+}
+.sg-onboard.sg-onboard .sg-onboard-mascot.is-paused .sg-goose-motion,
+.sg-onboard.sg-onboard .sg-onboard-mascot.is-paused .sg-goose-wing { animation-play-state: paused; }
+@media(prefers-reduced-motion:reduce) {
+  .sg-onboard.sg-onboard .sg-goose-motion,
+  .sg-onboard.sg-onboard .sg-goose-motion .sg-goose-wing { animation: none; }
 }
 @keyframes sg-goose-reflection {
   0%,70% { background-position: 120% 0; opacity: 0; }
