@@ -1,3 +1,4 @@
+import { mountCrmAssistant } from "./crm-assistant.js";
 import "./admin-customer.css";
 /* Street Goose 034 — /admin, painel do lojista: pedidos, clientes,
    moderação da comunidade, cupons/recompensas e newsletter.
@@ -42,7 +43,7 @@ export function mountAdminPage(root, _params, onClose) {
   };
   var POLL_MS = 20000;
   var pollTimer = null, liveTimer = null, lastSync = 0;
-  var finance = null;
+  var finance = null, disposeAssistant = null;
 
   var svc = null, money = null, csv = null, imageLib = null;
   var destroyed = false;
@@ -149,6 +150,7 @@ export function mountAdminPage(root, _params, onClose) {
 
   // ---------- gate ----------
   async function gate() {
+    if (disposeAssistant) { disposeAssistant(); disposeAssistant = null; }
     await loadDeps();
     if (destroyed) return;
     if (!svc.isConfigured()) {
@@ -191,6 +193,7 @@ export function mountAdminPage(root, _params, onClose) {
   // ---------- shell ----------
   function renderShell() {
     bodyEl.innerHTML =
+      '<div data-crm-assistant></div>' +
       '<div class="admin-kpis" data-admin-kpis aria-live="polite">' + kpiSkeleton() + "</div>" +
       '<div class="admin-tabs" role="tablist" aria-label="Seções do painel">' +
         '<span class="admin-tab-ink" data-tab-ink aria-hidden="true"></span>' +
@@ -202,6 +205,8 @@ export function mountAdminPage(root, _params, onClose) {
         }).join("") +
       "</div>" +
       '<section class="admin-panel" id="admin-panel" role="tabpanel" aria-labelledby="admin-tab-' + state.tab + '" data-admin-panel></section>';
+    if (disposeAssistant) disposeAssistant();
+    disposeAssistant = mountCrmAssistant(bodyEl.querySelector("[data-crm-assistant]"));
     greet();
     loadOverview();
     renderPanel();
@@ -2062,6 +2067,7 @@ export function mountAdminPage(root, _params, onClose) {
 
   return function destroy() {
     destroyed = true;
+    if (disposeAssistant) { disposeAssistant(); disposeAssistant = null; }
     Object.values(state.photoDraft).forEach(function (photos) { photos.forEach(releasePhoto); });
     clearTimeout(searchTimer);
     if (unsubscribeAuth) unsubscribeAuth();
