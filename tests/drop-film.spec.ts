@@ -143,14 +143,15 @@ test('knees flex before the hand releases, and headline reveals with a light swe
     const tl = film._dropTimeline;
     const at = (t: number) => {
       tl.seek(t, false);
-      return {crouch:Number(film.dataset.crouch),flight:Number(film.dataset.throw),transform:lupa.style.transform,wordTransform:word.style.transform,color:getComputedStyle(word).color,shine:word.style.getPropertyValue('--shine')};
+      return {jump:Number(film.dataset.jump),crouch:Number(film.dataset.crouch),flight:Number(film.dataset.throw),transform:lupa.style.transform,wordTransform:word.style.transform,color:getComputedStyle(word).color,shine:word.style.getPropertyValue('--shine')};
     };
-    return {start:at(.3),standing:at(1.6),crouched:at(2.7),released:at(3.6),approaching:at(4.5)};
+    return {start:at(.3),standing:at(.6),crouched:at(1.18),released:at(2.4),approaching:at(3.45)};
   });
   expect(states.start.wordTransform).toMatch(/112%/);
   expect(states.crouched.crouch).toBeGreaterThan(.85);
   expect(states.crouched.flight).toBe(0);
-  expect(states.crouched.transform).toContain('scale(0.14)');
+  expect(Number(states.crouched.transform.match(/scale\(([^)]+)/)![1])).toBeLessThan(.15);
+  expect(states.released.jump).toBeLessThan(-10);
   expect(states.released.crouch).toBe(0);
   expect(states.released.flight).toBeGreaterThan(0);
   expect(states.approaching.flight).toBeGreaterThan(.95);
@@ -175,4 +176,34 @@ test('loss of GPU support keeps the articulated canvas scene and valid destinati
   await page.locator('[data-drop-skip]').click();
   await page.locator('.sg-drop-lupa').click();
   await expect(page).toHaveURL(/\/categoria\/lupas$/);
+});
+
+
+test('portal and floating light continue after the throw, pause while hidden, and clean up on close', async ({ page }) => {
+  await enter(page, true);
+  await expect(page.locator('[data-drop-film]')).toHaveClass(/is-settled/, {timeout:6500});
+  const read = () => page.evaluate(() => ({
+    portal: (document.querySelector('.sg-drop-portal > span') as HTMLElement).style.transform,
+    product: (document.querySelector('.sg-drop-product') as HTMLElement).style.transform,
+    orbit: (document.querySelector('.sg-drop-product-orbit i') as HTMLElement).style.transform,
+    hitbox: (document.querySelector('.sg-drop-lupa') as HTMLElement).style.transform
+  }));
+  const before = await read();
+  await expect.poll(async () => (await read()).portal).not.toBe(before.portal);
+  await expect.poll(async () => (await read()).product).not.toBe(before.product);
+  await expect.poll(async () => (await read()).orbit).not.toBe(before.orbit);
+  expect((await read()).hitbox).toBe('');
+  const paused = await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable:true, value:true});
+    document.dispatchEvent(new Event('visibilitychange'));
+    return (document.querySelector('[data-drop-film]') as any)._dropAmbient.paused();
+  });
+  expect(paused).toBe(true);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', {configurable:true, value:false});
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.keyboard.press('Escape');
+  expect(await page.evaluate(() => (document.querySelector('[data-drop-film]') as any)._dropAmbient)).toBe(null);
+  expect(await page.evaluate(() => document.body.style.position)).toBe('');
 });
