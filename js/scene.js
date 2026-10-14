@@ -29,7 +29,7 @@
     // o canvas do viewport geométrico, então sem esse flag explícito a cena
     // continuaria rendendo escondida atrás, competindo por GPU com o vídeo
     // em scrub da categoria
-    var overlayOpen = document.body.classList.contains("category-page-open");
+    var overlayOpen = document.body.classList.contains("category-page-open") || document.body.classList.contains("sg-entry-popup-open");
 
     var io = "IntersectionObserver" in window ? new IntersectionObserver(function (entries) {
       visible = entries[0].isIntersecting;

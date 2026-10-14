@@ -26,6 +26,8 @@
  <link rel="preload" as="video" href="assets/INTRO-LOADER-STREET-small.mp4" type="video/mp4" />
 
  <link rel="stylesheet" href="styles.css" />
+ <link rel="stylesheet" href="/js/drop-film.css" />
+ <link rel="preload" as="image" href="/brand/drop-lupa-034.webp" fetchpriority="high" />
 <link rel="manifest" href="/manifest.webmanifest">
  <meta name="theme-color" content="#111111">
  <link rel="apple-touch-icon" href="/icons/street-192.png">
@@ -52,7 +54,7 @@
       var introVideo = document.querySelector("[data-intro-video]");
       var introAudio = document.querySelector("[data-intro-audio]");
       if (!intro || !skip) return;
-      var introShouldShow = true;
+      var introShouldShow = window.location.pathname === "/";
       window.addEventListener('pageshow', function(event){
         if(event.persisted && window.matchMedia('(pointer: coarse)').matches) window.location.reload();
       });
@@ -475,12 +477,35 @@
   <!-- POPUP / DROP -->
   <div class="popup" data-popup aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="popup-title">
  <div class="popup-backdrop" data-close-popup></div>
- <article class="popup-card popup-card--banner">
- <h2 id="popup-title" class="sr-only">Seu visual pede assinatura. alta performance, acabamento premium, presença real.</h2>
- <img class="popup-banner-img" src="assets/banners/popup-street-goose-drop-orange.png" alt="Street Goose 034: seu visual pede assinatura. Alta performance, acabamento premium, presença real. 1 lupa por R$140, 2 lupas por R$260." loading="lazy" width="941" height="1672">
- <button class="popup-close" type="button" data-close-popup aria-label="Fechar"></button>
- <a class="popup-hit popup-hit--cta" href="#colecao" data-close-popup aria-label="Entrar na coleção"></a>
- <button class="popup-hit popup-hit--dismiss" type="button" data-close-popup aria-label="Continuar navegando"></button>
+ <article class="popup-card sg-drop-film" data-drop-film>
+ <button class="popup-close" type="button" data-close-popup aria-label="Fechar promoção">×</button>
+ <div class="sg-drop-scene">
+  <div class="sg-drop-portal" aria-hidden="true"><span></span><i></i></div>
+  <div class="sg-drop-floor" aria-hidden="true"></div>
+  <div class="sg-drop-goose" aria-hidden="true">
+   <div class="sg-drop-pose" data-drop-pose><img src="/brand/onboarding-goose-034.webp" width="560" height="840" alt="" decoding="async" fetchpriority="low"></div>
+  </div>
+  <div class="sg-drop-trail" aria-hidden="true"></div>
+  <div class="sg-drop-particles" data-drop-particles aria-hidden="true"></div>
+  <a class="sg-drop-lupa" href="/categoria/lupas" data-drop-promotion data-close-popup aria-label="Ver promoção de lupas Street Goose 034">
+   <img src="/brand/drop-lupa-034.webp" width="1000" height="350" alt="Lupa de armação cinza e lentes espelhadas laranja" decoding="async" fetchpriority="high">
+  </a>
+  <span class="sg-drop-scene-label" aria-hidden="true">034 / VISÃO DE RUA</span>
+  <button class="sg-drop-skip" type="button" data-drop-skip>Pular animação ↗</button>
+ </div>
+ <div class="sg-drop-copy">
+  <p class="sg-drop-brand">STREET GOOSE <span>034</span></p>
+  <p class="sg-drop-eyebrow">O PRÓXIMO MOVIMENTO É SEU.</p>
+  <h2 id="popup-title">Seu visual.<br><em>Sua assinatura.</em></h2>
+  <p class="sg-drop-description">Presença que você vê.<br>Atitude que você veste.</p>
+  <div class="sg-drop-prices" aria-label="Promoção: uma lupa por 140 reais, duas lupas por 260 reais">
+   <div><span>1 LUPA</span><strong><small>R$</small>140</strong></div>
+   <div><span>2 LUPAS</span><strong><small>R$</small>260</strong><b>ECONOMIZE R$ 20</b></div>
+  </div>
+  <a class="sg-drop-cta" href="/categoria/lupas" data-drop-promotion data-close-popup>Ver a promoção <span aria-hidden="true">↗</span></a>
+  <p class="sg-drop-hint">Toque na lupa e encontre sua assinatura.</p>
+  <button class="sg-drop-dismiss" type="button" data-close-popup>Continuar navegando</button>
+ </div>
  </article>
  </div>
 
@@ -562,6 +587,7 @@
  </div>
 
   <script type="module" src="/js/intro-entry.js"></script>
+  <script defer src="/entry-popup.js?v=20261014"></script>
   <script type="module" src="/src/main.tsx"></script>
 <script type="module" src="/js/install-app.js"></script>
 </body>

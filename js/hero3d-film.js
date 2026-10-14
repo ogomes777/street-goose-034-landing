@@ -254,7 +254,7 @@
     // overlay position:fixed (categoria/busca/carrinho...) cobre a tela sem
     // tirar a seção do viewport geométrico do IntersectionObserver — sem
     // esse flag o canvas continuaria desenhando escondido atrás dele
-    var pOverlayOpen = document.body.classList.contains("category-page-open");
+    var pOverlayOpen = document.body.classList.contains("category-page-open") || document.body.classList.contains("sg-entry-popup-open");
     window.addEventListener("sg:overlay", function (e) {
       pOverlayOpen = !!(e.detail && e.detail.open);
       syncParticleLoop();

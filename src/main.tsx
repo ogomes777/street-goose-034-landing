@@ -62,7 +62,6 @@ async function bootstrap() {
   await import("../js/hero3d-film.js");
   await import("../js/product-universe.js");
   await import("../js/drift-product.js");
-  await import("../js/popup.js");
   await import("../js/checkout.js");
   await import("../js/community-home.js");
   await import("../js/main.js");
