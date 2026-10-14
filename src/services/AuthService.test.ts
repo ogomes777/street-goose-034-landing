@@ -9,6 +9,16 @@ describe('email authentication', () => {
     expect(await AuthService.sendEmailCode('user@example.com', 'captcha')).toEqual({ ok: true });
     expect(auth.signInWithOtp).toHaveBeenCalledWith({ email: 'user@example.com', options: { shouldCreateUser: false, emailRedirectTo: 'https://www.streetgoose034.com.br/', captchaToken: 'captcha' } });
   });
+  it('explains how to register when OTP cannot create an account', async () => {
+    auth.signInWithOtp.mockResolvedValue({ error: { code: 'signup_disabled', message: 'Signups not allowed for otp' } });
+    const result = await AuthService.sendEmailCode('new@example.com', 'captcha');
+    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({ message: expect.stringContaining('Criar conta') });
+  });
+  it('asks for a fresh challenge when CAPTCHA fails', async () => {
+    auth.signInWithOtp.mockResolvedValue({ error: { code: 'captcha_failed', message: 'captcha failed' } });
+    expect(await AuthService.sendEmailCode('user@example.com', 'expired')).toMatchObject({ ok: false, message: expect.stringContaining('Confirme novamente') });
+  });
   it('does not report login success without a session', async () => {
     auth.verifyOtp.mockResolvedValue({ data: { session: null }, error: null });
     expect((await AuthService.verifyEmailCode('user@example.com', '123456')).ok).toBe(false);

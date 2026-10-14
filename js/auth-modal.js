@@ -69,7 +69,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
   }
 
   function formHtml() {
-    if (mode === "emailCode") return '<div class="auth-modal-panel"><button class="popup-close" type="button" data-auth-close aria-label="Fechar">×</button><h2>Entrar por e-mail</h2><p>Use o código enviado para sua conta.</p><form class="auth-form" data-code-form><label>E-mail<input name="email" type="email" required autocomplete="email" value="' + window.SG.esc(codeEmail) + '"></label><label>Código<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" minlength="6" maxlength="8"></label><div data-auth-captcha></div><p class="auth-error" data-auth-error role="status" hidden></p><button class="btn btn-primary" type="button" data-send-code>Enviar código</button><button class="btn btn-primary" type="submit">Confirmar código</button></form><button class="text-link" data-code-back type="button">Voltar ao login</button></div>';
+    if (mode === "emailCode") return '<div class="auth-modal-panel"><button class="popup-close" type="button" data-auth-close aria-label="Fechar">×</button><h2>Entrar por e-mail</h2><p>Já tem conta? Receba um código por e-mail. No primeiro acesso, crie sua conta.</p><form class="auth-form" data-code-form><label>E-mail<input name="email" type="email" required autocomplete="email" value="' + window.SG.esc(codeEmail) + '"></label><label>Código<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" minlength="6" maxlength="8"></label><div data-auth-captcha></div><p class="auth-error" data-auth-error role="status" hidden></p><button class="btn btn-primary" type="button" data-send-code>Enviar código</button><button class="btn btn-primary" type="submit">Confirmar código</button></form><button class="text-link" data-code-signup type="button">Criar conta</button><button class="text-link" data-code-back type="button">Voltar ao login</button></div>';
     var isSignUp = mode === "signUp";
     return (
       '<div class="auth-modal-panel">' +
@@ -140,6 +140,11 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
   function bindCodeForm() {
     overlay.querySelector("[data-auth-close]").addEventListener("click", close);
     overlay.querySelector("[data-code-back]").addEventListener("click", function () { mode = "signIn"; render(); });
+    overlay.querySelector("[data-code-signup]").addEventListener("click", function () {
+      var email = overlay.querySelector('[name="email"]').value.trim();
+      mode = "signUp"; render();
+      overlay.querySelector('[name="email"]').value = email;
+    });
     var form = overlay.querySelector("[data-code-form]");
     var send = overlay.querySelector("[data-send-code]");
     send.addEventListener("click", async function () {

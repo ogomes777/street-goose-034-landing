@@ -47,7 +47,16 @@ export const AuthService = {
   async sendEmailCode(email: string, captchaToken?: string | null): Promise<AuthResult> {
     if (!supabase) return { ok: false, reason: "not_configured", message: "Login por e-mail indisponível." };
     const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: window.location.origin + "/", ...(captchaToken ? { captchaToken } : {}) } });
-    if (error) return { ok: false, reason: "unknown", message: error.message };
+    if (error) {
+      const message = error.code === "signup_disabled" || /signups not allowed for otp/i.test(error.message)
+        ? "O acesso por código é para contas já cadastradas. Se este é seu primeiro acesso, escolha Criar conta."
+        : error.code === "captcha_failed"
+          ? "A confirmação de segurança expirou. Confirme novamente e tente enviar o código."
+          : error.status === 429
+            ? "Muitas tentativas de envio. Aguarde alguns minutos e tente novamente."
+            : "Não foi possível enviar o código agora. Tente novamente em alguns instantes.";
+      return { ok: false, reason: "unknown", message };
+    }
     return { ok: true };
   },
 
