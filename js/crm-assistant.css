@@ -67,3 +67,11 @@
 @keyframes crm-code-stream{to{transform:translateY(50%)}}@keyframes crm-galaxy-turn{from{transform:rotateX(52deg) rotate(0)}to{transform:rotateX(52deg) rotate(360deg)}}@keyframes crm-galaxy-orbit{from{transform:rotateX(62deg) rotateZ(-25deg) rotate(0)}to{transform:rotateX(62deg) rotateZ(-25deg) rotate(360deg)}}@keyframes crm-galaxy-orbit-reverse{from{transform:rotateX(-35deg) rotateZ(38deg) rotate(360deg)}to{transform:rotateX(-35deg) rotateZ(38deg) rotate(0)}}
 @media(max-width:600px){.crm-os .crm-ai-orb{width:70px;height:70px}.crm-os .crm-ai-orb span{font-size:22px}.crm-os .crm-ai-head{gap:30px}.crm-os .crm-os-ring{inset:-9px}.crm-os .crm-os-ring.outer{inset:-17px}.crm-galaxy-disk{inset:-9px}.crm-galaxy-stars{inset:-16px}.crm-os-matrix{opacity:.17}.crm-os-matrix i{font-size:9px;width:180px;left:calc(var(--col)*16%)}.crm-os h2{font-size:26px}}
 @media(prefers-reduced-motion:reduce){.crm-os-matrix i,.crm-galaxy-disk,.crm-galaxy-stars,.crm-os .crm-os-ring{animation:none!important;will-change:auto}}
+
+/* Vertical Matrix-style orange character rain. */
+.crm-os-matrix{opacity:.3;mask-image:linear-gradient(90deg,#0005,black 70%)}
+.crm-os-matrix i{left:calc(var(--col)*4.3%);top:-110%;width:14px;height:auto;writing-mode:vertical-rl;text-orientation:upright;font:12px/1 monospace;letter-spacing:7px;white-space:nowrap;color:#ff8e36;text-shadow:0 0 8px #ff791a66;animation:crm-matrix-fall var(--speed) linear var(--delay) infinite;mask-image:linear-gradient(to bottom,transparent,#0005 20%,black 85%);will-change:transform}
+.crm-os-matrix i:nth-child(3n){color:#ffb66f}.crm-os-matrix i:nth-child(4n){opacity:.55}
+@keyframes crm-matrix-fall{to{transform:translateY(105%)}}
+@media(max-width:600px){.crm-os-matrix{opacity:.22}.crm-os-matrix i{font-size:10px;width:12px;left:calc(var(--col)*4.3%);letter-spacing:6px}.crm-os-matrix i:nth-child(2n){display:none}}
+@media(prefers-reduced-motion:reduce){.crm-os-matrix i{animation:none!important;will-change:auto}.crm-os-matrix{opacity:.08}}
