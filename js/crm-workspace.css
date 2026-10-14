@@ -10,3 +10,16 @@
 .app-page[data-active-route="/admin"] .crm-theme-toggle{min-width:96px;justify-content:center;gap:8px}
 .app-page[data-active-route="/admin"] .crm-balance-eye{display:inline-grid;place-items:center;width:36px;height:36px;min-width:36px;min-height:36px;padding:0;border-radius:50%;box-sizing:border-box;line-height:1;overflow:hidden;flex:none}
 .app-page[data-active-route="/admin"] .crm-balance-eye svg{display:block;position:static;width:18px;height:18px;margin:0;transform:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;fill:none}
+
+/* Theme-aware neon code backdrop, below protected reading surfaces. */
+.app-page[data-active-route="/admin"] .crm-os-matrix{opacity:.66;mask-image:linear-gradient(90deg,#0005,#000b 50%,black)}
+.app-page[data-active-route="/admin"] .crm-os-matrix i{font-weight:700;color:#ff7b13;background:linear-gradient(to bottom,#c85109 10%,#ff790b 50%,#ffa438 88%,#ffe2a7);background-clip:text;-webkit-background-clip:text;text-shadow:0 0 5px #ff701acc,0 0 13px #ff8b2166}
+.app-page[data-active-route="/admin"][data-crm-theme="light"] .crm-os-matrix{display:block!important;opacity:.48;mask-image:linear-gradient(90deg,#0004,#000a 50%,black)}
+.app-page[data-active-route="/admin"][data-crm-theme="light"] .crm-os-matrix i{color:#b84400;background:linear-gradient(to bottom,#a83a00 10%,#d65200 55%,#ed7200 90%,#ff9b21);background-clip:text;-webkit-background-clip:text;text-shadow:0 0 3px #ff650a99,0 0 9px #ff8b2140}
+.app-page[data-active-route="/admin"] .crm-os .crm-ai-head>div:last-child,.app-page[data-active-route="/admin"] .crm-os .crm-ai-mode{position:relative;z-index:1;border-radius:12px;background:#11141cdd;padding:8px 12px}
+.app-page[data-active-route="/admin"][data-crm-theme="light"] .crm-os .crm-ai-head>div:last-child,.app-page[data-active-route="/admin"][data-crm-theme="light"] .crm-os .crm-ai-mode{background:#fff9f0ed}
+.app-page[data-active-route="/admin"] .crm-os form>label{display:table;background:var(--panel);border-radius:8px;padding:5px 9px}
+.app-page[data-active-route="/admin"] .crm-os-nebula:after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 25% 60%,#ffad52 0 1px,transparent 2px),radial-gradient(circle at 55% 65%,#ff9035 0 1px,transparent 2px),radial-gradient(circle at 45% 85%,#ffd89e 0 1px,transparent 2px),radial-gradient(circle at 70% 45%,#ff8e25 0 1px,transparent 2px);opacity:.5;animation:crm-neon-drift 12s ease-in-out infinite alternate;pointer-events:none}
+@keyframes crm-neon-drift{to{transform:translate(-12px,20px);opacity:.85}}
+@media(max-width:600px){.app-page[data-active-route="/admin"] .crm-os-matrix{opacity:.5}.app-page[data-active-route="/admin"][data-crm-theme="light"] .crm-os-matrix{opacity:.4}.app-page[data-active-route="/admin"] .crm-os .crm-ai-head>div:last-child{padding:6px 8px}.app-page[data-active-route="/admin"] .crm-os-matrix i{text-shadow:0 0 5px #ff721a88}}
+@media(prefers-reduced-motion:reduce){.app-page[data-active-route="/admin"] .crm-os-nebula:after{animation:none}.app-page[data-active-route="/admin"] .crm-os-matrix{opacity:.2}}
