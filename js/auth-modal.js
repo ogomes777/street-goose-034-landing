@@ -1,3 +1,4 @@
+import { announceAuthRequest } from "./auth-send-notice.js";
 import "./auth-modal.css";
 /* Street Goose 034 — modal de autenticação + gate de ação pendente.
    window.SG.auth.requireAuth(action) é o gate: se AuthService não está
@@ -197,6 +198,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
         var res = await svc.sendEmailCode(email, captchaToken());
         if (!res.ok) { showError(res.message); return; }
         codeEmail = email; resendAfter = Date.now() + 60000;
+        void announceAuthRequest("Pedido de código aceito. Confira seu e-mail, inclusive o spam. A entrega ainda não foi confirmada.");
         showError("Pedido de código aceito. Confira sua caixa de entrada e o spam. Para confirmar o código, não é preciso repetir a proteção.", true);
         var box = form.querySelector("[data-auth-captcha]"); if (box) box.hidden = true;
         form.elements.code.focus();
@@ -237,6 +239,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
         var svc = await loadAuthService();
         var result = await svc.resendConfirmation(input.value.trim(), captchaToken());
         showError(result.ok ? "Se houver uma confirmação pendente, confira o novo e-mail e use o link mais recente." : result.message, result.ok);
+        if (result.ok) void announceAuthRequest("Pedido de confirmação aceito. Se houver cadastro pendente, confira seu e-mail. A entrega ainda não foi confirmada.");
       } catch (e) { showError("Não foi possível reenviar agora. Tente novamente."); }
       finally { confirmationBtn.disabled = false; if (captcha) captcha.reset(); }
     });
@@ -285,7 +288,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
         var token = captchaToken();
         var res = mode === "signUp" ? await svc.signUpWithEmail(name, email, password, token) : await svc.signInWithEmail(email, password, token);
         if (!res.ok) { showError(res.message); return; }
-        if (res.confirmationRequired) { showError("Confira seu e-mail para confirmar sua conta antes de entrar.", true); return; }
+        if (res.confirmationRequired) { showError("Confira seu e-mail para confirmar sua conta antes de entrar.", true); void announceAuthRequest("Pedido de cadastro aceito. Confira seu e-mail para confirmar a conta. A entrega ainda não foi confirmada."); return; }
         await runPendingAction(); close();
       } catch (e) { showError("Não foi possível conectar agora. Tente novamente."); }
       finally { setLoading(false); if (captcha) captcha.reset(); }

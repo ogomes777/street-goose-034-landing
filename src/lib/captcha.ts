@@ -55,6 +55,7 @@ export async function mountCaptcha(container: HTMLElement): Promise<CaptchaHandl
   if (!container.isConnected) return null;
   const id = api.render(container, {
     sitekey: siteKey,
+    appearance: "interaction-only",
     size: container.clientWidth < 300 ? "compact" : "flexible",
     // acompanha o tema efetivo do site (data-theme ou preferência do sistema)
     theme: siteTheme(),
