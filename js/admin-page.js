@@ -1,3 +1,4 @@
+import {mountWorkspace,renderPrivateBalance} from './crm-workspace.js';
 import { mountCrmAssistant } from "./crm-assistant.js";
 import "./admin-customer.css";
 /* Street Goose 034 — /admin, painel do lojista: pedidos, clientes,
@@ -80,6 +81,7 @@ export function mountAdminPage(root, _params, onClose) {
     '<div class="app-page-body admin-body" data-admin-body><div class="app-page-loading">' + t("common.loading") + "</div></div>";
 
   var bodyEl = root.querySelector("[data-admin-body]");
+  var disposeWorkspace = mountWorkspace(root);
 
   // ---------- helpers ----------
   var esc = window.SG.esc;
@@ -221,7 +223,7 @@ export function mountAdminPage(root, _params, onClose) {
     var h = now.getHours();
     var hello = h < 5 ? "Boa noite" : h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
     var day = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
-    el.textContent = hello + " · " + day.charAt(0).toUpperCase() + day.slice(1);
+    el.textContent = "Olá, visionário Kibão. " + day.charAt(0).toUpperCase() + day.slice(1);
   }
 
   function kpiSkeleton() {
@@ -271,7 +273,7 @@ export function mountAdminPage(root, _params, onClose) {
     }
     function val(key, v, fmt) { countUp(kpis.querySelector('[data-kpi-value="' + key + '"]'), v, fmt); }
     function sub(key, text) { var el = kpis.querySelector('[data-kpi-sub="' + key + '"]'); if (el) el.textContent = text; }
-    val("balance", o.balance_cents || 0, signed);
+    renderPrivateBalance(kpis.querySelector('[data-kpi-value="balance"]'),o.balance_cents || 0,signed);
     val("in", o.in_30d_cents || 0, brl);
     val("out", o.out_30d_cents || 0, brl);
     val("receivable", o.receivable_cents || 0, brl);
@@ -2030,7 +2032,7 @@ export function mountAdminPage(root, _params, onClose) {
 
   function onKeydown(e) {
     var kpiKey = e.target.closest && e.target.closest("[data-kpi-tab]");
-    if (kpiKey && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openFromKpi(kpiKey); return; }
+    if (kpiKey && !e.target.closest("button") && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openFromKpi(kpiKey); return; }
     var tab = e.target.closest && e.target.closest("[data-admin-tab]");
     if (tab && ["ArrowLeft", "ArrowRight", "Home", "End"].indexOf(e.key) !== -1) {
       e.preventDefault();
@@ -2067,6 +2069,7 @@ export function mountAdminPage(root, _params, onClose) {
 
   return function destroy() {
     destroyed = true;
+    disposeWorkspace();
     if (disposeAssistant) { disposeAssistant(); disposeAssistant = null; }
     Object.values(state.photoDraft).forEach(function (photos) { photos.forEach(releasePhoto); });
     clearTimeout(searchTimer);
