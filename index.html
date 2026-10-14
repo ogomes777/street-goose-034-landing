@@ -480,10 +480,13 @@
  <article class="popup-card sg-drop-film" data-drop-film>
  <button class="popup-close" type="button" data-close-popup aria-label="Fechar promoção">×</button>
  <div class="sg-drop-scene">
-  <div class="sg-drop-portal" aria-hidden="true"><span></span><i></i></div>
+  <div class="sg-drop-street-type" aria-hidden="true">STREET<br>VISION.</div>
+  <div class="sg-drop-grid" aria-hidden="true"></div>
+  <div class="sg-drop-portal" aria-hidden="true"><span></span><i></i><b></b></div>
+  <div class="sg-drop-haze" aria-hidden="true"></div>
   <div class="sg-drop-floor" aria-hidden="true"></div>
   <div class="sg-drop-goose" aria-hidden="true">
-   <div class="sg-drop-pose" data-drop-pose><img src="/brand/onboarding-goose-034.webp" width="560" height="840" alt="" decoding="async" fetchpriority="low"></div>
+   <div class="sg-drop-pose" data-drop-pose><div class="sg-drop-body"></div><div class="sg-drop-arm"></div></div>
   </div>
   <div class="sg-drop-trail" aria-hidden="true"></div>
   <div class="sg-drop-particles" data-drop-particles aria-hidden="true"></div>
@@ -495,13 +498,14 @@
  </div>
  <div class="sg-drop-copy">
   <p class="sg-drop-brand">STREET GOOSE <span>034</span></p>
-  <p class="sg-drop-eyebrow">O PRÓXIMO MOVIMENTO É SEU.</p>
-  <h2 id="popup-title">Seu visual.<br><em>Sua assinatura.</em></h2>
+  <p class="sg-drop-eyebrow">DROP / VISÃO DE RUA</p>
+  <h2 id="popup-title">Seu visual<br><em>chega antes.</em></h2>
   <p class="sg-drop-description">Presença que você vê.<br>Atitude que você veste.</p>
-  <div class="sg-drop-prices" aria-label="Promoção: uma lupa por 140 reais, duas lupas por 260 reais">
-   <div><span>1 LUPA</span><strong><small>R$</small>140</strong></div>
-   <div><span>2 LUPAS</span><strong><small>R$</small>260</strong><b>ECONOMIZE R$ 20</b></div>
+  <div class="sg-drop-prices" aria-label="Promoção: uma lupa por 200 reais, duas lupas por 290 reais">
+   <div><span>1 LUPA</span><strong><small>R$</small>200</strong></div>
+   <div><span>2 LUPAS</span><strong><small>R$</small>290</strong><b>ECONOMIZE R$ 110</b></div>
   </div>
+  <p class="sg-drop-terms">Promoção válida para modelos selecionados. Nem todos os modelos participam. Consulte os modelos disponíveis antes de comprar.</p>
   <a class="sg-drop-cta" href="/categoria/lupas" data-drop-promotion data-close-popup>Ver a promoção <span aria-hidden="true">↗</span></a>
   <p class="sg-drop-hint">Toque na lupa e encontre sua assinatura.</p>
   <button class="sg-drop-dismiss" type="button" data-close-popup>Continuar navegando</button>
@@ -587,7 +591,8 @@
  </div>
 
   <script type="module" src="/js/intro-entry.js"></script>
-  <script defer src="/entry-popup.js?v=20261014"></script>
+  <script defer src="/vendor/gsap-3.12.5.min.js"></script>
+  <script defer src="/entry-popup.js?v=20261014-portal-2"></script>
   <script type="module" src="/src/main.tsx"></script>
 <script type="module" src="/js/install-app.js"></script>
 </body>

@@ -18,10 +18,11 @@
 .sg-drop-portal i { position:absolute; inset:10%; border-radius:50%; border:1px solid #ff9b3340; box-shadow:0 0 24px #ff70000d,inset 0 0 28px #ff700010; }
 .sg-drop-floor { position:absolute; left:-20%; right:-20%; bottom:8%; height:20%; border-radius:50%; background:radial-gradient(ellipse,#b85a0040,transparent 66%); transform:rotateX(68deg); }
 .sg-drop-goose { position:absolute; width:49%; height:70%; left:25%; bottom:18%; transform-origin:50% 90%; }
-.sg-drop-pose { width:100%; height:100%; }
-.sg-drop-pose > img { width:100%; height:100%; object-fit:contain; }
-.sg-drop-pose.has-poses > img { visibility:hidden; }
-.sg-drop-pose.has-poses { background-image:var(--drop-poses); background-size:400% 100%; background-repeat:no-repeat; background-position:0% 0; }
+.sg-drop-pose { width:100%; height:100%; position:relative; }
+.sg-drop-body,.sg-drop-arm { position:absolute; inset:0; background:url('/brand/drop-goose-poses-034.webp') 100% 0 / 400% 100% no-repeat; }
+/* Fixed final pose separated into articulated layers; artwork never switches. */
+.sg-drop-body { clip-path:polygon(0 0,100% 0,100% 100%,0 100%,0 55%,18% 55%,38% 44%,43% 30%,0 30%); }
+.sg-drop-arm { clip-path:polygon(2% 30%,43% 27%,50% 36%,38% 46%,18% 56%,2% 51%); transform-origin:42% 32%; }
 .sg-drop-lupa { display:block; position:absolute; width:87%; left:7%; top:55%; z-index:4; transform-origin:center; -webkit-tap-highlight-color:transparent; border-radius:40%; }
 .sg-drop-lupa img { width:100%; height:auto; display:block; filter:drop-shadow(0 14px 10px #000b); }
 .sg-drop-lupa::after { content:''; position:absolute; inset:22% 5%; border-radius:50%; box-shadow:0 0 65px #ff7a001a; pointer-events:none; }
@@ -51,40 +52,10 @@
 .sg-drop-hint { text-align:center; color:#bcaa95; font-size:9px; margin:11px 0 13px; }
 .sg-drop-dismiss { display:block; margin:auto; padding:6px; color:#827b72; background:none; border:0; border-bottom:1px solid #484037; font-size:10px; cursor:pointer; }
 .sg-drop-film a:focus-visible,.sg-drop-film button:focus-visible { outline:2px solid #ffca75; outline-offset:4px; }
-/* A short authored sequence, followed by a still offer. Replay only on explicit open. */
-.sg-drop-film.is-playing .sg-drop-goose { animation:sg-drop-emerge 3.9s cubic-bezier(.2,.7,.2,1) both; }
-.sg-drop-film.is-playing .sg-drop-pose.has-poses { animation:sg-drop-gesture 3.9s steps(1,end) both; }
-.sg-drop-film.is-playing .sg-drop-lupa { animation:sg-drop-throw 3.9s cubic-bezier(.2,.7,.2,1) both; }
-.sg-drop-film.is-playing .sg-drop-portal { animation:sg-drop-gate 3.9s ease both; }
-.sg-drop-film.is-playing .sg-drop-trail { animation:sg-drop-streak 3.9s ease both; }
-.sg-drop-film.is-playing .sg-drop-particles i { animation:sg-drop-spark 3.4s ease-out both; animation-delay:var(--delay); }
-.sg-drop-film.is-playing .sg-drop-eyebrow,.sg-drop-film.is-playing h2 { animation:sg-drop-copy .8s .15s ease both; }
-.sg-drop-film.is-playing .sg-drop-lupa,.sg-drop-film.is-playing .sg-drop-goose { will-change:transform,opacity; }
-.sg-drop-film.is-paused *, .sg-drop-film.is-paused *::before,.sg-drop-film.is-paused *::after { animation-play-state:paused !important; }
-.sg-drop-film.is-lite .sg-drop-particles i:nth-child(n+7) { display:none; }
+/* GSAP owns motion. No sprite stepping, no independent CSS timelines. */
 .sg-drop-film.is-lite .sg-drop-lupa img { filter:none; }
 .sg-drop-film.is-lite .sg-drop-portal i { box-shadow:none; }
 .sg-drop-film.is-settled .sg-drop-skip { display:none; }
-@keyframes sg-drop-emerge {
- 0% { opacity:0; transform:translate3d(0,90px,-250px) scale(.55); }
- 15% { opacity:1; transform:translate3d(0,12px,-80px) scale(.85); }
- 36% { opacity:1; transform:translate3d(0,0,0) scale(1) rotate(-3deg); }
- 47% { transform:translate3d(0,-5px,0) scale(1) rotate(3deg); }
- 64%,100% { opacity:1; transform:translate3d(0,0,0) scale(1); }
-}
-@keyframes sg-drop-gesture { 0%,28% { background-position:0% 0; } 29%,41% { background-position:33.3333% 0; } 42%,61% { background-position:66.6667% 0; } 62%,100% { background-position:100% 0; } }
-@keyframes sg-drop-throw {
- 0%,27% { opacity:0; transform:translate3d(-80px,var(--launch-y),-300px) scale(.12) rotate(-38deg); }
- 30% { opacity:1; transform:translate3d(-84px,var(--launch-y),-210px) scale(.15) rotate(-38deg); }
- 41% { opacity:1; transform:translate3d(-80px,var(--release-y),-190px) scale(.15) rotate(-45deg); }
- 52% { transform:translate3d(-35px,var(--arc-y),40px) scale(.42) rotate(16deg); }
- 68% { transform:translate3d(0,-10px,100px) scale(1.08) rotate(-4deg); }
- 84%,100% { opacity:1; transform:translate3d(0,0,0) scale(1) rotate(0); }
-}
-@keyframes sg-drop-gate { 0% { opacity:0; transform:scale(.65) rotateY(-30deg); } 18% { opacity:1; transform:scale(1.1) rotateY(-15deg); } 65%,100% { opacity:.55; transform:scale(1) rotateY(-15deg); } }
-@keyframes sg-drop-streak { 0%,41%,68%,100% { opacity:0; transform:rotate(-24deg) scaleX(.15); } 49% { opacity:.85; transform:rotate(-24deg) scaleX(1); } }
-@keyframes sg-drop-spark { 0% { opacity:0; transform:translateY(20px) scale(.1); } 25% { opacity:.75; } 100% { opacity:0; transform:translate(var(--dx),-130px) scale(.2); } }
-@keyframes sg-drop-copy { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 @media(max-width:640px) {
  .popup-card.sg-drop-film { --launch-y:-140px; --release-y:-95px; --arc-y:-130px; width:min(410px,calc(100vw - 24px)); height:auto; max-height:calc(100dvh - 24px); grid-template-columns:1fr; grid-template-rows:minmax(230px,32dvh) auto; border-radius:20px; overflow-y:auto; }
  .sg-drop-scene { min-height:230px; }
@@ -117,7 +88,7 @@
 }
 /* Match the pose sheet's cell ratio: no character distortion. */
 .sg-drop-goose { width:min(54%,40dvh); height:auto; aspect-ratio:3 / 4; left:23%; bottom:23%; }
-.sg-drop-film.is-settled .sg-drop-pose.has-poses { background-position:100% 0; }
+
 @media(max-width:640px) { .sg-drop-goose { width:40%; height:auto; left:30%; bottom:10%; } }
 .sg-entry-popup-open .sg-character-hero *, .sg-entry-popup-open .hero * { animation-play-state:paused !important; }
 @media(max-width:640px) and (max-height:700px) {
@@ -136,4 +107,52 @@
 }
 @media(prefers-reduced-motion:reduce) {
  .sg-drop-film *, .sg-drop-film *::before,.sg-drop-film *::after { transition:none !important; }
+}
+
+/* Carbon, brushed chrome, typographic street poster, restrained optical orange. */
+.popup-card.sg-drop-film { border-radius:16px; border-color:#56514b; background:linear-gradient(135deg,#1d1c19 0%,#080808 18%,#080808 78%,#171512); height:min(660px,calc(100dvh - 40px)); }
+.sg-drop-scene { background:radial-gradient(ellipse at 52% 43%,#38210f 0%,#14100c 34%,#090909 70%); }
+.sg-drop-street-type { position:absolute; left:7%; top:12%; font-weight:900; font-size:clamp(64px,8vw,108px); letter-spacing:-.09em; line-height:.85; color:#ffffff07; transform:rotate(-9deg); }
+.sg-drop-grid { position:absolute; inset:0; opacity:.13; background-image:linear-gradient(#b7aa941c 1px,transparent 1px),linear-gradient(90deg,#b7aa941c 1px,transparent 1px); background-size:44px 44px; mask-image:linear-gradient(transparent,#000,transparent); }
+.sg-drop-portal { opacity:.65; width:62%; height:65%; left:19%; top:12%; border:1px solid #ffac6660; background:radial-gradient(ellipse,#080808 42%,#241405 64%,#ff6b0015 72%,transparent); box-shadow:0 0 35px #ff6a0020,inset 0 0 35px #ff6a0020; transform:rotate(-12deg); }
+.sg-drop-portal span { inset:-3%; background:conic-gradient(from 20deg,transparent 0 22%,#ff6a00 29%,#ffe0b0 30%,transparent 33% 68%,#ff6a00 75%,transparent 82%); mask-image:radial-gradient(ellipse,transparent 65%,#000 66% 68%,transparent 69%); }
+.sg-drop-portal i { inset:7%; border:1px solid #ff9d4b45; }
+.sg-drop-portal b { position:absolute; inset:-9%; border:1px dashed #d9965b55; border-radius:50%; }
+.sg-drop-haze { position:absolute; left:5%; right:0; height:30%; bottom:12%; background:radial-gradient(ellipse,#a2602738,transparent 70%); opacity:.22; pointer-events:none; }
+.sg-drop-copy { padding:32px 36px 26px 16px; }
+.sg-drop-brand { margin-bottom:25px; color:#dadbd8; }
+.sg-drop-copy h2 { font-weight:800; font-size:clamp(32px,4vw,48px); }
+.sg-drop-copy h2 em { color:#ff9b42; }
+.sg-drop-eyebrow { color:#ff9b42; }
+.sg-drop-prices { border-color:#ffffff20; gap:12px; margin-bottom:12px; }
+.sg-drop-prices > div+div { border-color:#ffffff20; padding-left:18px; }
+.sg-drop-prices b { background:#ff8b24; }
+.sg-drop-terms { color:#c6bfb5; font-size:11px; line-height:1.6; margin:0 0 18px; max-width:36em; }
+.sg-drop-cta { border-radius:4px; background:linear-gradient(110deg,#ff5b0b,#ffae4f); border:1px solid #ffbc7c; box-shadow:inset 0 1px 0 #ffdfb560; transition:box-shadow .2s,background .2s; }
+.sg-drop-cta:hover { background:linear-gradient(110deg,#ff7628,#ffb962); box-shadow:0 6px 24px #ff6a0020; }
+.sg-drop-cta span { transition:transform .2s; }
+.sg-drop-cta:hover span { transform:translate(3px,-3px); }
+.sg-drop-film .popup-close { border-color:#68615a; border-radius:50%; }
+@media(max-width:640px) {
+ .popup-card.sg-drop-film { height:auto; grid-template-rows:minmax(215px,29dvh) auto; }
+ .sg-drop-scene { min-height:215px; }
+ .sg-drop-copy { padding:4px 24px 18px; }
+ .sg-drop-brand { margin-bottom:10px; }
+ .sg-drop-copy h2 { font-size:34px; }
+ .sg-drop-prices { margin:12px 0 10px; padding:10px 0; }
+ .sg-drop-terms { font-size:10px; margin-bottom:12px; line-height:1.5; }
+ .sg-drop-portal { width:48%;height:84%;left:26%;top:5%; }
+ .sg-drop-street-type { font-size:75px;top:10%;left:8%; }
+}
+@media(max-width:640px) and (max-height:700px) {
+ .popup-card.sg-drop-film { grid-template-rows:150px auto; }
+ .sg-drop-scene { min-height:150px; }
+ .sg-drop-copy { padding:2px 22px 12px; }
+ .sg-drop-copy h2 { font-size:28px; }
+ .sg-drop-brand { margin-bottom:6px; }
+ .sg-drop-prices { margin:9px 0; padding:8px 0; }
+ .sg-drop-prices strong { font-size:30px; }
+ .sg-drop-terms { font-size:10px; margin-bottom:10px; }
+ .sg-drop-hint { display:none; }
+ .sg-drop-dismiss { margin-top:5px; }
 }

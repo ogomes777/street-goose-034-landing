@@ -20,55 +20,80 @@
   // por baixo dele.
   var zoomOpen = false;
   var film = popupEl && popupEl.querySelector('[data-drop-film]');
-  var filmTimer;
-  var poseReady = false;
+  var timeline;
   var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   var connection = navigator.connection;
   var lite = !!(connection && (connection.saveData || /(^|-)2g$/.test(connection.effectiveType))) ||
     (navigator.deviceMemory && navigator.deviceMemory <= 4) ||
     (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
   function settleFilm() {
-    clearTimeout(filmTimer);
     if (!film) return;
+    if (timeline) { timeline.kill(); timeline = null; }
     film.classList.remove('is-playing');
     film.classList.add('is-settled');
-    if (poseReady) film.querySelector('[data-drop-pose]').classList.add('has-poses');
+    // A single fixed character artwork: never change poses or swap frames.
+    film.querySelectorAll('[data-motion], .sg-drop-goose, .sg-drop-arm, .sg-drop-lupa, .sg-drop-portal, .sg-drop-portal span, .sg-drop-portal i, .sg-drop-portal b, .sg-drop-haze, .sg-drop-floor, .sg-drop-trail, .sg-drop-particles i').forEach(function (el) {
+      el.style.removeProperty('transform'); el.style.removeProperty('opacity'); el.style.removeProperty('will-change');
+    });
   }
   function startFilm() {
     if (!film) return;
-    clearTimeout(filmTimer);
-    film.classList.remove('is-playing', 'is-settled');
+    settleFilm();
     film.classList.toggle('is-lite', !!lite);
-    if (reducedMotion.matches) { settleFilm(); return; }
-    // Restart only on an explicit new opening; the offer is usable from frame one.
-    void film.offsetWidth;
+    if (reducedMotion.matches || !window.gsap) return;
+    film.classList.remove('is-settled');
     film.classList.add('is-playing');
-    filmTimer = setTimeout(settleFilm, 4300);
+    var gsap = window.gsap;
+    var goose = film.querySelector('.sg-drop-goose');
+    var arm = film.querySelector('.sg-drop-arm');
+    var lupa = film.querySelector('.sg-drop-lupa');
+    var portal = film.querySelector('.sg-drop-portal');
+    var scene = film.querySelector('.sg-drop-scene');
+    // Derive the launch from the actual hand position, in every viewport.
+    var handX = goose.offsetLeft + goose.offsetWidth * .20;
+    var handY = goose.offsetTop + goose.offsetHeight * .43;
+    var launchX = handX - (lupa.offsetLeft + lupa.offsetWidth / 2);
+    var launchY = handY - (lupa.offsetTop + lupa.offsetHeight / 2);
+    gsap.set([goose, arm, lupa, portal], {willChange:'transform,opacity'});
+    timeline = gsap.timeline({onComplete:settleFilm, defaults:{ease:'power2.inOut'}});
+    film.dataset.motionEngine = 'gsap';
+    timeline.fromTo(portal, {opacity:0, scaleX:.04, scaleY:.6}, {opacity:1,scaleX:1,scaleY:1,duration:1.25,ease:'power3.out'}, 0)
+      .fromTo('.sg-drop-portal span', {rotation:-100,scale:.85}, {rotation:360,scale:1,duration:5}, 0)
+      .fromTo('.sg-drop-portal b', {rotation:60}, {rotation:360,duration:5}, 0)
+      .fromTo(goose, {opacity:0, y:scene.clientHeight*.16, z:-160,scale:.55,rotation:-7}, {opacity:1,y:0,z:0,scale:1,rotation:0,duration:1.9,ease:'power3.out'}, .35)
+      .fromTo('.sg-drop-haze', {opacity:0,scale:.65}, {opacity:.55,scale:1.2,duration:1.8}, .25)
+      .fromTo('.sg-drop-floor', {opacity:0,scale:.6}, {opacity:1,scale:1,duration:1.5}, .5)
+      .to(arm, {rotation:-13,x:-3,y:-5,duration:.75}, 1.45)
+      .to(goose, {rotation:-3,y:-5,duration:.75}, 1.45)
+      .fromTo(lupa, {opacity:0,x:launchX,y:launchY,scale:.13,rotation:-28,rotationY:-28}, {opacity:1,duration:.25}, 1.55)
+      .to(lupa, {x:launchX-6,y:launchY-12,rotation:-38,duration:.65}, 1.8)
+      .to(arm, {rotation:8,x:2,y:0,duration:.6,ease:'power3.out'}, 2.4)
+      .to(goose, {rotation:2,y:0,duration:.65}, 2.4)
+      .to(lupa, {x:launchX*.4,y:launchY-35,scale:.5,rotation:12,rotationY:12,duration:.7,ease:'power2.in'}, 2.4)
+      .to(lupa, {x:0,y:-8,scale:1.04,rotation:-3,rotationY:0,duration:.85,ease:'power3.out'}, 3.1)
+      .to(lupa, {x:0,y:0,scale:1,rotation:0,duration:1.05,ease:'sine.inOut'}, 3.95)
+      .to(arm, {rotation:0,x:0,y:0,duration:1.1}, 3.1)
+      .to(goose, {rotation:0,y:0,duration:1.1}, 3.1)
+      .to(portal, {opacity:.65,duration:1.5}, 3.5)
+      .to('.sg-drop-haze', {opacity:.22,scale:1,duration:1.5}, 3.5)
+      .fromTo('.sg-drop-trail', {opacity:0,scaleX:.1}, {opacity:.6,scaleX:1,duration:.4}, 2.6)
+      .to('.sg-drop-trail', {opacity:0,duration:.5}, 3);
+    film.querySelectorAll('.sg-drop-particles i').forEach(function (spark, index) {
+      timeline.fromTo(spark, {opacity:0,y:20,scale:.3}, {opacity:.65,y:-18,scale:1,duration:.7}, .4+index*.04)
+        .to(spark, {opacity:0,x:(index%2 ? 1 : -1)*(12+index*3),y:-90,scale:.3,duration:2.6}, 1.1+index*.04);
+    });
   }
   if (film) {
     var sparks = film.querySelector('[data-drop-particles]');
-    for (var s = 0; s < (lite ? 6 : 18); s++) {
+    for (var s = 0; s < (lite ? 6 : 14); s++) {
       var spark = document.createElement('i');
-      spark.style.cssText = 'left:' + (12 + (s * 37 % 78)) + '%;top:' + (30 + (s * 13 % 56)) + '%;--dx:' + ((s % 2 ? 1 : -1) * (18 + s * 3)) + 'px;--delay:' + (s * .045) + 's';
+      spark.style.cssText = 'left:' + (12 + (s * 37 % 78)) + '%;top:' + (30 + (s * 13 % 56)) + '%';
       sparks.append(spark);
     }
-    // Optional pose sheet never blocks opening; neutral mascot is already in HTML.
-    var poses = new Image();
-    poses.fetchPriority = 'low';
-    poses.onload = function () {
-      poseReady = true;
-      var pose = film.querySelector('[data-drop-pose]');
-      pose.style.setProperty('--drop-poses', 'url("/brand/drop-goose-poses-034.webp")');
-      if (!film.classList.contains('is-playing')) pose.classList.add('has-poses');
-    };
-    if (!(connection && connection.saveData)) poses.src = '/brand/drop-goose-poses-034.webp';
     film.querySelector('[data-drop-skip]').addEventListener('click', settleFilm);
-    film.querySelector('.sg-drop-lupa img').addEventListener('error', function () {
-      film.querySelector('.sg-drop-lupa').hidden = true;
-    });
+    film.querySelector('.sg-drop-lupa img').addEventListener('error', function () { film.querySelector('.sg-drop-lupa').hidden = true; });
     document.addEventListener('visibilitychange', function () {
-      film.classList.toggle('is-paused', document.hidden);
-      if (document.hidden && film.classList.contains('is-playing')) settleFilm();
+      if (timeline) { if (document.hidden) timeline.pause(); else timeline.resume(); }
     });
     reducedMotion.addEventListener('change', function () { if (reducedMotion.matches) settleFilm(); });
   }

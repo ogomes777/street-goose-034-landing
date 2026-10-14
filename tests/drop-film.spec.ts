@@ -27,7 +27,10 @@ test('desktop film and real SPA promotion destination', async ({ page }) => {
   page.on('pageerror', error => console.log('PAGE ERROR:',error.message));
   await enter(page);
   await expect.poll(() => page.evaluate(() => typeof (window as any).SG_ROUTER?.navigate), {timeout:20000}).toBe('function');
-  await expect(page.locator('[data-drop-pose]')).toHaveClass(/has-poses/);
+  await expect(page.locator('[data-drop-film]')).toHaveAttribute('data-motion-engine', 'gsap');
+  await expect(page.locator('.sg-drop-prices')).toContainText('200');
+  await expect(page.locator('.sg-drop-prices')).toContainText('290');
+  await expect(page.locator('.sg-drop-terms')).toContainText('Nem todos os modelos participam');
   if (await page.locator('[data-drop-skip]').isVisible()) await page.locator('[data-drop-skip]').click();
   await page.screenshot({ path: '/workspace/scratch/c7ef087aa677/drop-desktop.png' });
   await page.locator('.sg-drop-lupa').click();
@@ -88,4 +91,35 @@ test('lead gate waits for dismissal and then releases; no simultaneous overlays'
   await page.locator('.popup-close[data-close-popup]').click();
   await expect(page.locator('#lead-gate-fixture')).toBeVisible();
   await expect(page.locator('[data-popup]')).not.toHaveClass(/is-open/);
+});
+
+test('continuous GSAP motion keeps one artwork and cleans up on natural completion', async ({ page }) => {
+  await enter(page, true);
+  const samples = await page.evaluate(async () => {
+    const body = document.querySelector('.sg-drop-body')!;
+    const goose = document.querySelector('.sg-drop-goose')!;
+    const arm = document.querySelector('.sg-drop-arm')!;
+    const result: { artwork: string; pose: string; goose: string; arm: string }[] = [];
+    for (let i = 0; i < 12; i++) {
+      result.push({artwork:getComputedStyle(body).backgroundImage,pose:getComputedStyle(body).backgroundPosition,goose:getComputedStyle(goose).transform,arm:getComputedStyle(arm).transform});
+      await new Promise(resolve => setTimeout(resolve, 180));
+    }
+    return result;
+  });
+  expect(new Set(samples.map(sample => sample.artwork)).size).toBe(1);
+  expect(new Set(samples.map(sample => sample.pose)).size).toBe(1);
+  expect(new Set(samples.map(sample => sample.goose)).size).toBeGreaterThan(5);
+  expect(new Set(samples.map(sample => sample.arm)).size).toBeGreaterThan(2);
+  await expect(page.locator('[data-drop-film]')).toHaveClass(/is-settled/, { timeout: 6500 });
+  expect(await page.locator('.sg-drop-goose').evaluate(el => (el as HTMLElement).style.transform)).toBe('');
+  expect(await page.locator('.sg-drop-lupa').evaluate(el => (el as HTMLElement).style.transform)).toBe('');
+});
+
+test('offer remains usable when GSAP cannot load', async ({ page }) => {
+  await page.route('**/vendor/gsap-3.12.5.min.js', route => route.abort());
+  await enter(page, true);
+  await expect(page.locator('[data-drop-film]')).toHaveClass(/is-settled/);
+  await expect(page.locator('.sg-drop-terms')).toBeVisible();
+  await page.locator('.sg-drop-cta').click();
+  await expect(page).toHaveURL(/\/categoria\/lupas$/);
 });
