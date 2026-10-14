@@ -75,3 +75,11 @@
 @keyframes crm-matrix-fall{to{transform:translateY(105%)}}
 @media(max-width:600px){.crm-os-matrix{opacity:.22}.crm-os-matrix i{font-size:10px;width:12px;left:calc(var(--col)*4.3%);letter-spacing:6px}.crm-os-matrix i:nth-child(2n){display:none}}
 @media(prefers-reduced-motion:reduce){.crm-os-matrix i{animation:none!important;will-change:auto}.crm-os-matrix{opacity:.08}}
+
+/* Brighter orange terminals with slower, staggered falling trails. */
+.crm-os-matrix{opacity:.52;mask-image:linear-gradient(90deg,#0008,black 65%)}
+.crm-os-matrix i{animation-duration:calc(var(--speed) + 3s);color:#ff780a;text-shadow:0 0 5px #ff650ab0,0 0 12px #ff6b1a55;letter-spacing:6px;mask-image:linear-gradient(to bottom,transparent 2%,#0004 22%,#000b 55%,black 95%);background:linear-gradient(to bottom,#c84700 10%,#ff7600 55%,#ff9b36 90%,#ffe3b5 100%);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.crm-os-matrix i:nth-child(3n){opacity:1;text-shadow:0 0 7px #ff751cb0,0 0 16px #ff6a1d66}
+.crm-os-matrix i:nth-child(4n){opacity:.7;animation-duration:calc(var(--speed) + 5s)}
+@media(max-width:600px){.crm-os-matrix{opacity:.4}.crm-os-matrix i{letter-spacing:6px;text-shadow:0 0 5px #ff681a88}}
+@media(prefers-reduced-motion:reduce){.crm-os-matrix{opacity:.2}.crm-os-matrix i{animation:none!important}}
