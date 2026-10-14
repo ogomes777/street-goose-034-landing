@@ -1,3 +1,4 @@
+import "./auth-modal.css";
 /* Street Goose 034 — modal de autenticação + gate de ação pendente.
    window.SG.auth.requireAuth(action) é o gate: se AuthService não está
    configurado (sem credenciais Supabase), a ação roda direto — favoritar/
@@ -14,7 +15,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
   var authSvc = null, i18nT = function (k) { return (window.SG.i18n && window.SG.i18n.t(k)) || k; };
   var mode = "signIn"; // "signIn" | "signUp"
   var currentSession = null;
-  var codeEmail = "", resendAfter = 0;
+  var codeEmail = "", resendAfter = 0, codeRecovery = false;
 
   // logos oficiais inline (sem CDN externa, sem emoji) — silhueta preta da
   // Apple e o "G" multicolorido oficial do Google, cores/paths reais
@@ -69,7 +70,9 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
   }
 
   function formHtml() {
-    if (mode === "emailCode") return '<div class="auth-modal-panel"><button class="popup-close" type="button" data-auth-close aria-label="Fechar">×</button><h2>Entrar por e-mail</h2><p>Já tem conta? Receba um código por e-mail. No primeiro acesso, crie sua conta.</p><form class="auth-form" data-code-form><label>E-mail<input name="email" type="email" required autocomplete="email" value="' + window.SG.esc(codeEmail) + '"></label><label>Código<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" minlength="6" maxlength="8"></label><div data-auth-captcha></div><p class="auth-error" data-auth-error role="status" hidden></p><button class="btn btn-primary" type="button" data-send-code>Enviar código</button><button class="btn btn-primary" type="submit">Confirmar código</button></form><button class="text-link" data-code-signup type="button">Criar conta</button><button class="text-link" data-code-back type="button">Voltar ao login</button></div>';
+    if (mode === "newPassword") return '<div class="auth-modal-panel"><button class="popup-close" type="button" data-auth-close aria-label="Fechar">×</button><h2>Nova senha</h2><p>Seu acesso foi confirmado. Escolha uma senha com pelo menos 8 caracteres.</p><form class="auth-form" data-new-password><label>Nova senha<input name="password" type="password" required minlength="8" autocomplete="new-password"></label><label>Confirmar senha<input name="confirm" type="password" required minlength="8" autocomplete="new-password"></label><p class="auth-error" data-auth-error role="status" hidden></p><button class="btn btn-primary" type="submit">Salvar nova senha</button></form></div>';
+
+    if (mode === "emailCode") return '<div class="auth-modal-panel"><button class="popup-close" type="button" data-auth-close aria-label="Fechar">×</button><h2>' + (codeRecovery ? 'Recuperar senha' : 'Entrar por e-mail') + '</h2><p>' + (codeRecovery ? 'Confirme o código recebido no seu e-mail para escolher uma nova senha.' : 'Já tem conta? Receba um código por e-mail. No primeiro acesso, crie sua conta.') + '</p><form class="auth-form" data-code-form><label>E-mail<input name="email" type="email" required autocomplete="email" value="' + window.SG.esc(codeEmail) + '"></label><label>Código<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" minlength="6" maxlength="8"></label><div data-auth-captcha></div><p class="auth-error" data-auth-error role="status" hidden></p><button class="btn btn-primary" type="button" data-send-code>Enviar código</button><button class="btn btn-primary" type="submit">Confirmar código</button></form><button class="text-link" data-code-signup type="button">Criar conta</button><button class="text-link" data-code-back type="button">Voltar ao login</button></div>';
     var isSignUp = mode === "signUp";
     return (
       '<div class="auth-modal-panel">' +
@@ -99,22 +102,32 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
     );
   }
 
-  var captcha = null;
+  var captcha = null, captchaGeneration = 0, captchaState = "loading";
   async function mountCaptchaWidget() {
+    var generation = ++captchaGeneration;
     if (captcha) { captcha.destroy(); captcha = null; }
     var box = overlay.querySelector("[data-auth-captcha]");
+    captchaState = box ? "loading" : "disabled";
     if (!box) return;
     try {
       var mod = await import("../src/lib/captcha.ts");
-      captcha = await mod.mountCaptcha(box);
+      if (generation !== captchaGeneration || !box.isConnected) return;
+      var handle = await mod.mountCaptcha(box);
+      if (generation !== captchaGeneration || !box.isConnected) { if (handle) handle.destroy(); return; }
+      captcha = handle; captchaState = handle ? "ready" : "disabled";
     } catch (e) {
-      captcha = null; // falha ao carregar o widget: o Supabase recusa e mostramos o erro dele
+      if (generation !== captchaGeneration) return;
+      captchaState = "failed";
+      showError("A proteção não carregou. Feche e abra esta tela para tentar novamente.");
     }
   }
   function captchaToken() {
     return captcha ? captcha.getToken() : null;
   }
   function needsCaptcha() {
+    if (captchaState === "loading" || captchaState === "failed") {
+      showError(captchaState === "loading" ? "Aguarde a proteção carregar antes de continuar." : "A proteção não carregou. Feche e abra esta tela para tentar novamente."); return true;
+    }
     if (!captcha) return false;
     if (captcha.getToken()) return false;
     showError("Confirma que você não é robô antes de continuar.");
@@ -123,13 +136,14 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
 
   function render() {
     overlay.innerHTML = formHtml();
-    if (mode === "emailCode") bindCodeForm(); else bindForm();
+    if (mode === "emailCode") bindCodeForm(); else if (mode === "newPassword") bindNewPassword(); else bindForm();
     mountCaptchaWidget();
   }
 
-  function showError(msg) {
+  function showError(msg, success) {
     var el = overlay.querySelector("[data-auth-error]");
     el.textContent = msg;
+    el.classList.toggle("auth-status-success", Boolean(success));
     el.hidden = false;
   }
 
@@ -138,20 +152,43 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
     if (btn) { btn.disabled = isLoading; btn.textContent = isLoading ? i18nT("common.loading") : i18nT(mode === "signUp" ? "auth.submitSignUp" : "auth.submitSignIn"); }
   }
 
+  function validEmail(input) {
+    input.value = input.value.trim();
+    if (!input.value || !input.validity.valid) { showError("Confira o e-mail completo, incluindo @ e o domínio. Exemplo: nome@gmail.com."); input.focus(); return false; }
+    return true;
+  }
+  function bindNewPassword() {
+    overlay.querySelector("[data-auth-close]").addEventListener("click", close);
+    var form = overlay.querySelector("[data-new-password]");
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      if (!form.reportValidity()) return;
+      if (form.elements.password.value !== form.elements.confirm.value) { showError("As senhas não conferem."); return; }
+      var btn = form.querySelector('[type="submit"]'); if (btn.disabled) return; btn.disabled = true;
+      try {
+        var svc = await loadAuthService(); var result = await svc.updatePassword(form.elements.password.value);
+        if (!result.ok) { showError(result.message); return; }
+        form.reset(); close(); if (window.SG.toast) window.SG.toast("SENHA ATUALIZADA");
+      } catch (e) { showError("Não foi possível salvar agora. Tente novamente."); }
+      finally { btn.disabled = false; }
+    });
+  }
   function bindCodeForm() {
     overlay.querySelector("[data-auth-close]").addEventListener("click", close);
-    overlay.querySelector("[data-code-back]").addEventListener("click", function () { mode = "signIn"; render(); });
+    overlay.querySelector("[data-code-back]").addEventListener("click", function () { codeRecovery = false; mode = "signIn"; render(); });
     overlay.querySelector("[data-code-signup]").addEventListener("click", function () {
       var email = overlay.querySelector('[name="email"]').value.trim();
-      mode = "signUp"; render();
+      codeRecovery = false; mode = "signUp"; render();
       overlay.querySelector('[name="email"]').value = email;
     });
     var form = overlay.querySelector("[data-code-form]");
     var send = overlay.querySelector("[data-send-code]");
     send.addEventListener("click", async function () {
+      if (send.disabled) return;
       var input = form.elements.email;
-      if (!input.reportValidity()) return;
+      if (!validEmail(input)) return;
       if (Date.now() < resendAfter) { showError("Aguarde " + Math.ceil((resendAfter - Date.now()) / 1000) + " segundos para reenviar."); return; }
+      var captchaBox = form.querySelector("[data-auth-captcha]"); if (captchaBox) captchaBox.hidden = false;
       if (needsCaptcha()) return;
       send.disabled = true;
       try {
@@ -160,7 +197,8 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
         var res = await svc.sendEmailCode(email, captchaToken());
         if (!res.ok) { showError(res.message); return; }
         codeEmail = email; resendAfter = Date.now() + 60000;
-        showError("Se o e-mail estiver cadastrado, confira sua caixa de entrada e o spam.");
+        showError("Pedido de código aceito. Confira sua caixa de entrada e o spam. Para confirmar o código, não é preciso repetir a proteção.", true);
+        var box = form.querySelector("[data-auth-captcha]"); if (box) box.hidden = true;
         form.elements.code.focus();
       } catch (err) { showError("Não foi possível enviar agora. Tente novamente."); }
       finally { send.disabled = false; if (captcha) captcha.reset(); }
@@ -168,12 +206,14 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
     form.addEventListener("submit", async function (e) {
       e.preventDefault();
       var token = form.elements.code.value.trim();
+      if (!validEmail(form.elements.email)) return;
       if (!/^[0-9]{6,8}$/.test(token)) { showError("Digite o código recebido por e-mail."); return; }
       if (form.elements.email.value.trim() !== codeEmail) { showError("Solicite um código para este e-mail primeiro."); return; }
-      var btn = form.querySelector('[type="submit"]'); btn.disabled = true;
+      var btn = form.querySelector('[type="submit"]'); if (btn.disabled) return; btn.disabled = true;
       try {
         var svc = await loadAuthService(); var res = await svc.verifyEmailCode(codeEmail, token);
         if (!res.ok) { showError(res.message); return; }
+        if (codeRecovery) { mode = "newPassword"; render(); return; }
         await runPendingAction(); close();
       } catch (err) { showError("Não foi possível confirmar agora. Tente novamente."); }
       finally { btn.disabled = false; }
@@ -187,32 +227,27 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
       render();
     });
     var codeBtn = overlay.querySelector("[data-email-code]");
-    if (codeBtn) codeBtn.addEventListener("click", function () { mode = "emailCode"; render(); });
+    if (codeBtn) codeBtn.addEventListener("click", function () { codeRecovery = false; mode = "emailCode"; render(); });
     var confirmationBtn = overlay.querySelector("[data-resend-confirmation]");
     confirmationBtn.addEventListener("click", async function () {
       var input = overlay.querySelector('[name="email"]');
-      if (!input.reportValidity() || needsCaptcha()) return;
+      if (!validEmail(input) || needsCaptcha()) return;
       confirmationBtn.disabled = true;
       try {
         var svc = await loadAuthService();
         var result = await svc.resendConfirmation(input.value.trim(), captchaToken());
-        showError(result.ok ? "Se houver uma confirmação pendente, confira o novo e-mail e use o link mais recente." : result.message);
+        showError(result.ok ? "Se houver uma confirmação pendente, confira o novo e-mail e use o link mais recente." : result.message, result.ok);
       } catch (e) { showError("Não foi possível reenviar agora. Tente novamente."); }
       finally { confirmationBtn.disabled = false; if (captcha) captcha.reset(); }
     });
     var forgotBtn = overlay.querySelector("[data-auth-forgot]");
     if (forgotBtn) {
-      forgotBtn.addEventListener("click", async function () {
-        var email = overlay.querySelector('[name="email"]').value.trim();
-        if (!email) { showError("Digite seu e-mail acima primeiro."); return; }
-        if (needsCaptcha()) return;
-        var svc = await loadAuthService();
-        var res = await svc.resetPassword(email, captchaToken());
-        if (captcha) captcha.reset();
-        if (!res.ok) showError(res.message);
-        else { if (window.SG.toast) window.SG.toast("LINK DE RECUPERAÇÃO ENVIADO, SE O E-MAIL EXISTIR"); }
+      forgotBtn.addEventListener("click", function () {
+        codeEmail = overlay.querySelector('[name="email"]').value.trim();
+        codeRecovery = true; mode = "emailCode"; render();
       });
     }
+
     overlay.querySelectorAll("[data-oauth]").forEach(function (btn) {
       btn.addEventListener("click", async function () {
         var svc = await loadAuthService();
@@ -222,6 +257,8 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
     });
     overlay.querySelector("[data-auth-form]").addEventListener("submit", async function (e) {
       e.preventDefault();
+      if (overlay.querySelector("[data-auth-submit]").disabled) return;
+      if (!validEmail(e.target.elements.email)) return;
       var fd = new FormData(e.target);
       var email = String(fd.get("email") || "").trim();
       var password = String(fd.get("password") || "");
@@ -243,25 +280,27 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
 
       if (needsCaptcha()) return;
       setLoading(true);
-      var svc = await loadAuthService();
-      var token = captchaToken();
-      var res = mode === "signUp" ? await svc.signUpWithEmail(name, email, password, token) : await svc.signInWithEmail(email, password, token);
-      setLoading(false);
-      if (captcha) captcha.reset();
-      if (!res.ok) { showError(res.message); return; }
-      if (res.confirmationRequired) { showError("Confira seu e-mail para confirmar sua conta antes de entrar."); return; }
-      await runPendingAction();
-      close();
+      try {
+        var svc = await loadAuthService();
+        var token = captchaToken();
+        var res = mode === "signUp" ? await svc.signUpWithEmail(name, email, password, token) : await svc.signInWithEmail(email, password, token);
+        if (!res.ok) { showError(res.message); return; }
+        if (res.confirmationRequired) { showError("Confira seu e-mail para confirmar sua conta antes de entrar.", true); return; }
+        await runPendingAction(); close();
+      } catch (e) { showError("Não foi possível conectar agora. Tente novamente."); }
+      finally { setLoading(false); if (captcha) captcha.reset(); }
+
     });
   }
 
   function open() {
-    mode = "signIn";
+    codeRecovery = false; mode = "signIn";
     overlay.hidden = false;
     document.body.classList.add("auth-modal-open");
     render();
   }
   function close() {
+    ++captchaGeneration;
     if (captcha) { captcha.destroy(); captcha = null; }
     overlay.hidden = true;
     document.body.classList.remove("auth-modal-open");
@@ -342,7 +381,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
       currentSession = session;
       if (!session) setTimeout(function(){import("../src/services/NotificationRealtime.ts").then(function(m){return m.watchCustomerNotifications(null);}).catch(function(){});},0);
       renderHeaderAccount();
-      if (session) { runPendingAction(); if (_event === "SIGNED_IN") setTimeout(function () { import("./customer-onboarding.js").then(function(m){return m.offerCustomerOnboarding(session);}).catch(function(){}); }, 0); }
+      if (session) { runPendingAction(); if (_event === "SIGNED_IN" && !codeRecovery) setTimeout(function () { import("./customer-onboarding.js").then(function(m){return m.offerCustomerOnboarding(session);}).catch(function(){}); }, 0); }
     });
   })();
 

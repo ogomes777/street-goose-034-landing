@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const auth = vi.hoisted(() => ({ signInWithOtp: vi.fn(), verifyOtp: vi.fn(), signUp: vi.fn(), resend: vi.fn(), signInWithPassword: vi.fn() }));
+const auth = vi.hoisted(() => ({ signInWithOtp: vi.fn(), verifyOtp: vi.fn(), signUp: vi.fn(), resend: vi.fn(), signInWithPassword: vi.fn(), getSession: vi.fn(), updateUser: vi.fn() }));
 vi.mock('../lib/supabase', () => ({ supabase: { auth }, isSupabaseConfigured: true }));
 import { AuthService } from './AuthService';
 beforeEach(() => { vi.resetAllMocks(); vi.stubGlobal('window', { location: { origin: 'https://www.streetgoose034.com.br' } }); });
@@ -42,4 +42,16 @@ it('resends signup confirmation with the security token', async () => {
 it('explains pending email confirmation without claiming login success', async () => {
   auth.signInWithPassword.mockResolvedValue({ error: { code: 'email_not_confirmed' } });
   expect(await AuthService.signInWithEmail('user@example.com', 'password')).toMatchObject({ ok: false, message: expect.stringContaining('Confirme seu e-mail') });
+});
+
+it('does not change passwords without an authenticated session', async () => {
+ auth.getSession.mockResolvedValue({ data: { session: null }, error: null });
+ expect((await AuthService.updatePassword('new-password')).ok).toBe(false);
+ expect(auth.updateUser).not.toHaveBeenCalled();
+});
+it('updates a password only using the authenticated client', async () => {
+ auth.getSession.mockResolvedValue({ data: { session: {} }, error: null });
+ auth.updateUser.mockResolvedValue({ error: null });
+ expect(await AuthService.updatePassword('new-password')).toEqual({ ok: true });
+ expect(auth.updateUser).toHaveBeenCalledWith({ password: 'new-password' });
 });

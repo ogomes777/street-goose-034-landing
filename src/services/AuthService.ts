@@ -91,6 +91,16 @@ export const AuthService = {
     return { ok: true }; // navegador redireciona — callback tratado em AuthCallback
   },
 
+  async updatePassword(password: string): Promise<AuthResult> {
+    if (!supabase) return { ok: false, reason: "not_configured", message: "Atualização de senha indisponível." };
+    if (password.length < 8) return { ok: false, reason: "invalid_credentials", message: "Use pelo menos 8 caracteres." };
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) return { ok: false, reason: "invalid_credentials", message: "Confirme seu acesso por e-mail antes de alterar a senha." };
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return { ok: false, reason: "unknown", message: error.code === "same_password" ? "Escolha uma senha diferente da atual." : "Não foi possível salvar a senha. Confirme seu acesso novamente e tente outra vez." };
+    return { ok: true };
+  },
+
   async resetPassword(email: string, captchaToken?: string | null): Promise<AuthResult> {
     if (!supabase) return { ok: false, reason: "not_configured", message: "Recuperação de senha ainda não configurada." };
     const { error } = await supabase.auth.resetPasswordForEmail(email, {

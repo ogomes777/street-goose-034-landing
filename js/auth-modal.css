@@ -1,0 +1,14 @@
+
+/* Auth actions share one alignment and comfortable touch targets. */
+.auth-modal-panel > .text-link{display:block;width:100%;margin:8px 0 0;padding:10px 6px;min-height:44px;text-align:center;white-space:normal;line-height:1.5;overflow-wrap:anywhere}
+.auth-modal-panel [data-auth-captcha]{display:flex;justify-content:center;min-height:65px}
+.auth-modal-panel [data-auth-captcha][hidden]{display:none}
+.auth-modal-panel [data-auth-captcha] iframe{max-width:100%}
+@media(max-width:480px){
+ .auth-modal{padding:12px}
+ .auth-modal-panel{padding:48px 18px 22px;max-height:calc(100dvh - 24px);overscroll-behavior:contain}
+ .auth-form input[type="text"],.auth-form input[type="email"],.auth-form input[type="password"]{font-size:16px}
+ .auth-modal-panel > .text-link{font-size:12px;letter-spacing:.06em}
+}
+
+.auth-error.auth-status-success{color:var(--text);background:color-mix(in srgb,var(--accent) 10%,var(--panel));border-color:color-mix(in srgb,var(--accent) 45%,transparent)}

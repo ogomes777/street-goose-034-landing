@@ -52,8 +52,10 @@ export async function mountCaptcha(container: HTMLElement): Promise<CaptchaHandl
   if (!siteKey) return null;
   let token: string | null = null;
   const api = await loadTurnstile();
+  if (!container.isConnected) return null;
   const id = api.render(container, {
     sitekey: siteKey,
+    size: container.clientWidth < 300 ? "compact" : "flexible",
     // acompanha o tema efetivo do site (data-theme ou preferência do sistema)
     theme: siteTheme(),
     language: document.documentElement.lang || "pt-BR",
