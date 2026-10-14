@@ -87,5 +87,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/crm-assistant.mjs": {
+      "maxDuration": 120
+    }
+  }
 }

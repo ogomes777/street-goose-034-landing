@@ -1,0 +1,12 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const mocks=vi.hoisted(()=>({getUser:vi.fn(),rpc:vi.fn()}));
+vi.mock('@supabase/supabase-js',()=>({createClient:()=>({auth:{getUser:mocks.getUser},rpc:mocks.rpc})}));
+vi.mock('@vercel/oidc',()=>({getVercelOidcToken:async()=>undefined}));
+import handler from '../../api/crm-assistant.mjs';
+const response=()=>{const r:any={setHeader:vi.fn(),status:vi.fn(),json:vi.fn()};r.status.mockReturnValue(r);return r;};
+beforeEach(()=>{vi.resetAllMocks();vi.unstubAllEnvs();vi.stubEnv('VITE_SUPABASE_URL','https://example.supabase.co');vi.stubEnv('VITE_SUPABASE_ANON_KEY','test');});
+it('requires authentication before provider access',async()=>{const r=response();await handler({method:'POST',headers:{},body:{action:'chat'}},r);expect(r.status).toHaveBeenCalledWith(401);expect(mocks.rpc).not.toHaveBeenCalled();});
+it('rejects non-admins independently of client UI',async()=>{mocks.getUser.mockResolvedValue({data:{user:{id:'test'}},error:null});mocks.rpc.mockResolvedValue({data:false,error:null});const r=response();await handler({method:'POST',headers:{authorization:'Bearer test'},body:{action:'status'}},r);expect(r.status).toHaveBeenCalledWith(403);});
+it('reports missing provider configuration honestly',async()=>{vi.stubEnv('AI_GATEWAY_API_KEY','');vi.stubEnv('VERCEL_OIDC_TOKEN','');mocks.getUser.mockResolvedValue({data:{user:{id:'test'}},error:null});mocks.rpc.mockResolvedValue({data:true,error:null});const r=response();await handler({method:'POST',headers:{authorization:'Bearer test'},body:{action:'status'}},r);expect(r.json).toHaveBeenCalledWith(expect.objectContaining({configured:false,liveVerified:false}));});
+it('blocks cross-origin calls',async()=>{const r=response();await handler({method:'POST',headers:{origin:'https://attacker.example',authorization:'Bearer test'},body:{action:'chat'}},r);expect(r.status).toHaveBeenCalledWith(403);expect(mocks.getUser).not.toHaveBeenCalled();});
+it('enforces the database-backed quota before invoking the provider',async()=>{vi.stubEnv('AI_GATEWAY_API_KEY','test');mocks.getUser.mockResolvedValue({data:{user:{id:'test'}},error:null});mocks.rpc.mockResolvedValueOnce({data:true,error:null}).mockResolvedValueOnce({data:false,error:null});const r=response();await handler({method:'POST',headers:{authorization:'Bearer test'},body:{action:'chat',question:'saldo'}},r);expect(r.status).toHaveBeenCalledWith(429);});

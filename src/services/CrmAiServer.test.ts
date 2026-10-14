@@ -1,0 +1,19 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+import {validPeriod,materializeAnswer,readTool,runConversation,gateway} from '../../server/crm-ai.mjs';
+beforeEach(()=>vi.unstubAllEnvs());
+const sources=[{source:'finance_entries',from:'2026-10-01T03:00:00Z',to:'2026-10-14T03:00:00Z',note:'Dados registrados.'}];
+it('rejects invalid and unbounded periods',()=>{expect(()=>validPeriod('bad','bad')).toThrow();expect(()=>validPeriod('2020-01-01','2026-01-01')).toThrow();});
+it('materializes chart and metric numbers only from database references',()=>{const a=materializeAnswer({title:'Financeiro',summary:'Entraram {{q0.in_cents}}.',metrics:[{label:'Entradas',ref:'q0.in_cents',value:999999}],chart:[{label:'Entradas',ref:'q0.in_cents'}]}, {'q0.in_cents':12345},sources);expect(a.metrics[0].value).toBe(12345);expect(a.summary).toContain('123,45');expect(a.chart[0].money).toBe(true);});
+it('rejects unreferenced values and numbers in narrative',()=>{expect(()=>materializeAnswer({title:'x',summary:'Entraram 999 reais.',metrics:[]},{},sources)).toThrow('sem referência');expect(()=>materializeAnswer({title:'x',summary:'x',metrics:[{ref:'made_up'}]},{},sources)).toThrow('sem fonte');});
+it('blocks arbitrary tool names before queries',async()=>{const db={rpc:vi.fn()};await expect(readTool(db,{area:'execute_sql'})).rejects.toThrow('não permitida');expect(db.rpc).not.toHaveBeenCalled();});
+it('supports specific period-filtered customer queries',async()=>{const db={rpc:vi.fn().mockResolvedValue({data:{total:1,items:[]},error:null})};await readTool(db,{area:'customers',search:'Cliente',sort:'spent',onlyNew:true});expect(db.rpc).toHaveBeenCalledWith('crm_assistant_details',expect.objectContaining({p_area:'customers',p_search:'Cliente',p_sort:'spent',p_only_new:true}));});
+it('maps provider credit and authentication failures without raw errors',async()=>{await expect(gateway('test','/test',{}, {},vi.fn().mockResolvedValue({ok:false,status:402}))).rejects.toMatchObject({code:'credits_required'});await expect(gateway('test','/test',{}, {},vi.fn().mockResolvedValue({ok:false,status:401}))).rejects.toMatchObject({code:'provider_setup'});});
+it('walks model -> bounded tool -> database -> grounded response with context',async()=>{
+ const db={rpc:vi.fn().mockResolvedValue({data:{in_cents:12000,out_cents:2000,prev_in_cents:6000,prev_out_cents:1000},error:null})};
+ const fetcher=vi.fn().mockResolvedValueOnce({ok:true,json:async()=>({choices:[{message:{role:'assistant',content:null,tool_calls:[{id:'call1',type:'function',function:{name:'read_crm',arguments:JSON.stringify({area:'finance'})}}]}}]})}).mockResolvedValueOnce({ok:true,json:async()=>({choices:[{message:{role:'assistant',content:JSON.stringify({title:'Caixa',summary:'O saldo é {{q0.period_balance_cents}}.',metrics:[{label:'Saldo',ref:'q0.period_balance_cents'}]})}}]})});
+ const a=await runConversation(db,'test',{question:'E o saldo?',history:[{role:'user',content:'Me explique o financeiro'}]},fetcher);
+ expect(a.metrics[0].value).toBe(10000);expect(db.rpc).toHaveBeenCalledWith('admin_finance_summary',expect.any(Object));
+ expect(JSON.parse(fetcher.mock.calls[0][1].body).messages).toEqual(expect.arrayContaining([{role:'user',content:'Me explique o financeiro'}]));
+});
+it('rejects answers that did not consult data',async()=>{const fetcher=vi.fn().mockResolvedValue({ok:true,json:async()=>({choices:[{message:{content:'{}'}}]})});await expect(runConversation({rpc:vi.fn()},'test',{question:'Quanto entrou?'},fetcher)).rejects.toMatchObject({code:'no_sources'});});
+it('does not invent a percentage when the previous period has no base',async()=>{const db={rpc:vi.fn().mockResolvedValue({data:{in_cents:12000,out_cents:500,prev_in_cents:0,prev_out_cents:0},error:null})};const s=await readTool(db,{area:'finance'});expect(s.data.in_change_cents).toBe(12000);expect(s.data.in_change_percent).toBeNull();});
