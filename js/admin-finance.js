@@ -1,4 +1,3 @@
-import {renderPrivateBalance} from './crm-workspace.js';
 /* Street Goose 034 — /admin → Financeiro (migration 0106).
    Saldo em caixa, entradas, saídas e resultado do período (com comparação
    ao período anterior), vendas e ticket médio, a receber, gráfico de
@@ -111,7 +110,7 @@ export function mountFinance(panel, ctx) {
         stat("refunds", "Reembolsos", "");
     }
     var net = s.in_cents - s.out_cents;
-    renderPrivateBalance(box.querySelector('[data-fin-value="balance"]'), s.balance_cents, signedBrl);
+    countUp(box.querySelector('[data-fin-value="balance"]'), s.balance_cents, signedBrl);
     countUp(box.querySelector('[data-fin-value="in"]'), s.in_cents, brl);
     countUp(box.querySelector('[data-fin-value="out"]'), s.out_cents, brl);
     countUp(box.querySelector('[data-fin-value="net"]'), net, signedBrl);

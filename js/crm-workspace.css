@@ -4,3 +4,9 @@
 [data-crm-theme="light"] .crm-ai.crm-os{--panel:#fffaf4;--surface:#fff;--input-bg:#fff;--text:#2d2118;--muted:#77604d;--border:#dcc8b5;--crm-soft:#f6e6d5;background:linear-gradient(145deg,#fff9f1,#f1e4d6);color:var(--text)}
 [data-crm-theme="light"] .crm-os h2{background:none;color:#342315;-webkit-text-fill-color:initial}[data-crm-theme="light"] .crm-os textarea,[data-crm-theme="light"] .crm-os .crm-ai-chips button,[data-crm-theme="light"] .crm-os .crm-ai-actions>button,[data-crm-theme="light"] .crm-os .crm-ai-answer,[data-crm-theme="light"] .crm-os .crm-ai-metric,[data-crm-theme="light"] .crm-os .crm-ai-source{background:var(--panel);color:var(--text);border-color:var(--border)}[data-crm-theme="light"] .crm-os .crm-ai-metric b{color:#7f3b0b}[data-crm-theme="light"] .crm-os button[type=submit]{background:linear-gradient(115deg,#ed7e2a,#ffb76c);color:#281509}[data-crm-theme="light"] .crm-os-matrix{opacity:.22}
 @media(max-width:600px){.crm-theme-toggle{padding:8px 10px}.crm-theme-toggle b{display:none}.crm-balance-caption{max-width:100%}}
+
+[data-crm-theme="light"] .crm-os-matrix{display:none!important}
+.app-page[data-active-route="/admin"] .crm-theme-toggle b{display:block!important;font-size:11px;line-height:1;white-space:nowrap}
+.app-page[data-active-route="/admin"] .crm-theme-toggle{min-width:96px;justify-content:center;gap:8px}
+.app-page[data-active-route="/admin"] .crm-balance-eye{display:inline-grid;place-items:center;width:36px;height:36px;min-width:36px;min-height:36px;padding:0;border-radius:50%;box-sizing:border-box;line-height:1;overflow:hidden;flex:none}
+.app-page[data-active-route="/admin"] .crm-balance-eye svg{display:block;position:static;width:18px;height:18px;margin:0;transform:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;fill:none}
