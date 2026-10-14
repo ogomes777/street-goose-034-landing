@@ -93,6 +93,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
         "</form>" +
         '<button class="text-link auth-switch" type="button" data-auth-switch>' + i18nT(isSignUp ? "auth.switchToSignIn" : "auth.switchToSignUp") + "</button>" +
         (!isSignUp ? '<button class="text-link auth-forgot" type="button" data-auth-forgot>' + i18nT("auth.forgotPassword") + "</button>" : "") +
+      '<button class="text-link" type="button" data-resend-confirmation>Reenviar confirmação de e-mail</button>' +
       (!isSignUp ? '<button class="text-link auth-switch" type="button" data-email-code>Entrar com código por e-mail</button>' : "") +
       "</div>"
     );
@@ -187,6 +188,18 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
     });
     var codeBtn = overlay.querySelector("[data-email-code]");
     if (codeBtn) codeBtn.addEventListener("click", function () { mode = "emailCode"; render(); });
+    var confirmationBtn = overlay.querySelector("[data-resend-confirmation]");
+    confirmationBtn.addEventListener("click", async function () {
+      var input = overlay.querySelector('[name="email"]');
+      if (!input.reportValidity() || needsCaptcha()) return;
+      confirmationBtn.disabled = true;
+      try {
+        var svc = await loadAuthService();
+        var result = await svc.resendConfirmation(input.value.trim(), captchaToken());
+        showError(result.ok ? "Se houver uma confirmação pendente, confira o novo e-mail e use o link mais recente." : result.message);
+      } catch (e) { showError("Não foi possível reenviar agora. Tente novamente."); }
+      finally { confirmationBtn.disabled = false; if (captcha) captcha.reset(); }
+    });
     var forgotBtn = overlay.querySelector("[data-auth-forgot]");
     if (forgotBtn) {
       forgotBtn.addEventListener("click", async function () {

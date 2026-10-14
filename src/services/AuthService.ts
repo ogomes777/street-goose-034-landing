@@ -30,7 +30,10 @@ export const AuthService = {
   async signInWithEmail(email: string, password: string, captchaToken?: string | null): Promise<AuthResult> {
     if (!supabase) return { ok: false, reason: "not_configured", message: "Login ainda não configurado — falta VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY." };
     const { error } = await supabase.auth.signInWithPassword({ email, password, options: captchaToken ? { captchaToken } : undefined });
-    if (error) return { ok: false, reason: "invalid_credentials", message: error.message };
+    if (error) return { ok: false, reason: "invalid_credentials", message:
+      error.code === "email_not_confirmed" ? "Confirme seu e-mail pelo link recebido antes de entrar. Se necessário, reenvie a confirmação."
+      : error.code === "captcha_failed" ? "Confirme novamente a segurança antes de entrar."
+      : "E-mail ou senha não conferem. Confira os dados, confirme seu e-mail ou use o acesso por código." };
     return { ok: true };
   },
 
@@ -57,6 +60,17 @@ export const AuthService = {
             : "Não foi possível enviar o código agora. Tente novamente em alguns instantes.";
       return { ok: false, reason: "unknown", message };
     }
+    return { ok: true };
+  },
+
+  async resendConfirmation(email: string, captchaToken?: string | null): Promise<AuthResult> {
+    if (!supabase) return { ok: false, reason: "not_configured", message: "Confirmação indisponível." };
+    const { error } = await supabase.auth.resend({ type: "signup", email, options: {
+      emailRedirectTo: window.location.origin + "/", ...(captchaToken ? { captchaToken } : {}),
+    } });
+    if (error) return { ok: false, reason: "unknown", message: error.status === 429 || /after .*seconds/i.test(error.message)
+      ? "Aguarde um minuto antes de solicitar outra confirmação."
+      : "Não foi possível reenviar agora. Confirme novamente a segurança e tente mais tarde." };
     return { ok: true };
   },
 

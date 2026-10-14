@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const auth = vi.hoisted(() => ({ signInWithOtp: vi.fn(), verifyOtp: vi.fn(), signUp: vi.fn() }));
+const auth = vi.hoisted(() => ({ signInWithOtp: vi.fn(), verifyOtp: vi.fn(), signUp: vi.fn(), resend: vi.fn(), signInWithPassword: vi.fn() }));
 vi.mock('../lib/supabase', () => ({ supabase: { auth }, isSupabaseConfigured: true }));
 import { AuthService } from './AuthService';
 beforeEach(() => { vi.resetAllMocks(); vi.stubGlobal('window', { location: { origin: 'https://www.streetgoose034.com.br' } }); });
@@ -32,4 +32,14 @@ describe('email authentication', () => {
     auth.signUp.mockResolvedValue({ data: { session: null }, error: null });
     expect(await AuthService.signUpWithEmail('User', 'user@example.com', 'password')).toEqual({ ok: true, confirmationRequired: true });
   });
+});
+
+it('resends signup confirmation with the security token', async () => {
+  auth.resend.mockResolvedValue({ error: null });
+  expect(await AuthService.resendConfirmation('user@example.com', 'challenge')).toEqual({ ok: true });
+  expect(auth.resend).toHaveBeenCalledWith({ type: 'signup', email: 'user@example.com', options: { emailRedirectTo: 'https://www.streetgoose034.com.br/', captchaToken: 'challenge' } });
+});
+it('explains pending email confirmation without claiming login success', async () => {
+  auth.signInWithPassword.mockResolvedValue({ error: { code: 'email_not_confirmed' } });
+  expect(await AuthService.signInWithEmail('user@example.com', 'password')).toMatchObject({ ok: false, message: expect.stringContaining('Confirme seu e-mail') });
 });
