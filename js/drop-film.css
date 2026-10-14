@@ -1,4 +1,4 @@
-/* Entry film: compositor motion and small transparent assets, no WebGL/video. */
+/* Entry film: compositor motion, optional one-draw mesh rig, no video download. */
 [data-popup] { z-index: 216; }
 [data-popup] .popup-backdrop { background:rgba(0,0,0,.88); backdrop-filter:none; }
 .popup-card.sg-drop-film {
@@ -156,3 +156,17 @@
  .sg-drop-hint { display:none; }
  .sg-drop-dismiss { margin-top:5px; }
 }
+
+/* Articulated mesh extends beyond its original rectangle for the overhead windup. */
+.sg-drop-rig { position:absolute; left:-30%; top:-20%; width:160%; height:140%; pointer-events:none; display:none; }
+.sg-drop-pose.has-rig .sg-drop-rig { display:block; }
+.sg-drop-pose.has-rig .sg-drop-body,.sg-drop-pose.has-rig .sg-drop-arm { visibility:hidden; }
+.sg-drop-line { display:block; overflow:hidden; padding-bottom:.05em; margin-bottom:-.05em; }
+.sg-drop-word { position:relative; display:block; --shine:150%; --light:0; }
+.sg-drop-word::after { content:attr(data-text); position:absolute; inset:0; color:transparent; background:linear-gradient(110deg,transparent 38%,#ffc57b 46%,#fff9ef 50%,#ffc57b 54%,transparent 62%); background-size:300% 100%; background-position:var(--shine) 50%; background-clip:text; -webkit-background-clip:text; opacity:var(--light); pointer-events:none; }
+.sg-drop-energy { position:absolute; inset:8%; border:1px solid #ffbd8060; border-radius:50%; opacity:0; pointer-events:none; }
+.sg-drop-portal::after { content:''; position:absolute; inset:15%; border-radius:50%; background:radial-gradient(ellipse,#ff952730,transparent 68%); opacity:.4; }
+.sg-drop-lupa .sg-drop-optical { position:absolute; inset:19% 7%; overflow:hidden; border-radius:48%; pointer-events:none; }
+.sg-drop-optical i { position:absolute; top:-30%; left:-45%; height:160%; width:25%; background:linear-gradient(90deg,transparent,#fff5cd77,transparent); transform:skewX(-20deg); opacity:0; }
+.sg-drop-film.is-lite .sg-drop-energy { display:none; }
+@media(prefers-reduced-motion:reduce) { .sg-drop-word::after,.sg-drop-energy,.sg-drop-optical { display:none; } }

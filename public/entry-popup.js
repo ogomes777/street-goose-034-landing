@@ -21,24 +21,43 @@
   var zoomOpen = false;
   var film = popupEl && popupEl.querySelector('[data-drop-film]');
   var timeline;
+  var ambient;
+  var rig;
+  var motion = {crouch:0,arm:0,lean:0,flight:0,productOpacity:0,impact:0};
   var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   var connection = navigator.connection;
   var lite = !!(connection && (connection.saveData || /(^|-)2g$/.test(connection.effectiveType))) ||
     (navigator.deviceMemory && navigator.deviceMemory <= 4) ||
     (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
-  function settleFilm() {
+  function stopAmbient() { if (ambient) { ambient.kill(); ambient = null; } }
+  function startAmbient() {
+    stopAmbient();
+    if (reducedMotion.matches || !window.gsap || !popupEl.classList.contains('is-open') || document.hidden) return;
+    var word = film.querySelector('em.sg-drop-word');
+    ambient = window.gsap.timeline({repeat:-1,repeatDelay:5,delay:3});
+    ambient.set(word, {'--light':.65,'--shine':'145%'})
+      .to(word, {'--shine':'-45%',duration:1.5,ease:'sine.inOut'})
+      .to(word, {color:'#f0cf9f',duration:1.7}, .5)
+      .to(word, {color:'#c6ceda',duration:1.7}, 2.2)
+      .to(word, {color:'#ff9b42','--light':0,duration:2}, 3.9);
+  }
+  function settleFilm(allowAmbient) {
     if (!film) return;
     if (timeline) { timeline.kill(); timeline = null; }
+    stopAmbient();
     film.classList.remove('is-playing');
     film.classList.add('is-settled');
-    // A single fixed character artwork: never change poses or swap frames.
-    film.querySelectorAll('[data-motion], .sg-drop-goose, .sg-drop-arm, .sg-drop-lupa, .sg-drop-portal, .sg-drop-portal span, .sg-drop-portal i, .sg-drop-portal b, .sg-drop-haze, .sg-drop-floor, .sg-drop-trail, .sg-drop-particles i').forEach(function (el) {
-      el.style.removeProperty('transform'); el.style.removeProperty('opacity'); el.style.removeProperty('will-change');
+    film.querySelectorAll('.sg-drop-goose, .sg-drop-body, .sg-drop-arm, .sg-drop-lupa, .sg-drop-portal, .sg-drop-portal span, .sg-drop-portal i, .sg-drop-portal b, .sg-drop-haze, .sg-drop-floor, .sg-drop-trail, .sg-drop-particles i, .sg-drop-energy, .sg-drop-optical i, .sg-drop-word').forEach(function (el) {
+      ['transform','opacity','will-change','color','--shine','--light'].forEach(function(p){el.style.removeProperty(p);});
     });
+    film._dropTimeline = null;
+    motion={crouch:0,arm:0,lean:0,flight:1,productOpacity:1,impact:0};
+    if (rig) rig.render(motion);
+    if (allowAmbient === true) startAmbient();
   }
   function startFilm() {
     if (!film) return;
-    settleFilm();
+    settleFilm(false);
     film.classList.toggle('is-lite', !!lite);
     if (reducedMotion.matches || !window.gsap) return;
     film.classList.remove('is-settled');
@@ -49,51 +68,98 @@
     var lupa = film.querySelector('.sg-drop-lupa');
     var portal = film.querySelector('.sg-drop-portal');
     var scene = film.querySelector('.sg-drop-scene');
-    // Derive the launch from the actual hand position, in every viewport.
-    var handX = goose.offsetLeft + goose.offsetWidth * .20;
-    var handY = goose.offsetTop + goose.offsetHeight * .43;
-    var launchX = handX - (lupa.offsetLeft + lupa.offsetWidth / 2);
-    var launchY = handY - (lupa.offsetTop + lupa.offsetHeight / 2);
+    var word = film.querySelectorAll('.sg-drop-word');
+    motion={crouch:0,arm:0,lean:0,flight:0,productOpacity:0,impact:0};
+    var launch = null;
+    var geometry = {left:goose.offsetLeft,top:goose.offsetTop,width:goose.offsetWidth,height:goose.offsetHeight,cx:lupa.offsetLeft+lupa.offsetWidth/2,cy:lupa.offsetTop+lupa.offsetHeight/2};
+
+    function handPosition() {
+      var point = rig ? rig.hand(motion) : {x:.16,y:.44+.125*motion.crouch};
+      return {x:geometry.left+geometry.width*point.x-geometry.cx,y:geometry.top+geometry.height*point.y-geometry.cy};
+    }
+    function renderMotion() {
+      if (rig && rig.ready()) {
+        rig.render(motion);
+        arm.style.removeProperty('transform');
+      } else {
+        // Animated fallback if mesh/GPU is unavailable; controls stay independent.
+        gsap.set(arm,{rotation:motion.arm*180/Math.PI,y:goose.offsetHeight*.125*motion.crouch});
+        gsap.set(film.querySelector('.sg-drop-body'),{y:goose.offsetHeight*.10*motion.crouch,scaleY:1-.10*motion.crouch,transformOrigin:'50% 100%'});
+      }
+      var point=handPosition(),t=motion.flight,x=point.x,y=point.y;
+      if(t>0){
+        if(!launch) launch=point;
+        var u=1-t;
+        // One cubic camera approach from the releasing hand to the final button.
+        x=u*u*u*launch.x+3*u*u*t*(launch.x-24)+3*u*t*t*24;
+        y=u*u*u*launch.y+3*u*u*t*(launch.y-55)+3*u*t*t*(-75);
+      }
+      var scale=.14+.86*t+motion.impact*.06;
+      var rotation=-32*(1-t)+Math.sin(t*Math.PI)*26;
+      lupa.style.transform='translate3d('+x.toFixed(3)+'px,'+y.toFixed(3)+'px,0) rotate('+rotation.toFixed(3)+'deg) rotateY('+(-24*(1-t)).toFixed(3)+'deg) scale('+scale.toFixed(4)+')';
+      lupa.style.opacity=motion.productOpacity.toFixed(3);
+      film.dataset.crouch=motion.crouch.toFixed(3);
+      film.dataset.throw=motion.flight.toFixed(3);
+    }
     gsap.set([goose, arm, lupa, portal], {willChange:'transform,opacity'});
-    timeline = gsap.timeline({onComplete:settleFilm, defaults:{ease:'power2.inOut'}});
+    timeline = gsap.timeline({onUpdate:renderMotion,onComplete:function(){settleFilm(true);},defaults:{ease:'power2.inOut'}});
+    film._dropTimeline = timeline;
     film.dataset.motionEngine = 'gsap';
-    timeline.fromTo(portal, {opacity:0, scaleX:.04, scaleY:.6}, {opacity:1,scaleX:1,scaleY:1,duration:1.25,ease:'power3.out'}, 0)
-      .fromTo('.sg-drop-portal span', {rotation:-100,scale:.85}, {rotation:360,scale:1,duration:5}, 0)
-      .fromTo('.sg-drop-portal b', {rotation:60}, {rotation:360,duration:5}, 0)
-      .fromTo(goose, {opacity:0, y:scene.clientHeight*.16, z:-160,scale:.55,rotation:-7}, {opacity:1,y:0,z:0,scale:1,rotation:0,duration:1.9,ease:'power3.out'}, .35)
-      .fromTo('.sg-drop-haze', {opacity:0,scale:.65}, {opacity:.55,scale:1.2,duration:1.8}, .25)
-      .fromTo('.sg-drop-floor', {opacity:0,scale:.6}, {opacity:1,scale:1,duration:1.5}, .5)
-      .to(arm, {rotation:-13,x:-3,y:-5,duration:.75}, 1.45)
-      .to(goose, {rotation:-3,y:-5,duration:.75}, 1.45)
-      .fromTo(lupa, {opacity:0,x:launchX,y:launchY,scale:.13,rotation:-28,rotationY:-28}, {opacity:1,duration:.25}, 1.55)
-      .to(lupa, {x:launchX-6,y:launchY-12,rotation:-38,duration:.65}, 1.8)
-      .to(arm, {rotation:8,x:2,y:0,duration:.6,ease:'power3.out'}, 2.4)
-      .to(goose, {rotation:2,y:0,duration:.65}, 2.4)
-      .to(lupa, {x:launchX*.4,y:launchY-35,scale:.5,rotation:12,rotationY:12,duration:.7,ease:'power2.in'}, 2.4)
-      .to(lupa, {x:0,y:-8,scale:1.04,rotation:-3,rotationY:0,duration:.85,ease:'power3.out'}, 3.1)
-      .to(lupa, {x:0,y:0,scale:1,rotation:0,duration:1.05,ease:'sine.inOut'}, 3.95)
-      .to(arm, {rotation:0,x:0,y:0,duration:1.1}, 3.1)
-      .to(goose, {rotation:0,y:0,duration:1.1}, 3.1)
-      .to(portal, {opacity:.65,duration:1.5}, 3.5)
-      .to('.sg-drop-haze', {opacity:.22,scale:1,duration:1.5}, 3.5)
-      .fromTo('.sg-drop-trail', {opacity:0,scaleX:.1}, {opacity:.6,scaleX:1,duration:.4}, 2.6)
-      .to('.sg-drop-trail', {opacity:0,duration:.5}, 3);
-    film.querySelectorAll('.sg-drop-particles i').forEach(function (spark, index) {
-      timeline.fromTo(spark, {opacity:0,y:20,scale:.3}, {opacity:.65,y:-18,scale:1,duration:.7}, .4+index*.04)
-        .to(spark, {opacity:0,x:(index%2 ? 1 : -1)*(12+index*3),y:-90,scale:.3,duration:2.6}, 1.1+index*.04);
+    film.dataset.choreography = 'crouch-windup-release';
+    timeline.fromTo(portal,{opacity:0,scaleX:.03,scaleY:.5},{opacity:1,scaleX:1,scaleY:1,duration:1.25,ease:'power3.out'},0)
+      .fromTo('.sg-drop-portal span',{rotation:-80,scale:.82},{rotation:360,scale:1,duration:6.2},0)
+      .fromTo('.sg-drop-portal b',{rotation:80},{rotation:360,duration:6.2},0)
+      .fromTo(goose,{opacity:0,y:scene.clientHeight*.18,z:-180,scale:.5},{opacity:1,y:0,z:0,scale:1,duration:1.65,ease:'power3.out'},.4)
+      .fromTo('.sg-drop-haze',{opacity:0,scale:.6},{opacity:.7,scale:1.2,duration:1.6},.25)
+      .fromTo('.sg-drop-floor',{opacity:0,scale:.6},{opacity:1,scale:1,duration:1.6},.5)
+      // A complete action: knees flex, weight drops, arm winds up, body rises.
+      .to(motion,{crouch:1,lean:-.09,duration:.85},1.6)
+      .to(motion,{arm:1.12,duration:.95},1.9)
+      .to(motion,{productOpacity:1,duration:.3},1.7)
+      .to(motion,{crouch:.9,lean:-.12,duration:.35},2.45)
+      .to(motion,{crouch:0,lean:.08,duration:.7,ease:'power3.out'},2.8)
+      .to(motion,{arm:-.18,duration:.6,ease:'power2.inOut'},2.85)
+      .call(function(){launch=handPosition();},[],3.12)
+      .to(motion,{flight:1,duration:1.6,ease:'power2.inOut'},3.12)
+      .to(motion,{arm:0,lean:0,duration:1.1},3.5)
+      .to(motion,{impact:1,duration:.22,ease:'sine.out'},4.72)
+      .to(motion,{impact:0,duration:.85,ease:'sine.inOut'},4.94)
+      .to(portal,{opacity:.65,duration:1.6},4.6)
+      .to('.sg-drop-haze',{opacity:.22,scale:1,duration:1.6},4.6)
+      .fromTo('.sg-drop-energy',{opacity:0,scale:.75},{opacity:.75,scale:1.05,duration:.5},2.8)
+      .to('.sg-drop-energy',{opacity:0,scale:1.4,duration:.9},3.3)
+      .fromTo('.sg-drop-trail',{opacity:0,scaleX:.1},{opacity:.6,scaleX:1,duration:.4},3.15)
+      .to('.sg-drop-trail',{opacity:0,duration:.6},3.55)
+      .fromTo(word,{yPercent:112,opacity:0},{yPercent:0,opacity:1,duration:1.1,stagger:.22,ease:'power3.out'},.7)
+      .set(word,{'--light':1,'--shine':'145%'},3.05)
+      .to(word,{'--shine':'-45%',duration:1.35,stagger:.15,ease:'sine.inOut'},3.05)
+      .to(word,{'--light':0,duration:.6},4.55)
+      .to(film.querySelector('em.sg-drop-word'),{color:'#f0d1a0',duration:.65},3.12)
+      .to(film.querySelector('em.sg-drop-word'),{color:'#d4dce8',duration:.7},3.77)
+      .to(film.querySelector('em.sg-drop-word'),{color:'#ff9b42',duration:1.2},4.47)
+      .fromTo('.sg-drop-optical i',{xPercent:0,opacity:0},{xPercent:600,opacity:.6,duration:1.2},4.1)
+      .to('.sg-drop-optical i',{opacity:0,duration:.4},5.3);
+    film.querySelectorAll('.sg-drop-particles i').forEach(function(spark,index){
+      timeline.fromTo(spark,{opacity:0,y:20,scale:.3},{opacity:.65,y:-18,scale:1,duration:.7},.4+index*.04)
+        .to(spark,{opacity:0,x:(index%2?1:-1)*(12+index*3),y:-90,scale:.3,duration:2.6},1.1+index*.04);
     });
+    renderMotion();
   }
+
   if (film) {
+    if (window.SGDropRig) rig = window.SGDropRig(film.querySelector('[data-drop-pose]'), lite);
+    if (rig) window.addEventListener('resize', function(){if(popupEl.classList.contains('is-open')) settleFilm(true);rig.resize();}, {passive:true});
     var sparks = film.querySelector('[data-drop-particles]');
     for (var s = 0; s < (lite ? 6 : 14); s++) {
       var spark = document.createElement('i');
       spark.style.cssText = 'left:' + (12 + (s * 37 % 78)) + '%;top:' + (30 + (s * 13 % 56)) + '%';
       sparks.append(spark);
     }
-    film.querySelector('[data-drop-skip]').addEventListener('click', settleFilm);
+    film.querySelector('[data-drop-skip]').addEventListener('click', function(){settleFilm(true);});
     film.querySelector('.sg-drop-lupa img').addEventListener('error', function () { film.querySelector('.sg-drop-lupa').hidden = true; });
     document.addEventListener('visibilitychange', function () {
       if (timeline) { if (document.hidden) timeline.pause(); else timeline.resume(); }
+      if (ambient) { if (document.hidden) ambient.pause(); else ambient.resume(); }
     });
     reducedMotion.addEventListener('change', function () { if (reducedMotion.matches) settleFilm(); });
   }

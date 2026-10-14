@@ -95,21 +95,25 @@ test('lead gate waits for dismissal and then releases; no simultaneous overlays'
 
 test('continuous GSAP motion keeps one artwork and cleans up on natural completion', async ({ page }) => {
   await enter(page, true);
+  await page.waitForFunction(() => {const tl=(document.querySelector('[data-drop-film]') as any)._dropTimeline;if(tl){tl.pause();return true;}return false;});
   const samples = await page.evaluate(async () => {
     const body = document.querySelector('.sg-drop-body')!;
     const goose = document.querySelector('.sg-drop-goose')!;
     const arm = document.querySelector('.sg-drop-arm')!;
-    const result: { artwork: string; pose: string; goose: string; arm: string }[] = [];
+    const result: { artwork: string; pose: string; goose: string; crouch: string }[] = [];
+    const tl=(document.querySelector('[data-drop-film]') as any)._dropTimeline;
     for (let i = 0; i < 12; i++) {
-      result.push({artwork:getComputedStyle(body).backgroundImage,pose:getComputedStyle(body).backgroundPosition,goose:getComputedStyle(goose).transform,arm:getComputedStyle(arm).transform});
-      await new Promise(resolve => setTimeout(resolve, 180));
+      tl.seek(i*.3, false);
+      result.push({artwork:getComputedStyle(body).backgroundImage,pose:getComputedStyle(body).backgroundPosition,goose:getComputedStyle(goose).transform,crouch:(document.querySelector('[data-drop-film]') as HTMLElement).dataset.crouch || '0'});
+
     }
+    tl.play();
     return result;
   });
   expect(new Set(samples.map(sample => sample.artwork)).size).toBe(1);
   expect(new Set(samples.map(sample => sample.pose)).size).toBe(1);
   expect(new Set(samples.map(sample => sample.goose)).size).toBeGreaterThan(5);
-  expect(new Set(samples.map(sample => sample.arm)).size).toBeGreaterThan(2);
+  expect(new Set(samples.map(sample => sample.crouch)).size).toBeGreaterThan(2);
   await expect(page.locator('[data-drop-film]')).toHaveClass(/is-settled/, { timeout: 6500 });
   expect(await page.locator('.sg-drop-goose').evaluate(el => (el as HTMLElement).style.transform)).toBe('');
   expect(await page.locator('.sg-drop-lupa').evaluate(el => (el as HTMLElement).style.transform)).toBe('');
@@ -121,5 +125,54 @@ test('offer remains usable when GSAP cannot load', async ({ page }) => {
   await expect(page.locator('[data-drop-film]')).toHaveClass(/is-settled/);
   await expect(page.locator('.sg-drop-terms')).toBeVisible();
   await page.locator('.sg-drop-cta').click();
+  await expect(page).toHaveURL(/\/categoria\/lupas$/);
+});
+
+test('knees flex before the hand releases, and headline reveals with a light sweep', async ({ page }) => {
+  await enter(page, true);
+  await page.waitForFunction(() => {
+    const film = document.querySelector('[data-drop-film]') as any;
+    if (!film._dropTimeline) return false;
+    film._dropTimeline.pause(); return true;
+  });
+  await page.waitForFunction(() => document.querySelector('[data-drop-pose]')!.classList.contains('has-rig'));
+  const states = await page.evaluate(() => {
+    const film = document.querySelector('[data-drop-film]') as any;
+    const lupa = document.querySelector('.sg-drop-lupa') as HTMLElement;
+    const word = document.querySelector('em.sg-drop-word') as HTMLElement;
+    const tl = film._dropTimeline;
+    const at = (t: number) => {
+      tl.seek(t, false);
+      return {crouch:Number(film.dataset.crouch),flight:Number(film.dataset.throw),transform:lupa.style.transform,wordTransform:word.style.transform,color:getComputedStyle(word).color,shine:word.style.getPropertyValue('--shine')};
+    };
+    return {start:at(.3),standing:at(1.6),crouched:at(2.7),released:at(3.6),approaching:at(4.5)};
+  });
+  expect(states.start.wordTransform).toMatch(/112%/);
+  expect(states.crouched.crouch).toBeGreaterThan(.85);
+  expect(states.crouched.flight).toBe(0);
+  expect(states.crouched.transform).toContain('scale(0.14)');
+  expect(states.released.crouch).toBe(0);
+  expect(states.released.flight).toBeGreaterThan(0);
+  expect(states.approaching.flight).toBeGreaterThan(.95);
+  expect(states.released.shine).not.toBe('');
+  expect(states.released.color).not.toBe(states.standing.color);
+  await page.locator('[data-drop-skip]').click();
+  await expect(page.locator('.sg-drop-word').first()).toBeVisible();
+  await page.locator('.popup-close[data-close-popup]').click();
+  expect(await page.evaluate(() => (document.querySelector('[data-drop-film]') as any)._dropTimeline)).toBe(null);
+});
+
+test('loss of GPU support keeps the articulated canvas scene and valid destination', async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function(type: any, ...args: any[]) {
+      if (type === 'webgl' || type === 'webgl2') return null;
+      return original.call(this, type, ...args);
+    } as any;
+  });
+  await enter(page, true);
+  await expect(page.locator('[data-drop-pose]')).toHaveAttribute('data-rig-status', 'canvas');
+  await page.locator('[data-drop-skip]').click();
+  await page.locator('.sg-drop-lupa').click();
   await expect(page).toHaveURL(/\/categoria\/lupas$/);
 });
