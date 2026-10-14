@@ -13,11 +13,11 @@ export function interpretQuestion(input:string){
  else if(/ranking|nivel|niveis|\bxp\b/.test(q))topic='xp';
  else if(/comunidade|postage|moderacao|aprovacao/.test(q))topic='community';
  else if(/cliente|cadastro|perfil|lead/.test(q))topic='customers';
- else if(/mais vend|mais saem|campea|finance|entrou|saiu|entrada|saida|saldo|fatur|receit|despes|ticket|venda|receber|lucro/.test(q))topic='finance';
+ else if(/mais vend|mais saem|campea|mais vendido|finance|vendi|vendeu|gasto|entrou|saiu|entrada|saida|saldo|fatur|receit|despes|ticket|venda|receber|lucro/.test(q))topic='finance';
  else if(/estoque|esgotad|catalogo|produto/.test(q))topic='products';
  else if(/pedido|entrega|reembolso|cancelad/.test(q))topic='orders';
  const d=q.match(/(?:ultimos?\s+)?(\d{1,3})\s*dias?/);
- return {topic,days:d?Math.min(365,Math.max(1,Number(d[1]))):null,month:/este mes|esse mes|mes atual/.test(q),today:/\bhoje\b/.test(q),topProducts:/mais vend|mais saem|campea/.test(q)};
+ return {topic,days:d?Math.min(365,Math.max(1,Number(d[1]))):null,month:/este mes|esse mes|mes atual/.test(q),today:/\bhoje\b/.test(q),topProducts:/mais vend|mais saem|campea|mais vendido/.test(q)};
 }
 export function makePeriod(days:number,month=false,today=false,now=new Date()){
  const end=new Date(now),start=new Date(now);
@@ -29,7 +29,7 @@ export function makePeriod(days:number,month=false,today=false,now=new Date()){
 export const CrmAssistantService={
  async ask(question:string,days=30):Promise<CrmAnswer>{
   if(!supabase||!await AdminService.isAdmin())throw Error('Acesso exclusivo da equipe da loja.');
-  const intent=interpretQuestion(question);if(!intent.topic)throw Error('Escolha uma das áreas ou peça um resumo de financeiro, pedidos, catálogo, clientes, comunidade, cupons, newsletter ou XP. Perguntas livres de IA ainda não estão conectadas.');
+  const intent=interpretQuestion(question);if(!intent.topic)throw Error('Escolha uma das áreas ou peça um resumo de financeiro, pedidos, catálogo, clientes, comunidade, cupons, newsletter ou XP. Experimente: quanto entrou e saiu este mês?');
   const period=makePeriod(intent.days??days,intent.month,intent.today),topic=intent.topic;
   const {data,error}=await supabase.rpc('admin_assistant_report',{p_from:period.from,p_to:period.to});
   if(error||!data)throw Error('Não foi possível consultar os registros. Tente novamente.');
