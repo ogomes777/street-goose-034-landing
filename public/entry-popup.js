@@ -139,7 +139,7 @@
       .to(motion,{crouch:1,lean:-.19,duration:.4,ease:'power2.in'},.62)
       .to(motion,{arm:1.33,duration:.45,ease:'power2.out'},.63)
       .to(motion,{crouch:0,lean:.16,duration:.42,ease:'expo.out'},1.12)
-      .to(motion,{jumpScale:1.13,jumpY:-h*(scene.clientWidth<420?.13:.19),turn:7,duration:.52,ease:'power3.out'},1.12)
+      .to(motion,{jumpScale:1.06,jumpY:-h*(scene.clientWidth<420?.13:.19),turn:7,duration:.52,ease:'power3.out'},1.12)
       .to(motion,{arm:-.34,duration:.38,ease:'power2.inOut'},1.44)
       .call(function(){launch=handPosition();launchScale=.14*motion.jumpScale;film.dataset.phase='throwing';},[],1.72)
       .to(motion,{flight:1,duration:.96,ease:'power3.out'},1.72)
@@ -163,7 +163,7 @@
       .to(speedlines,{opacity:0,scale:1.38,duration:.48},1.91)
       .fromTo(q('.sg-drop-trail'),{opacity:0,scaleX:.08},{opacity:1,scaleX:1.38,duration:.19,ease:'expo.out'},1.71)
       .to(q('.sg-drop-trail'),{opacity:0,scaleX:1.7,duration:.48},1.91)
-      .fromTo(word,{yPercent:115,opacity:0},{yPercent:0,opacity:1,duration:.78,stagger:.16,ease:'power4.out'},.62)
+      .fromTo(word,{yPercent:112,opacity:0},{yPercent:0,opacity:1,duration:.78,stagger:.16,ease:'power4.out'},.62)
       .fromTo(film.querySelectorAll('.sg-drop-description,.sg-drop-prices,.sg-drop-terms,.sg-drop-cta'),{y:17,opacity:0},{y:0,opacity:1,duration:.58,stagger:.075,ease:'power3.out'},1.25)
       .set(word,{'--light':1,'--shine':'145%'},1.77)
       .to(word,{'--shine':'-45%',duration:.94,stagger:.12,ease:'power2.inOut'},1.77)
@@ -178,7 +178,7 @@
         x:function(i,el){return parseFloat(el.dataset.dx)*power*scene.clientWidth;},
         y:function(i,el){return parseFloat(el.dataset.dy)*power*scene.clientHeight;},
         scale:function(i){return i%4===0?.34:1.25;},
-        opacity:0,duration:.77,stagger:{each:.009,from:'start'},ease:'power3.out'
+        opacity:0,duration:.77,stagger:{each:.009,from:'start'},ease:'power3.out',immediateRender:false
       },at);
     }
     if(burstA.length)burst(burstA,.69,.85);
