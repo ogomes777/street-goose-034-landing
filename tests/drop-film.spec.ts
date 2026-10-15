@@ -116,7 +116,8 @@ test('continuous GSAP motion keeps one artwork and cleans up on natural completi
   expect(new Set(samples.map(sample => sample.crouch)).size).toBeGreaterThan(2);
   await expect(page.locator('[data-drop-film]')).toHaveClass(/is-settled/, { timeout: 6500 });
   expect(await page.locator('.sg-drop-goose').evaluate(el => (el as HTMLElement).style.transform)).toBe('');
-  expect(await page.locator('.sg-drop-lupa').evaluate(el => (el as HTMLElement).style.transform)).toBe('');
+  expect(await page.locator('.sg-drop-lupa').evaluate(el => (el as HTMLElement).style.transform)).not.toBe('');
+  await expect.poll(() => page.evaluate(() => !!(document.querySelector('[data-drop-film]') as any)._dropLensIdle)).toBe(true);
 });
 
 test('offer remains usable when GSAP cannot load', async ({ page }) => {
@@ -192,18 +193,71 @@ test('portal and floating light continue after the throw, pause while hidden, an
   await expect.poll(async () => (await read()).portal).not.toBe(before.portal);
   await expect.poll(async () => (await read()).product).not.toBe(before.product);
   await expect.poll(async () => (await read()).orbit).not.toBe(before.orbit);
-  expect((await read()).hitbox).toBe('');
+  expect((await read()).hitbox).not.toBe('');
+  const lensStart=(await read()).hitbox;
+  await expect.poll(async () => (await read()).hitbox).not.toBe(lensStart);
   const paused = await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', {configurable:true, value:true});
     document.dispatchEvent(new Event('visibilitychange'));
     return (document.querySelector('[data-drop-film]') as any)._dropAmbient.paused();
   });
   expect(paused).toBe(true);
+  expect(await page.evaluate(() => (document.querySelector('[data-drop-film]') as any)._dropLensIdle.paused())).toBe(true);
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', {configurable:true, value:false});
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await page.keyboard.press('Escape');
   expect(await page.evaluate(() => (document.querySelector('[data-drop-film]') as any)._dropAmbient)).toBe(null);
+  expect(await page.evaluate(() => (document.querySelector('[data-drop-film]') as any)._dropLensIdle)).toBe(null);
   expect(await page.evaluate(() => document.body.style.position)).toBe('');
+});
+
+test('throw ends without a single-frame teleport and the physical lens keeps hovering', async ({ page }) => {
+  await enter(page, true);
+  await page.waitForFunction(() => {
+    const film = document.querySelector('[data-drop-film]') as any;
+    if (!film._dropTimeline) return false;
+    film._dropTimeline.pause(); return true;
+  });
+  const first = await page.evaluate(() => {
+    const film = document.querySelector('[data-drop-film]') as any;
+    const tl = film._dropTimeline;
+    tl.seek(tl.duration() - 0.025, false);
+    const rect = document.querySelector('.sg-drop-lupa')!.getBoundingClientRect();
+    tl.play();
+    return { x:rect.x, y:rect.y, w:rect.width, h:rect.height };
+  });
+  await expect(page.locator('[data-drop-film]')).toHaveClass(/is-settled/, {timeout:6500});
+  const second = await page.locator('.sg-drop-lupa').boundingBox();
+  expect(Math.abs(second!.x-first.x)).toBeLessThan(12);
+  expect(Math.abs(second!.y-first.y)).toBeLessThan(12);
+  expect(Math.abs(second!.width-first.w)).toBeLessThan(12);
+  await expect.poll(() => page.evaluate(() => !!(document.querySelector('[data-drop-film]') as any)._dropLensIdle)).toBe(true);
+  const before = await page.locator('.sg-drop-lupa').evaluate(el => (el as HTMLElement).style.transform);
+  await expect.poll(() => page.locator('.sg-drop-lupa').evaluate(el => (el as HTMLElement).style.transform)).not.toBe(before);
+  await page.locator('.popup-close[data-close-popup]').click();
+  expect(await page.evaluate(() => (document.querySelector('[data-drop-film]') as any)._dropLensIdle)).toBe(null);
+});
+
+test('price offers are two distinct rounded premium cards, including on 320px mobile', async ({page}) => {
+  await page.setViewportSize({width:320,height:568});
+  await enter(page,true);
+  await page.locator('[data-drop-skip]').click();
+  const info = await page.locator('.sg-drop-prices > div').evaluateAll(cards => cards.map(el => {
+    const s = getComputedStyle(el);
+    const box = el.getBoundingClientRect();
+    return {width:box.width, radius:parseFloat(s.borderTopLeftRadius), border:s.borderTopWidth, bg:s.backgroundImage};
+  }));
+  expect(info).toHaveLength(2);
+  for(const card of info){
+    expect(card.width).toBeGreaterThan(92);
+    expect(card.radius).toBeGreaterThanOrEqual(12);
+    expect(card.border).toBe('1px');
+    expect(card.bg).toContain('gradient');
+  }
+  const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  expect(horizontalOverflow).toBe(false);
+  await page.locator('.sg-drop-cta').click();
+  await expect(page).toHaveURL(/\/categoria\/lupas$/);
 });
