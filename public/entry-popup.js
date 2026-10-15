@@ -174,15 +174,12 @@
       .to(q('.sg-drop-product-aura'),{opacity:.45,scale:1.1,duration:.58},2.83);
     // Each burst consists of transformed 2D particles, no continuous canvas/WebGL render.
     function burst(particles,at,power) {
-      timeline.fromTo(particles,{x:0,y:0,scale:.1,opacity:0},{
+      timeline.fromTo(particles,{x:0,y:0,scale:.1,opacity:1},{
         x:function(i,el){return parseFloat(el.dataset.dx)*power*scene.clientWidth;},
         y:function(i,el){return parseFloat(el.dataset.dy)*power*scene.clientHeight;},
         scale:function(i){return i%4===0?.34:1.25;},
-        opacity:0,duration:.77,stagger:{each:.009,from:'random'},ease:'power3.out',
-        keyframes:null
+        opacity:0,duration:.77,stagger:{each:.009,from:'start'},ease:'power3.out'
       },at);
-      // Visible burst heads are displayed immediately, then accelerate and dissipate.
-      timeline.set(particles,{opacity:1},at+.015);
     }
     if(burstA.length)burst(burstA,.69,.85);
     if(burstB.length)burst(burstB,1.20,1.1);
