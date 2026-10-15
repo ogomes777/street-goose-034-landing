@@ -45,9 +45,9 @@
   function startLensIdle() {
     stopLensIdle();
     if(!film || reducedMotion.matches || !window.gsap)return;
-    var lupa=film.querySelector('.sg-drop-lupa'),gsap=window.gsap;
-    // At handoff the trajectory ends at the CSS layout origin with scale 1.
-    // GSAP interpolates from the ACTUAL inline transform (no clearProps/snap).
+    var lupa=film.querySelector('.sg-drop-lens-stage'),gsap=window.gsap;
+    // The outer anchor lands on the CSS layout origin. Only move the artwork
+    // inside it: the full promotional hitbox remains stationary and clickable.
     lensIdle=gsap.timeline({repeat:-1,yoyo:true,defaults:{ease:'sine.inOut'}});
     lensIdle.to(lupa,{
       x:lite?1.5:3.5,y:lite?-3.5:-7,rotation:lite?.55:1.4,
@@ -95,7 +95,7 @@
     if(!film)return;
     if(timeline){timeline.kill();timeline=null;}
     stopAmbient();stopLensIdle();film.classList.remove('is-playing');film.classList.add('is-settled');
-    film.querySelectorAll('.sg-drop-goose,.sg-drop-body,.sg-drop-arm,.sg-drop-lupa,.sg-drop-product,.sg-drop-product-aura,.sg-drop-product-orbit i,.sg-drop-portal,.sg-drop-portal > span,.sg-drop-portal > i,.sg-drop-portal > b,.sg-drop-starfield,.sg-drop-rift-core,.sg-drop-shockwave,.sg-drop-flare,.sg-drop-speedlines,.sg-drop-burst i,.sg-drop-haze,.sg-drop-floor,.sg-drop-trail,.sg-drop-particles i,.sg-drop-energy,.sg-drop-optical i,.sg-drop-word,.sg-drop-copy-atmosphere span,.sg-drop-copy-atmosphere i,.sg-drop-description,.sg-drop-prices,.sg-drop-terms,.sg-drop-cta').forEach(function(el){
+    film.querySelectorAll('.sg-drop-goose,.sg-drop-body,.sg-drop-arm,.sg-drop-lupa,.sg-drop-lens-stage,.sg-drop-product,.sg-drop-product-aura,.sg-drop-product-orbit i,.sg-drop-portal,.sg-drop-portal > span,.sg-drop-portal > i,.sg-drop-portal > b,.sg-drop-starfield,.sg-drop-rift-core,.sg-drop-shockwave,.sg-drop-flare,.sg-drop-speedlines,.sg-drop-burst i,.sg-drop-haze,.sg-drop-floor,.sg-drop-trail,.sg-drop-particles i,.sg-drop-energy,.sg-drop-optical i,.sg-drop-word,.sg-drop-copy-atmosphere span,.sg-drop-copy-atmosphere i,.sg-drop-description,.sg-drop-prices,.sg-drop-terms,.sg-drop-cta').forEach(function(el){
       ['transform','opacity','will-change','color','--shine','--light','--speed-opacity'].forEach(function(p){el.style.removeProperty(p);});
       if(el._gsap)el._gsap.uncache=1;
     });
