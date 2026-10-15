@@ -23,6 +23,7 @@
   var timeline;
   var ambient;
   var rig;
+  var burstA = [], burstB = [];
   var motion = {crouch:0,arm:0,lean:0,flight:0,productOpacity:0,impact:0};
   var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   var connection = navigator.connection;
@@ -51,12 +52,11 @@
     lens.fromTo(q('.sg-drop-optical i'),{xPercent:0,opacity:0},{xPercent:600,opacity:.55,duration:2,ease:'sine.inOut'})
       .to(q('.sg-drop-optical i'),{opacity:0,duration:.35},1.65);
     ambient.add(lens,floatDelay);
-    var word=q('em.sg-drop-word'),shine=gsap.timeline({repeat:-1,repeatDelay:4});
-    shine.set(word,{'--light':.8,'--shine':'145%'})
-      .to(word,{'--shine':'-45%',duration:1.7,ease:'sine.inOut'})
-      .to(word,{color:'#f0cf9f',duration:1.7},.3)
-      .to(word,{color:'#c6ceda',duration:1.7},2)
-      .to(word,{color:'#ff9b42','--light':0,duration:2},3.7);
+    var word=q('em.sg-drop-word'),shine=gsap.timeline({repeat:-1,repeatDelay:3.8});
+    shine.set(word,{'--light':1,'--shine':'145%'})
+      .to(word,{'--shine':'-45%',duration:.95,ease:'power2.inOut'})
+      .to(word,{color:'#fff2d5',duration:.16},.52)
+      .to(word,{color:'#ff9b42','--light':0,duration:.28,ease:'power3.out'},1.05);
     ambient.add(shine,headlineDelay);
     film.querySelectorAll('.sg-drop-particles i,.sg-drop-copy-atmosphere i').forEach(function(spark,index){
       var drift=gsap.timeline({repeat:-1,repeatDelay:.6+index%3*.4});
@@ -70,8 +70,8 @@
     if(!film)return;
     if(timeline){timeline.kill();timeline=null;}
     stopAmbient();film.classList.remove('is-playing');film.classList.add('is-settled');
-    film.querySelectorAll('.sg-drop-goose,.sg-drop-body,.sg-drop-arm,.sg-drop-lupa,.sg-drop-product,.sg-drop-product-aura,.sg-drop-product-orbit i,.sg-drop-portal,.sg-drop-portal > span,.sg-drop-portal > i,.sg-drop-portal > b,.sg-drop-starfield,.sg-drop-haze,.sg-drop-floor,.sg-drop-trail,.sg-drop-particles i,.sg-drop-energy,.sg-drop-optical i,.sg-drop-word,.sg-drop-copy-atmosphere span,.sg-drop-copy-atmosphere i,.sg-drop-description,.sg-drop-prices,.sg-drop-terms,.sg-drop-cta').forEach(function(el){
-      ['transform','opacity','will-change','color','--shine','--light'].forEach(function(p){el.style.removeProperty(p);});
+    film.querySelectorAll('.sg-drop-goose,.sg-drop-body,.sg-drop-arm,.sg-drop-lupa,.sg-drop-product,.sg-drop-product-aura,.sg-drop-product-orbit i,.sg-drop-portal,.sg-drop-portal > span,.sg-drop-portal > i,.sg-drop-portal > b,.sg-drop-starfield,.sg-drop-rift-core,.sg-drop-shockwave,.sg-drop-flare,.sg-drop-speedlines,.sg-drop-burst i,.sg-drop-haze,.sg-drop-floor,.sg-drop-trail,.sg-drop-particles i,.sg-drop-energy,.sg-drop-optical i,.sg-drop-word,.sg-drop-copy-atmosphere span,.sg-drop-copy-atmosphere i,.sg-drop-description,.sg-drop-prices,.sg-drop-terms,.sg-drop-cta').forEach(function(el){
+      ['transform','opacity','will-change','color','--shine','--light','--speed-opacity'].forEach(function(p){el.style.removeProperty(p);});
       if(el._gsap)el._gsap.uncache=1;
     });
     film._dropTimeline=null;film.dataset.phase=allowAmbient?'floating':'idle';
@@ -87,6 +87,8 @@
     var gsap=window.gsap,q=function(s){return film.querySelector(s);};
     var goose=q('.sg-drop-goose'),arm=q('.sg-drop-arm'),lupa=q('.sg-drop-lupa');
     var portal=q('.sg-drop-portal'),scene=q('.sg-drop-scene'),word=film.querySelectorAll('.sg-drop-word'),h=scene.clientHeight;
+    var shockA=q('.sg-drop-shockwave--a'),shockB=q('.sg-drop-shockwave--b');
+    var flare=q('.sg-drop-flare'),speedlines=q('.sg-drop-speedlines');
     motion={crouch:.2,arm:0,lean:-.08,flight:0,productOpacity:0,impact:0,jumpY:-h*.20,jumpScale:.24,turn:-12,visible:0};
     var launch=null,lastPose='',launchScale=.14;
     var geometry={left:goose.offsetLeft,top:goose.offsetTop,width:goose.offsetWidth,height:goose.offsetHeight,cx:lupa.offsetLeft+lupa.offsetWidth/2,cy:lupa.offsetTop+lupa.offsetHeight/2};
@@ -110,59 +112,99 @@
       if(t>0){
         if(!launch){launch=point;launchScale=.14*motion.jumpScale;}
         var u=1-t;
-        x=u*u*u*launch.x+3*u*u*t*(launch.x-geometry.width*.13)+3*u*t*t*geometry.width*.1;
-        y=u*u*u*launch.y+3*u*u*t*(launch.y-h*.1)+3*u*t*t*(-h*.14);
+        // Cubic Bezier with a real end anchor: the product rushes towards the viewer.
+        var endX=geometry.width*.12,endY=-h*.12;
+        x=u*u*u*launch.x+3*u*u*t*(launch.x-geometry.width*.38)+3*u*t*t*(endX-geometry.width*.22)+t*t*t*endX;
+        y=u*u*u*launch.y+3*u*u*t*(launch.y-h*.38)+3*u*t*t*(endY-h*.26)+t*t*t*endY;
       }
-      var scale=(t>0?launchScale+(1-launchScale)*t:.14*motion.jumpScale)+motion.impact*.035;
-      var rotation=-32*(1-t)+Math.sin(t*Math.PI)*30;
-      lupa.style.transform='translate3d('+x.toFixed(3)+'px,'+y.toFixed(3)+'px,0) rotate('+rotation.toFixed(3)+'deg) rotateY('+(-24*(1-t)).toFixed(3)+'deg) scale('+scale.toFixed(4)+')';
+      var scale=(t>0?launchScale+(1.06-launchScale)*t:.14*motion.jumpScale)+motion.impact*.045;
+      var rotation=-46*(1-t)+Math.sin(t*Math.PI)*530;
+      lupa.style.transform='translate3d('+x.toFixed(3)+'px,'+y.toFixed(3)+'px,0) rotate('+rotation.toFixed(3)+'deg) rotateY('+(-34*(1-t)+18*Math.sin(Math.PI*t)).toFixed(3)+'deg) scale('+scale.toFixed(4)+')';
+      lupa.style.setProperty('--speed-opacity',(t>0?Math.max(0,Math.sin(Math.PI*t))*.8:0).toFixed(3));
       lupa.style.opacity=motion.productOpacity.toFixed(3);
       film.dataset.crouch=motion.crouch.toFixed(3);film.dataset.throw=motion.flight.toFixed(3);film.dataset.jump=motion.jumpY.toFixed(3);
     }
-    gsap.set([goose,lupa,portal],{willChange:'transform,opacity'});startAmbient(3.8,6);
+    gsap.set([goose,lupa,portal],{willChange:'transform,opacity'});startAmbient(3.35,4.7);
     timeline=gsap.timeline({onUpdate:renderMotion,onComplete:function(){
       // No reset/cut at the handoff: rotation, floating and lighting continue.
       timeline=null;film._dropTimeline=null;film.classList.remove('is-playing');film.classList.add('is-settled');film.dataset.phase='floating';
       [goose,lupa,portal].forEach(function(el){el.style.removeProperty('will-change');});
       [goose,lupa].forEach(function(el){el.style.removeProperty('transform');el.style.removeProperty('opacity');});
     },defaults:{ease:'power2.inOut'}});
-    film._dropTimeline=timeline;film.dataset.motionEngine='gsap';film.dataset.choreography='portal-jump-airborne-throw';film.dataset.phase='emerging';
-    timeline.fromTo(portal,{opacity:0,scaleX:.025,scaleY:.55},{opacity:1,scaleX:1,scaleY:1.13,duration:1.1,ease:'power3.out'},0)
-      .to(motion,{visible:1,jumpScale:.56,jumpY:-h*.12,turn:-7,duration:.75,ease:'power2.out'},.38)
-      .to(motion,{productOpacity:1,duration:.35},.65)
-      .to(motion,{crouch:1,lean:-.12,duration:.55},.65)
-      .to(motion,{arm:1.12,duration:.7},.62)
-      .to(motion,{crouch:0,lean:.10,duration:.58,ease:'power2.out'},1.2)
-      .to(motion,{jumpScale:1.06,jumpY:-h*(scene.clientWidth<420?.10:.14),turn:4,duration:.72,ease:'power2.out'},1.2)
-      .to(motion,{arm:-.27,duration:.56,ease:'power2.inOut'},1.55)
-      .call(function(){launch=handPosition();launchScale=.14*motion.jumpScale;film.dataset.phase='throwing';},[],1.86)
-      .to(motion,{flight:1,duration:1.65,ease:'power2.inOut'},1.86)
-      .to(motion,{jumpY:0,jumpScale:1,turn:0,duration:.86,ease:'power2.in'},1.95)
-      .to(motion,{crouch:.58,lean:.035,duration:.24,ease:'sine.out'},2.65)
-      .to(motion,{crouch:0,lean:0,arm:0,duration:.68,ease:'sine.inOut'},2.89)
-      .to(motion,{impact:1,duration:.18,ease:'sine.out'},3.51)
-      .to(motion,{impact:0,duration:.7,ease:'sine.inOut'},3.69)
-      .fromTo(q('.sg-drop-haze'),{opacity:0,scale:.5},{opacity:.9,scale:1.2,duration:1.5},.2)
-      .to(q('.sg-drop-haze'),{opacity:.6,scale:1,duration:1.8},2.8)
-      .fromTo(q('.sg-drop-floor'),{opacity:0,scale:.5},{opacity:1,scale:1,duration:1.5},.4)
-      .fromTo(q('.sg-drop-energy'),{opacity:0,scale:.5},{opacity:.9,scale:.9,duration:.45},1.2)
-      .to(q('.sg-drop-energy'),{opacity:0,scale:1.5,duration:1},1.65)
-      .fromTo(q('.sg-drop-trail'),{opacity:0,scaleX:.1},{opacity:.85,scaleX:1,duration:.35},1.88)
-      .to(q('.sg-drop-trail'),{opacity:0,duration:.65},2.23)
-      .fromTo(word,{yPercent:112,opacity:0},{yPercent:0,opacity:1,duration:1.05,stagger:.2,ease:'power3.out'},.65)
-      .fromTo(film.querySelectorAll('.sg-drop-description,.sg-drop-prices,.sg-drop-terms,.sg-drop-cta'),{y:14,opacity:0},{y:0,opacity:1,duration:.8,stagger:.1,ease:'power2.out'},1.25)
-      .set(word,{'--light':1,'--shine':'145%'},2.1)
-      .to(word,{'--shine':'-45%',duration:1.5,stagger:.15,ease:'sine.inOut'},2.1)
-      .to(word,{'--light':0,duration:.6},3.75)
-      .to(q('em.sg-drop-word'),{color:'#f0d1a0',duration:.7},2.1)
-      .to(q('em.sg-drop-word'),{color:'#d4dce8',duration:.7},2.8)
-      .to(q('em.sg-drop-word'),{color:'#ff9b42',duration:1.3},3.5);
+    film._dropTimeline=timeline;film.dataset.motionEngine='gsap';film.dataset.choreography='rift-burst-jump-hyperthrow';film.dataset.phase='emerging';
+    timeline.fromTo(portal,{opacity:0,scaleX:.025,scaleY:.55},{opacity:1,scaleX:1,scaleY:1.13,duration:.88,ease:'expo.out'},0)
+      .fromTo(q('.sg-drop-rift-core'),{opacity:0,scale:.25},{opacity:.9,scale:1,duration:.72,ease:'power3.out'},.08)
+      .to(motion,{visible:1,jumpScale:.64,jumpY:-h*.13,turn:-9,duration:.58,ease:'power3.out'},.34)
+      .to(motion,{productOpacity:1,duration:.24},.54)
+      .to(motion,{crouch:1,lean:-.19,duration:.4,ease:'power2.in'},.62)
+      .to(motion,{arm:1.33,duration:.45,ease:'power2.out'},.63)
+      .to(motion,{crouch:0,lean:.16,duration:.42,ease:'expo.out'},1.25)
+      .to(motion,{jumpScale:1.06,jumpY:-h*(scene.clientWidth<420?.13:.19),turn:7,duration:.52,ease:'power3.out'},1.25)
+      .to(motion,{arm:-.34,duration:.38,ease:'power2.inOut'},1.44)
+      .call(function(){launch=handPosition();launchScale=.14*motion.jumpScale;film.dataset.phase='throwing';},[],1.72)
+      .to(motion,{flight:1,duration:.96,ease:'power3.out'},1.72)
+      .to(motion,{jumpY:0,jumpScale:1,turn:0,duration:.83,ease:'power2.in'},1.91)
+      .to(motion,{crouch:.62,lean:.045,duration:.21,ease:'sine.out'},2.62)
+      .to(motion,{crouch:0,lean:0,arm:0,duration:.65,ease:'sine.inOut'},2.83)
+      .to(motion,{impact:1,duration:.12,ease:'power4.out'},2.64)
+      .to(motion,{impact:0,duration:.46,ease:'power2.out'},2.76)
+      .fromTo(q('.sg-drop-haze'),{opacity:0,scale:.55},{opacity:1,scale:1.27,duration:1.05},.28)
+      .to(q('.sg-drop-haze'),{opacity:.6,scale:1,duration:1.55},2.34)
+      .fromTo(q('.sg-drop-floor'),{opacity:0,scale:.4},{opacity:1,scale:1,duration:.9},.48)
+      .fromTo(q('.sg-drop-energy'),{opacity:0,scale:.32},{opacity:1,scale:1.38,duration:.42,ease:'expo.out'},.68)
+      .to(q('.sg-drop-energy'),{opacity:0,scale:1.9,duration:.45},1.10)
+      .fromTo(shockA,{opacity:0,scale:.3},{opacity:.94,scale:1.58,duration:.57,ease:'expo.out'},.65)
+      .to(shockA,{opacity:0,scale:2,duration:.4,ease:'power2.out'},1.01)
+      .fromTo(shockB,{opacity:0,scale:.38},{opacity:.83,scale:1.7,duration:.47,ease:'expo.out'},1.25)
+      .to(shockB,{opacity:0,scale:2.07,duration:.42},1.55)
+      .fromTo(flare,{opacity:0,scale:.36},{opacity:.84,scale:1.12,duration:.2,ease:'power4.out'},.67)
+      .to(flare,{opacity:0,scale:1.4,duration:.45},.88)
+      .fromTo(speedlines,{opacity:0,scale:.77},{opacity:.75,scale:1.18,duration:.19,ease:'power3.out'},1.67)
+      .to(speedlines,{opacity:0,scale:1.38,duration:.48},1.91)
+      .fromTo(q('.sg-drop-trail'),{opacity:0,scaleX:.08},{opacity:1,scaleX:1.38,duration:.19,ease:'expo.out'},1.71)
+      .to(q('.sg-drop-trail'),{opacity:0,scaleX:1.7,duration:.48},1.91)
+      .fromTo(word,{yPercent:112,opacity:0},{yPercent:0,opacity:1,duration:.78,stagger:.16,ease:'power4.out'},.62)
+      .fromTo(film.querySelectorAll('.sg-drop-description,.sg-drop-prices,.sg-drop-terms,.sg-drop-cta'),{y:17,opacity:0},{y:0,opacity:1,duration:.58,stagger:.075,ease:'power3.out'},1.25)
+      .set(word,{'--light':1,'--shine':'145%'},1.77)
+      .to(word,{'--shine':'-45%',duration:.94,stagger:.12,ease:'power2.inOut'},1.77)
+      .to(word,{'--light':0,duration:.25},2.87)
+      .to(q('em.sg-drop-word'),{color:'#ffe3b3',duration:.18},2.36)
+      .to(q('em.sg-drop-word'),{color:'#ff9b42',duration:.3,ease:'power3.out'},2.56)
+      .fromTo(q('.sg-drop-product-aura'),{opacity:0,scale:.5},{opacity:.9,scale:1.3,duration:.2,ease:'power3.out'},2.61)
+      .to(q('.sg-drop-product-aura'),{opacity:.45,scale:1.1,duration:.58},2.83);
+    // Each burst consists of transformed 2D particles, no continuous canvas/WebGL render.
+    function burst(particles,at,power) {
+      timeline.fromTo(particles,{x:0,y:0,scale:.1,opacity:1},{
+        x:function(i,el){return parseFloat(el.dataset.dx)*power*scene.clientWidth;},
+        y:function(i,el){return parseFloat(el.dataset.dy)*power*scene.clientHeight;},
+        scale:function(i){return i%4===0?.34:1.25;},
+        opacity:0,duration:.77,stagger:{each:.009,from:'start'},ease:'power3.out',immediateRender:false
+      },at);
+    }
+    if(burstA.length)burst(burstA,.69,.85);
+    if(burstB.length)burst(burstB,1.27,1.1);
     renderMotion();if(document.hidden)timeline.pause();
   }
 
   if (film) {
     if (window.SGDropRig) rig = window.SGDropRig(film.querySelector('[data-drop-pose]'), lite);
     if (rig) window.addEventListener('resize', function(){if(popupEl.classList.contains('is-open')) settleFilm(true);rig.resize();}, {passive:true});
+    var burstHost = film.querySelector('[data-drop-burst]');
+    if (burstHost) {
+      var totalA = lite ? 12 : 32, totalB = lite ? 8 : 24;
+      for (var b = 0; b < totalA + totalB; b++) {
+        var particle = document.createElement('i');
+        // Golden-angle distribution keeps the explosion organic and repeatable.
+        var angle = b * 2.399963229728653;
+        var radius = .25 + ((b * 17) % 29) / 29 * .75;
+        particle.dataset.dx = (Math.cos(angle) * radius * .7).toFixed(5);
+        particle.dataset.dy = (Math.sin(angle) * radius * .72).toFixed(5);
+        particle.style.setProperty('--spark-w', b % 5 === 0 ? '5px' : '3px');
+        particle.style.setProperty('--spark-h', b % 4 === 0 ? '2px' : '3px');
+        burstHost.appendChild(particle);
+        (b < totalA ? burstA : burstB).push(particle);
+      }
+    }
     var sparks = film.querySelector('[data-drop-particles]');
     for (var s = 0; s < (lite ? 6 : 14); s++) {
       var spark = document.createElement('i');
