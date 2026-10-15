@@ -208,6 +208,8 @@
 }
 
 /* Continuity pass: floating product, price capsules and editorial afterglow. */
+.sg-drop-lens-stage {display:block;position:relative;width:100%;transform-origin:50% 50%;}
+
 .sg-drop-copy {
   min-height:0;
   overflow-y:auto;
