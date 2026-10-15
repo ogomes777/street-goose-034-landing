@@ -138,8 +138,8 @@
       .to(motion,{productOpacity:1,duration:.24},.54)
       .to(motion,{crouch:1,lean:-.19,duration:.4,ease:'power2.in'},.62)
       .to(motion,{arm:1.33,duration:.45,ease:'power2.out'},.63)
-      .to(motion,{crouch:0,lean:.16,duration:.42,ease:'expo.out'},1.12)
-      .to(motion,{jumpScale:1.06,jumpY:-h*(scene.clientWidth<420?.13:.19),turn:7,duration:.52,ease:'power3.out'},1.12)
+      .to(motion,{crouch:0,lean:.16,duration:.42,ease:'expo.out'},1.25)
+      .to(motion,{jumpScale:1.06,jumpY:-h*(scene.clientWidth<420?.13:.19),turn:7,duration:.52,ease:'power3.out'},1.25)
       .to(motion,{arm:-.34,duration:.38,ease:'power2.inOut'},1.44)
       .call(function(){launch=handPosition();launchScale=.14*motion.jumpScale;film.dataset.phase='throwing';},[],1.72)
       .to(motion,{flight:1,duration:.96,ease:'power3.out'},1.72)
@@ -155,8 +155,8 @@
       .to(q('.sg-drop-energy'),{opacity:0,scale:1.9,duration:.45},1.10)
       .fromTo(shockA,{opacity:0,scale:.3},{opacity:.94,scale:1.58,duration:.57,ease:'expo.out'},.65)
       .to(shockA,{opacity:0,scale:2,duration:.4,ease:'power2.out'},1.01)
-      .fromTo(shockB,{opacity:0,scale:.38},{opacity:.83,scale:1.7,duration:.47,ease:'expo.out'},1.19)
-      .to(shockB,{opacity:0,scale:2.07,duration:.42},1.49)
+      .fromTo(shockB,{opacity:0,scale:.38},{opacity:.83,scale:1.7,duration:.47,ease:'expo.out'},1.25)
+      .to(shockB,{opacity:0,scale:2.07,duration:.42},1.55)
       .fromTo(flare,{opacity:0,scale:.36},{opacity:.84,scale:1.12,duration:.2,ease:'power4.out'},.67)
       .to(flare,{opacity:0,scale:1.4,duration:.45},.88)
       .fromTo(speedlines,{opacity:0,scale:.77},{opacity:.75,scale:1.18,duration:.19,ease:'power3.out'},1.67)
@@ -182,7 +182,7 @@
       },at);
     }
     if(burstA.length)burst(burstA,.69,.85);
-    if(burstB.length)burst(burstB,1.20,1.1);
+    if(burstB.length)burst(burstB,1.27,1.1);
     renderMotion();if(document.hidden)timeline.pause();
   }
 
