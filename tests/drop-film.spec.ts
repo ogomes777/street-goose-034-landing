@@ -187,7 +187,7 @@ test('portal and floating light continue after the throw, pause while hidden, an
     portal: (document.querySelector('.sg-drop-portal > span') as HTMLElement).style.transform,
     product: (document.querySelector('.sg-drop-product') as HTMLElement).style.transform,
     orbit: (document.querySelector('.sg-drop-product-orbit i') as HTMLElement).style.transform,
-    hitbox: (document.querySelector('.sg-drop-lupa') as HTMLElement).style.transform
+    hitbox: (document.querySelector('.sg-drop-lens-stage') as HTMLElement).style.transform
   }));
   const before = await read();
   await expect.poll(async () => (await read()).portal).not.toBe(before.portal);
@@ -196,6 +196,7 @@ test('portal and floating light continue after the throw, pause while hidden, an
   expect((await read()).hitbox).not.toBe('');
   const lensStart=(await read()).hitbox;
   await expect.poll(async () => (await read()).hitbox).not.toBe(lensStart);
+  expect(await page.locator('.sg-drop-lupa').evaluate(el => (el as HTMLElement).style.transform)).not.toBe('');
   const paused = await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', {configurable:true, value:true});
     document.dispatchEvent(new Event('visibilitychange'));
@@ -234,8 +235,8 @@ test('throw ends without a single-frame teleport and the physical lens keeps hov
   expect(Math.abs(second!.y-first.y)).toBeLessThan(12);
   expect(Math.abs(second!.width-first.w)).toBeLessThan(12);
   await expect.poll(() => page.evaluate(() => !!(document.querySelector('[data-drop-film]') as any)._dropLensIdle)).toBe(true);
-  const before = await page.locator('.sg-drop-lupa').evaluate(el => (el as HTMLElement).style.transform);
-  await expect.poll(() => page.locator('.sg-drop-lupa').evaluate(el => (el as HTMLElement).style.transform)).not.toBe(before);
+  const before = await page.locator('.sg-drop-lens-stage').evaluate(el => (el as HTMLElement).style.transform);
+  await expect.poll(() => page.locator('.sg-drop-lens-stage').evaluate(el => (el as HTMLElement).style.transform)).not.toBe(before);
   await page.locator('.popup-close[data-close-popup]').click();
   expect(await page.evaluate(() => (document.querySelector('[data-drop-film]') as any)._dropLensIdle)).toBe(null);
 });
