@@ -22,6 +22,7 @@
   var film = popupEl && popupEl.querySelector('[data-drop-film]');
   var timeline;
   var ambient;
+  var lensIdle = null;
   var rig;
   var burstA = [], burstB = [];
   var motion = {crouch:0,arm:0,lean:0,flight:0,productOpacity:0,impact:0};
@@ -33,6 +34,30 @@
   function stopAmbient() {
     if(ambient){ambient.kill();ambient=null;}
     if(film) film._dropAmbient=null;
+  }
+  // An independent idle loop owns the outer product only AFTER the flight stops
+  // writing to it. Kill the loop on close/replay so neither animation fights
+  // over transform and the clickable hitbox always tracks the product.
+  function stopLensIdle() {
+    if(lensIdle){lensIdle.kill();lensIdle=null;}
+    if(film) film._dropLensIdle=null;
+  }
+  function startLensIdle() {
+    stopLensIdle();
+    if(!film || reducedMotion.matches || !window.gsap)return;
+    var lupa=film.querySelector('.sg-drop-lupa'),gsap=window.gsap;
+    // At handoff the trajectory ends at the CSS layout origin with scale 1.
+    // GSAP interpolates from the ACTUAL inline transform (no clearProps/snap).
+    lensIdle=gsap.timeline({repeat:-1,yoyo:true,defaults:{ease:'sine.inOut'}});
+    lensIdle.to(lupa,{
+      x:lite?1.5:3.5,y:lite?-3.5:-7,rotation:lite?.55:1.4,
+      scale:lite?1.004:1.012,duration:3.1
+    },0).to(lupa,{
+      x:lite?-.5:-2.5,y:lite?0:2,rotation:lite?-.3:-.8,
+      scale:1,duration:3.5
+    },3.1);
+    film._dropLensIdle=lensIdle;
+    if(document.hidden)lensIdle.pause();
   }
   function startAmbient(floatDelay,headlineDelay) {
     stopAmbient();
@@ -69,7 +94,7 @@
   function settleFilm(allowAmbient) {
     if(!film)return;
     if(timeline){timeline.kill();timeline=null;}
-    stopAmbient();film.classList.remove('is-playing');film.classList.add('is-settled');
+    stopAmbient();stopLensIdle();film.classList.remove('is-playing');film.classList.add('is-settled');
     film.querySelectorAll('.sg-drop-goose,.sg-drop-body,.sg-drop-arm,.sg-drop-lupa,.sg-drop-product,.sg-drop-product-aura,.sg-drop-product-orbit i,.sg-drop-portal,.sg-drop-portal > span,.sg-drop-portal > i,.sg-drop-portal > b,.sg-drop-starfield,.sg-drop-rift-core,.sg-drop-shockwave,.sg-drop-flare,.sg-drop-speedlines,.sg-drop-burst i,.sg-drop-haze,.sg-drop-floor,.sg-drop-trail,.sg-drop-particles i,.sg-drop-energy,.sg-drop-optical i,.sg-drop-word,.sg-drop-copy-atmosphere span,.sg-drop-copy-atmosphere i,.sg-drop-description,.sg-drop-prices,.sg-drop-terms,.sg-drop-cta').forEach(function(el){
       ['transform','opacity','will-change','color','--shine','--light','--speed-opacity'].forEach(function(p){el.style.removeProperty(p);});
       if(el._gsap)el._gsap.uncache=1;
@@ -77,7 +102,7 @@
     film._dropTimeline=null;film.dataset.phase=allowAmbient?'floating':'idle';
     motion={crouch:0,arm:0,lean:0,flight:1,productOpacity:1,impact:0};
     if(rig)rig.render(motion);
-    if(allowAmbient===true)startAmbient(0,2);
+    if(allowAmbient===true){startAmbient(0,2);startLensIdle();}
   }
   function startFilm() {
     if(!film)return;
@@ -113,11 +138,14 @@
         if(!launch){launch=point;launchScale=.14*motion.jumpScale;}
         var u=1-t;
         // Cubic Bezier with a real end anchor: the product rushes towards the viewer.
-        var endX=geometry.width*.12,endY=-h*.12;
-        x=u*u*u*launch.x+3*u*u*t*(launch.x-geometry.width*.38)+3*u*t*t*(endX-geometry.width*.22)+t*t*t*endX;
-        y=u*u*u*launch.y+3*u*u*t*(launch.y-h*.38)+3*u*t*t*(endY-h*.26)+t*t*t*endY;
+        // The endpoint IS the resting hitbox position. The previous build
+        // finished ~70px above it, then dropped when transform was cleared.
+        // Land naturally at the same coordinates the perpetual idle uses.
+        var endX=0,endY=0;
+        x=u*u*u*launch.x+3*u*u*t*(launch.x-geometry.width*.38)+3*u*t*t*(endX-geometry.width*.06)+t*t*t*endX;
+        y=u*u*u*launch.y+3*u*u*t*(launch.y-h*.35)+3*u*t*t*(endY-h*.075)+t*t*t*endY;
       }
-      var scale=(t>0?launchScale+(1.06-launchScale)*t:.14*motion.jumpScale)+motion.impact*.045;
+      var scale=(t>0?launchScale+(1-launchScale)*t:.14*motion.jumpScale)+motion.impact*.045;
       var rotation=-46*(1-t)+Math.sin(t*Math.PI)*530;
       lupa.style.transform='translate3d('+x.toFixed(3)+'px,'+y.toFixed(3)+'px,0) rotate('+rotation.toFixed(3)+'deg) rotateY('+(-34*(1-t)+18*Math.sin(Math.PI*t)).toFixed(3)+'deg) scale('+scale.toFixed(4)+')';
       lupa.style.setProperty('--speed-opacity',(t>0?Math.max(0,Math.sin(Math.PI*t))*.8:0).toFixed(3));
@@ -126,10 +154,13 @@
     }
     gsap.set([goose,lupa,portal],{willChange:'transform,opacity'});startAmbient(3.35,4.7);
     timeline=gsap.timeline({onUpdate:renderMotion,onComplete:function(){
-      // No reset/cut at the handoff: rotation, floating and lighting continue.
+      // The final flight frame is already at the intended rest coordinates.
+      // Never clear the lens transform here: let the perpetual hover inherit it.
       timeline=null;film._dropTimeline=null;film.classList.remove('is-playing');film.classList.add('is-settled');film.dataset.phase='floating';
-      [goose,lupa,portal].forEach(function(el){el.style.removeProperty('will-change');});
-      [goose,lupa].forEach(function(el){el.style.removeProperty('transform');el.style.removeProperty('opacity');});
+      [goose,portal].forEach(function(el){el.style.removeProperty('will-change');});
+      goose.style.removeProperty('transform');goose.style.removeProperty('opacity');
+      lupa.style.removeProperty('opacity');lupa.style.removeProperty('--speed-opacity');
+      startLensIdle();
     },defaults:{ease:'power2.inOut'}});
     film._dropTimeline=timeline;film.dataset.motionEngine='gsap';film.dataset.choreography='rift-burst-jump-hyperthrow';film.dataset.phase='emerging';
     timeline.fromTo(portal,{opacity:0,scaleX:.025,scaleY:.55},{opacity:1,scaleX:1,scaleY:1.13,duration:.88,ease:'expo.out'},0)
@@ -216,8 +247,28 @@
     document.addEventListener('visibilitychange', function () {
       if (timeline) { if (document.hidden) timeline.pause(); else timeline.resume(); }
       if (ambient) { if (document.hidden) ambient.pause(); else ambient.resume(); }
+      if (lensIdle) { if (document.hidden) lensIdle.pause(); else lensIdle.resume(); }
     });
-    reducedMotion.addEventListener('change', function () { if (reducedMotion.matches) settleFilm(); });
+    reducedMotion.addEventListener('change', function () {
+      if (reducedMotion.matches) settleFilm(false);
+      else if (popupEl.classList.contains('is-open') && film.classList.contains('is-settled')) settleFilm(true);
+    });
+    // Compositor-only pointer depth on desktop; no pointer listeners on touch.
+    if(window.matchMedia('(hover: hover) and (pointer: fine)').matches){
+      var sceneParallax=film.querySelector('.sg-drop-scene');
+      sceneParallax.addEventListener('pointermove',function(event){
+        if(!popupEl.classList.contains('is-open'))return;
+        var bounds=sceneParallax.getBoundingClientRect();
+        var px=(event.clientX-bounds.left)/bounds.width-.5;
+        var py=(event.clientY-bounds.top)/bounds.height-.5;
+        sceneParallax.style.setProperty('--drop-parallax-x',(px*8).toFixed(2)+'px');
+        sceneParallax.style.setProperty('--drop-parallax-y',(py*6).toFixed(2)+'px');
+      },{passive:true});
+      sceneParallax.addEventListener('pointerleave',function(){
+        sceneParallax.style.setProperty('--drop-parallax-x','0px');
+        sceneParallax.style.setProperty('--drop-parallax-y','0px');
+      },{passive:true});
+    }
   }
 
   function lockScroll() {
