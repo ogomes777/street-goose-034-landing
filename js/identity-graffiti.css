@@ -407,3 +407,47 @@
   .hero3d-graffiti::after,.hero3d-graffiti__sparks::after { display:none; }
   .universe-sticky::before { opacity:.18; }
 }
+
+/* Originkit Toon Fireball, integrated with the single-film chrome -> cobalt
+   finale. The lettering remains above it; the glow never blocks interactions. */
+.hero3d-fireball {
+  --sg-fireball-visibility: 0;
+  --sg-fireball-expansion: 1;
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 49%;
+  width: min(64vw, 740px);
+  aspect-ratio: 1;
+  opacity: var(--sg-fireball-visibility);
+  transform: translate3d(-50%, -50%, 0) scale(var(--sg-fireball-expansion));
+  transform-origin: center;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  contain: paint;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+.hero3d-fireball::before {
+  content: "";
+  position: absolute;
+  inset: 23%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffd087 0%, rgba(255,91,16,.65) 34%, rgba(16,68,209,.35) 58%, transparent 78%);
+  filter: blur(18px);
+  opacity: .72;
+}
+.hero3d-fireball.is-webgl::before { opacity: .12; }
+.hero3d-fireball canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+@media(max-width:720px){
+  .hero3d-fireball { width: min(95vw, 420px); top: 51%; }
+  .hero3d-fireball::before { filter: blur(10px); }
+}
+@media(prefers-reduced-motion:reduce){
+  .hero3d-fireball { display: none; }
+}
