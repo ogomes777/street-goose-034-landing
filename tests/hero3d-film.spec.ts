@@ -23,12 +23,11 @@ const watchRuntimeIssues = (page: Page): RuntimeIssues => {
   });
   page.on("requestfailed", (request) => {
     const failure = request.failure()?.errorText ?? "request failed";
-    // Chromium cancels superseded byte-range requests while a video is being
-    // seeked. That is expected for scroll scrubbing; every other media failure
-    // remains a regression.
-    const supersededHero3dRange =
-      request.url().includes("/assets/heroes/web/hero-3d") && failure === "net::ERR_ABORTED";
-    if (!supersededHero3dRange) {
+    // Chromium cancels superseded media requests when switching responsive
+    // sources, scrubbing, or closing a test page; these aborts are expected.
+    const expectedMediaCancellation =
+      failure === "net::ERR_ABORTED" && /\.(?:mp4|mp3)$/i.test(new URL(request.url()).pathname);
+    if (!expectedMediaCancellation) {
       issues.failedRequests.push(`${failure}:${request.url()}`);
     }
   });
@@ -41,6 +40,14 @@ const watchRuntimeIssues = (page: Page): RuntimeIssues => {
 
 const suppressCampaignPopup = (page: Page) =>
   page.addInitScript(() => window.sessionStorage.setItem("sgPopupSeen", "1"));
+
+const openWithoutIntro = async (page: Page) => {
+  await suppressCampaignPopup(page);
+  await page.goto("/");
+  const skipIntro = page.locator("[data-intro-skip]");
+  if (await skipIntro.isVisible()) await skipIntro.click();
+  await page.locator("[data-intro-loader]").waitFor({ state: "hidden" });
+};
 
 const waitForActiveHero3d = (page: Page) =>
   page.waitForFunction(() => {
@@ -109,8 +116,7 @@ const expectContainedWithoutOverflow = async (page: Page) => {
 
 test("original graffiti closes the Identity Film as a scroll-driven 3D reveal", async ({ page }) => {
   const issues = watchRuntimeIssues(page);
-  await suppressCampaignPopup(page);
-  await page.goto("/");
+  await openWithoutIntro(page);
 
   const section = page.locator("[data-hero3d-film]");
   const artwork = section.locator("[data-hero3d-graffiti-art]");
@@ -157,8 +163,7 @@ test("original graffiti closes the Identity Film as a scroll-driven 3D reveal", 
 
 test("hero3d initializes with the desktop film contained and error-free", async ({ page }) => {
   const issues = watchRuntimeIssues(page);
-  await suppressCampaignPopup(page);
-  await page.goto("/");
+  await openWithoutIntro(page);
 
   await expect(page.locator("[data-hero3d-film]")).toBeAttached();
   await waitForActiveHero3d(page);
@@ -176,8 +181,7 @@ test("hero3d initializes with the desktop film contained and error-free", async 
 });
 
 test("hero3d scroll progress advances and reverses currentTime", async ({ page }) => {
-  await suppressCampaignPopup(page);
-  await page.goto("/");
+  await openWithoutIntro(page);
   await waitForActiveHero3d(page);
 
   await scrollHero3dTo(page, 0.18);
@@ -205,8 +209,7 @@ test("hero3d selects the mobile film without viewport overflow", async ({ browse
   });
   const page = await context.newPage();
   const issues = watchRuntimeIssues(page);
-  await suppressCampaignPopup(page);
-  await page.goto("http://127.0.0.1:4174/");
+  await openWithoutIntro(page);
 
   await waitForActiveHero3d(page);
   await scrollHero3dTo(page, 0.12);
@@ -214,6 +217,14 @@ test("hero3d selects the mobile film without viewport overflow", async ({ browse
 
   const source = await page.locator(hero3dVideo).evaluate((video: HTMLVideoElement) => video.currentSrc);
   expect(new URL(source).pathname).toBe("/assets/heroes/web/hero-3d-mobile.mp4");
+  await expectContainedWithoutOverflow(page);
+  const artwork = page.locator("[data-hero3d-graffiti-art]");
+  const artworkFrame = page.locator("[data-hero3d-graffiti]");
+  await scrollHero3dTo(page, 0.995);
+  await expect.poll(() => artwork.evaluate((image) => Number(getComputedStyle(image).opacity))).toBeGreaterThan(0.95);
+  await expect.poll(() => currentFrameProgress(page)).toBeGreaterThan(0.94);
+  await expect.poll(() => artwork.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await expect(artworkFrame).toHaveCSS("touch-action", "pan-y");
   await expectContainedWithoutOverflow(page);
 
   expect(issues.pageErrors).toEqual([]);
@@ -226,8 +237,7 @@ test("hero3d selects the mobile film without viewport overflow", async ({ browse
 test("hero3d uses a static poster frame when reduced motion is requested", async ({ page }) => {
   const issues = watchRuntimeIssues(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await suppressCampaignPopup(page);
-  await page.goto("/");
+  await openWithoutIntro(page);
 
   const section = page.locator("[data-hero3d-film]");
   const video = page.locator(hero3dVideo);
@@ -279,3 +289,4 @@ test("hero3d uses a static poster frame when reduced motion is requested", async
   expect(issues.failedRequests).toEqual([]);
   expect(issues.badResponses).toEqual([]);
 });
+
