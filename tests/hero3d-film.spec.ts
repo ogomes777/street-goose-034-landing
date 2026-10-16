@@ -139,10 +139,10 @@ test("original graffiti closes the Identity Film as a scroll-driven 3D reveal", 
   expect(placement).toEqual({
     sameSection: true,
     immediatelyAfterVideo: true,
-    wrapperBlendMode: "screen",
-    artBlendMode: "normal",
+    wrapperBlendMode: "normal",
+    artBlendMode: "luminosity",
     background: "rgba(0, 0, 0, 0)",
-    src: "/brand/sg034-idvisual-graffiti.png",
+    src: "/brand/sg034-idvisual-cutout.webp",
   });
 
   await waitForActiveHero3d(page);
@@ -154,6 +154,17 @@ test("original graffiti closes the Identity Film as a scroll-driven 3D reveal", 
   await expect.poll(() => section.locator("[data-hero3d-graffiti-drawing]").evaluate((el) => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0.95);
   await expect.poll(() => currentFrameProgress(page)).toBeGreaterThan(0.94);
   await expect.poll(() => artwork.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  // The source used to be RGB with an opaque black field; assert real alpha.
+  const alpha = await artwork.evaluate((image: HTMLImageElement) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(image, 0, 0);
+    return { corner: ctx.getImageData(0, 0, 1, 1).data[3], ink: ctx.getImageData(400, 400, 1, 1).data[3] };
+  });
+  expect(alpha.corner).toBe(0);
+  expect(alpha.ink).toBeGreaterThan(150);
   await expect(section.locator(".hero3d-stage")).toHaveCSS("opacity", "0");
   await expectContainedWithoutOverflow(page);
 
@@ -222,6 +233,7 @@ test("hero3d selects the mobile film without viewport overflow", async ({ browse
   await expectContainedWithoutOverflow(page);
   const artwork = page.locator("[data-hero3d-graffiti-art]");
   const artworkFrame = page.locator("[data-hero3d-graffiti]");
+  const section = page.locator("[data-hero3d-film]");
   await scrollHero3dTo(page, 0.995);
   await expect.poll(() => section.locator("[data-hero3d-graffiti-drawing]").evaluate((el) => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0.95);
   await expect.poll(() => currentFrameProgress(page)).toBeGreaterThan(0.94);
@@ -266,7 +278,8 @@ test("hero3d uses a static poster frame when reduced motion is requested", async
           target.querySelector<HTMLElement>(".hero3d-sticky")!.offsetHeight <= window.innerHeight * 1.05,
         graffitiVisible: (() => {
           const art = target.querySelector<HTMLElement>("[data-hero3d-graffiti-art]");
-          return Boolean(art && getComputedStyle(art).visibility === "visible" && Number(getComputedStyle(art).opacity) > 0.95);
+          const drawing = target.querySelector<HTMLElement>("[data-hero3d-graffiti-drawing]");
+          return Boolean(art && drawing && getComputedStyle(art).visibility === "visible" && Number(getComputedStyle(drawing).opacity) > 0.95);
         })(),
       };
     }),
