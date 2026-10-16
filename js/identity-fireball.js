@@ -125,3 +125,18 @@ void main(){
     if(run&&!frameId)frameId=requestAnimationFrame(render);
     if(!run&&frameId){cancelAnimationFrame(frameId);frameId=0;}
   }
+  const observer="IntersectionObserver" in window
+    ? new IntersectionObserver(entries=>{
+      visible=entries[0].isIntersecting;sync();
+    },{rootMargin:"10% 0px"}):null;
+  if(observer)observer.observe(host);else visible=true;
+  document.addEventListener("visibilitychange",sync);
+  const onLost=e=>{
+    e.preventDefault();ready=false;available=false;
+    host.classList.remove("is-webgl");sync();
+  };
+  canvas.addEventListener("webglcontextlost",onLost);
+  function smooth(a,b,v){
+    const t=Math.min(1,Math.max(0,(v-a)/(b-a)));
+    return t*t*(3-2*t);
+  }
