@@ -238,6 +238,11 @@ import quartzImg from "../assets/universe-web/quartz-oakley.webp";
   universeST = window.ScrollTrigger.create({
     trigger: section, start: "top top", end: "bottom bottom",
     onUpdate: function (self) {
+      // Film handoff: keep cobalt glow across the section boundary, then
+      // fade it while the first product arrives. Never change product timing.
+      var bridge = Math.min(1, Math.max(0, self.progress / .13));
+      bridge = bridge * bridge * (3 - 2 * bridge);
+      sticky.style.setProperty("--sg-universe-bridge", (1 - bridge).toFixed(3));
       if (navTarget !== null) {
         if (Math.abs(self.progress * (N - 1) - navTarget) > 0.35) return;
         navTarget = null;
