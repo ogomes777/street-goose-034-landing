@@ -224,6 +224,16 @@ import { createIdentityFireball } from "./identity-fireball.js";
       section.style.setProperty("--sg-orange-impact", orangeImpact.toFixed(3));
       section.style.setProperty("--sg-blue-impact", blueImpact.toFixed(3));
       section.style.setProperty("--sg-blue-wave", blueWave.toFixed(3));
+      // Cinematic pressure: distinct hot ignition, cobalt charge and an
+      // expanding front. Everything scrubs both directions without timers.
+      var heatPulse = smoothstep(.856, .896, p) * (1 - smoothstep(.919, .948, p));
+      var blueCharge = smoothstep(.913, .943, p) * (1 - smoothstep(.968, .998, p));
+      var shockTravel = smoothstep(.926, .991, p);
+      section.style.setProperty("--sg-energy-heat", heatPulse.toFixed(3));
+      section.style.setProperty("--sg-energy-cobalt", blueCharge.toFixed(3));
+      section.style.setProperty("--sg-energy-wave", shockTravel.toFixed(3));
+      section.style.setProperty("--sg-energy-lift",
+        smoothstep(.860, .962, p).toFixed(3));
       section.style.setProperty("--sg-graffiti-drop", smoothstep(.916, 1, p).toFixed(3));
       section.style.setProperty("--sg-graffiti-light",
         Math.min(1, reveal * (.50 + orangeImpact * .4 + blueImpact * .48)).toFixed(3));
