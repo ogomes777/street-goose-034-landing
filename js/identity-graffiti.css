@@ -791,3 +791,105 @@
 @media(prefers-reduced-motion:reduce) {
   .sg-finale { display:none; }
 }
+
+/* V8 / CLEAN CINEMA: one shockwave, one controlled lens flare, clear lettering.
+   Old duplicate ::after rings and large overlays are fully culled so they
+   do not allocate extra compositor surfaces. The actual Originkit 3D renderer
+   keeps its sphere / flame / steam geometry and transparent WebGL canvas. */
+.hero3d-graffiti::after,
+.hero3d-graffiti__sparks::after {
+  content: none !important;
+  display: none !important;
+}
+.hero3d-graffiti__halo {
+  filter: blur(12px);
+  opacity: calc(var(--sg-graffiti-light) * (1 - var(--sg-graffiti-blue)) * .10);
+}
+.hero3d-graffiti__halo--blue {
+  opacity: calc(var(--sg-graffiti-blue) * .11);
+}
+.hero3d-graffiti__sparks {
+  contain: paint;
+}
+.hero3d-graffiti__spark {
+  box-shadow: 0 0 3px rgba(255,139,43,.6);
+}
+.sg-finale {
+  /* no layered frame-sized filters, raster blur or extra glow loop */
+  isolation: auto;
+}
+.sg-finale__charge {
+  background: radial-gradient(ellipse 25% 27% at 50% 48%,
+    rgba(255,208,112,.42),
+    rgba(255,128,37,.18) 42%,
+    transparent 86%);
+  opacity: calc(var(--sg-final-charge) * .78);
+}
+.sg-finale__flash {
+  background: radial-gradient(ellipse 24% 20% at 50% 48%,
+    rgba(244,250,255,.94),
+    rgba(149,205,255,.47) 32%,
+    rgba(43,122,242,.13) 67%,
+    transparent 94%);
+  opacity: calc(var(--sg-final-whiteout) * .74);
+  transform: scale(calc(.69 + var(--sg-final-wave) * .89));
+}
+.sg-finale__ring {
+  width: min(68vmin, 880px);
+  border-width: 1px;
+  border-color: rgba(171,224,255,.69);
+  box-shadow: 0 0 10px rgba(84,158,245,.30);
+  opacity: calc(var(--sg-final-blast) * (1 - var(--sg-final-wave) * .93) * .72);
+  transform: translate3d(-50%, -50%, 0)
+    scale(calc(.23 + var(--sg-final-wave) * 2.06));
+}
+.sg-finale__fallout {
+  background: radial-gradient(ellipse 92% 75% at 50% 111%,
+    rgba(64,135,255,.30),
+    rgba(25,83,205,.12) 43%,
+    transparent 85%);
+  opacity: calc(var(--sg-final-fallout) * .82);
+}
+.hero3d-film--motion .hero3d-graffiti__drawing {
+  scale: calc(1
+    + var(--sg-orange-impact) * .010
+    + var(--sg-blue-impact) * .018
+    + var(--sg-final-charge) * .008
+    + var(--sg-final-blast) * .026);
+}
+.hero3d-graffiti .hero3d-fireball {
+  transform: translate3d(-50%,-50%,0)
+    scale(calc(var(--sg-fireball-expansion)
+      + var(--sg-final-charge) * .020
+      + var(--sg-final-blast) * .035));
+}
+.universe-sticky::before {
+  background:
+    radial-gradient(ellipse 95% 73% at 50% -9%,
+      rgba(57,124,237,.38),
+      rgba(24,71,169,.14) 43%,
+      transparent 85%),
+    linear-gradient(to bottom,
+      rgba(18,58,140,.22),
+      transparent 66%);
+}
+@media (max-width: 720px) {
+  .hero3d-graffiti__spark:nth-child(n+7) { display: none; }
+  .sg-finale__ring {
+    width: min(72vw,330px);
+    box-shadow: 0 0 6px rgba(84,158,245,.32);
+  }
+  .sg-finale__flash {
+    background: radial-gradient(ellipse 40% 21% at 50% 48%,
+      rgba(239,248,255,.72),
+      rgba(66,144,248,.19) 42%,
+      transparent 90%);
+  }
+  .hero3d-film--motion .hero3d-graffiti__drawing {
+    scale: calc(1 + var(--sg-final-blast) * .013
+      + var(--sg-blue-impact) * .012);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-finale { display: none; }
+}
