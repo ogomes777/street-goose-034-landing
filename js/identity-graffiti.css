@@ -18,6 +18,7 @@
   background: transparent;
   perspective: 1200px;
   transform-style: preserve-3d;
+  mix-blend-mode: screen;
   touch-action: pan-y;
 }
 
@@ -27,7 +28,7 @@
   max-height: calc(var(--hero3d-graffiti-slot) - 2.5rem);
   height: auto;
   object-fit: contain;
-  mix-blend-mode: screen;
+  mix-blend-mode: normal;
   backface-visibility: hidden;
   transform-origin: 50% 50%;
   user-select: none;

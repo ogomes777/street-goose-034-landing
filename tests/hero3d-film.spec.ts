@@ -130,7 +130,8 @@ test("original graffiti closes the Identity Film as a scroll-driven 3D reveal", 
         wrapper?.closest("section[data-hero3d-film]") ===
         document.querySelector("section[data-hero3d-film]"),
       immediatelyAfterVideo: wrapper?.previousElementSibling?.classList.contains("hero3d-sticky") ?? false,
-      blendMode: getComputedStyle(image).mixBlendMode,
+      wrapperBlendMode: getComputedStyle(wrapper!).mixBlendMode,
+      artBlendMode: getComputedStyle(image).mixBlendMode,
       background: getComputedStyle(wrapper!).backgroundColor,
       src: new URL((image as HTMLImageElement).src).pathname,
     };
@@ -138,7 +139,8 @@ test("original graffiti closes the Identity Film as a scroll-driven 3D reveal", 
   expect(placement).toEqual({
     sameSection: true,
     immediatelyAfterVideo: true,
-    blendMode: "screen",
+    wrapperBlendMode: "screen",
+    artBlendMode: "normal",
     background: "rgba(0, 0, 0, 0)",
     src: "/brand/sg034-idvisual-graffiti.png",
   });
