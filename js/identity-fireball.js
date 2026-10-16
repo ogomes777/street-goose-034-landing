@@ -6,7 +6,7 @@
 export function createIdentityFireball(host, perfTier) {
   if (!host) return null;
   const mobile = matchMedia("(max-width:720px)").matches;
-  const controller = { active:false, visible:false, wake:undefined, stop:undefined };
+  const controller = { active:false, visible:false, maxFps: mobile ? (perfTier === "low" ? 22 : 30) : (perfTier === "low" ? 26 : 45), wake:undefined, stop:undefined };
   let started = false, destroyed = false, reactRoot = null, mountPromise = null;
 
   const smooth = (a,b,v) => {
@@ -28,7 +28,7 @@ export function createIdentityFireball(host, perfTier) {
         baseColor:"#6567EA", accentColor:"#6562E0",
         speed:14, distance:5, interaction:false,
         fire:{core:"#FF0000",steam:"#FFFDFD",trail:"#0E23F3"},
-        bloom:{strength:130,radius:10},
+        bloom:{strength: mobile ? 80 : 96, radius:8},
         style:{pointerEvents:"none",background:"transparent"}
       }));
       started = true;
@@ -67,7 +67,7 @@ export function createIdentityFireball(host, perfTier) {
       controller.active=strength>.025;
       host.style.setProperty("--sg-fireball-visibility",strength.toFixed(3));
       host.style.setProperty("--sg-fireball-expansion",
-        (1 + smooth(.919,.982,progress)*.14 + boom*.05).toFixed(3));
+        (1 + smooth(.919,.982,progress)*.10 + boom*.035).toFixed(3));
       if(controller.visible && controller.active) { mount(); controller.wake?.(); }
       else controller.stop?.();
     },
