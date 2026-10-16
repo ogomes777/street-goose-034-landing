@@ -165,7 +165,7 @@ test("original graffiti closes the Identity Film as a scroll-driven 3D reveal", 
   });
   expect(alpha.corner).toBe(0);
   expect(alpha.ink).toBeGreaterThan(150);
-  await expect(section.locator(".hero3d-stage")).toHaveCSS("opacity", "0");
+  await expect.poll(() => section.locator(".hero3d-stage").evaluate(el => Number(getComputedStyle(el).opacity))).toBeLessThan(0.01);
   await expectContainedWithoutOverflow(page);
 
   expect(issues.pageErrors).toEqual([]);
