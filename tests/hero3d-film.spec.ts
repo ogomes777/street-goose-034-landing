@@ -239,9 +239,9 @@ test("V5 impact pulses ignite, expand and extinguish without extra sections", as
   await expect(page.locator(".hero3d-energy")).toHaveCount(3);
   await scrollHero3dTo(page,.900);
   await expect.poll(()=>value("--sg-energy-heat")).toBeGreaterThan(.7);
-  await expect.poll(()=>orb.evaluate(el =>
-    Number(getComputedStyle(el).getPropertyValue("--sg-fireball-expansion")))).toBeGreaterThan(1.0);
   await scrollHero3dTo(page,.950);
+  await expect.poll(()=>orb.evaluate(el =>
+    Number(getComputedStyle(el).getPropertyValue("--sg-fireball-expansion")))).toBeGreaterThan(1.1);
   await expect.poll(()=>value("--sg-energy-cobalt")).toBeGreaterThan(.7);
   await expect.poll(()=>value("--sg-energy-wave")).toBeGreaterThan(.2);
   await expect(orb).toHaveClass(/is-webgl/);
