@@ -31,10 +31,10 @@ const FAR = 1000
 
 const BLOOM_THRESHOLD = 0
 const BLOOM_SMOOTH_WIDTH = 0.01
-const BLOOM_KERNELS = [3, 5, 7, 9, 11]
-const BLOOM_FACTORS = [1.0, 0.8, 0.6, 0.4, 0.2]
+const BLOOM_KERNELS = [3, 5, 7]
+const BLOOM_FACTORS = [1.0, 0.60, 0.28]
 
-const MAX_DPR = 1.15
+const MAX_DPR = 1.0
 
 const ZOOM_STEP = 0.95
 const MIN_DISTANCE = 1.5
@@ -287,11 +287,9 @@ varying vec2 vUv;
 uniform sampler2D blurTexture1;
 uniform sampler2D blurTexture2;
 uniform sampler2D blurTexture3;
-uniform sampler2D blurTexture4;
-uniform sampler2D blurTexture5;
 uniform float bloomStrength;
 uniform float bloomRadius;
-uniform float bloomFactors[5];
+uniform float bloomFactors[3];
 
 float lerpBloomFactor(const in float factor) {
     float mirrorFactor = 1.2 - factor;
@@ -302,9 +300,7 @@ void main() {
     vec4 sum = bloomStrength * (
         lerpBloomFactor(bloomFactors[0]) * texture2D(blurTexture1, vUv) +
         lerpBloomFactor(bloomFactors[1]) * texture2D(blurTexture2, vUv) +
-        lerpBloomFactor(bloomFactors[2]) * texture2D(blurTexture3, vUv) +
-        lerpBloomFactor(bloomFactors[3]) * texture2D(blurTexture4, vUv) +
-        lerpBloomFactor(bloomFactors[4]) * texture2D(blurTexture5, vUv)
+        lerpBloomFactor(bloomFactors[2]) * texture2D(blurTexture3, vUv)
     );
     gl_FragColor = vec4(clamp(sum.rgb, 0.0, 1.0), 1.0);
 }
@@ -570,6 +566,7 @@ function makeRT(gl: WebGLRenderingContext, w: number, h: number): RT {
 
 export interface FireballControl {
   active: boolean;
+  maxFps?: number;
   visible: boolean;
   wake?: () => void;
   stop?: () => void;
@@ -719,8 +716,8 @@ function __OriginkitBase_ToonFireball(props: FireProps) {
         ])
         const uBlur = pBlur.map((p) => loc(p, ["colorTexture", "texSize", "direction"]))
         const uComp = loc(pComp, [
-            "blurTexture1", "blurTexture2", "blurTexture3", "blurTexture4",
-            "blurTexture5", "bloomStrength", "bloomRadius", "bloomFactors[0]",
+            "blurTexture1", "blurTexture2", "blurTexture3",
+            "bloomStrength", "bloomRadius", "bloomFactors[0]",
         ])
 
         const aBall = {
@@ -786,7 +783,7 @@ function __OriginkitBase_ToonFireball(props: FireProps) {
         }
 
         const resize = () => {
-            const dpr = Math.min(window.matchMedia("(max-width:720px)").matches ? 0.72 : MAX_DPR, window.devicePixelRatio || 1)
+            const dpr = Math.min(window.matchMedia("(max-width:720px)").matches ? 0.70 : MAX_DPR, window.devicePixelRatio || 1)
 
             const w = Math.max(1, Math.round(canvas.clientWidth * dpr))
             const h = Math.max(1, Math.round(canvas.clientHeight * dpr))
@@ -912,7 +909,7 @@ function __OriginkitBase_ToonFireball(props: FireProps) {
         const frame = (now: number) => {
             raf = 0
             if (!control?.active || !control?.visible || document.hidden) return
-            const fpsInterval = window.matchMedia("(max-width:720px)").matches ? 1000/25 : 1000/40
+            const fpsInterval = 1000 / (control?.maxFps || 40)
             if (lastPaint && now-lastPaint < fpsInterval) {
                 raf = requestAnimationFrame(frame)
                 return
@@ -922,7 +919,7 @@ function __OriginkitBase_ToonFireball(props: FireProps) {
             last = now
             const L = live.current
             acc += dt * (L.speed / 50)
-            resize()
+            // ResizeObserver is the only resizing authority; avoid layout reads per frame.
             if (!rtScene || !rtBright) return
 
             const tBall = -acc / 2000
@@ -1052,7 +1049,7 @@ function __OriginkitBase_ToonFireball(props: FireProps) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, rtH[0].fb)
             gl.viewport(0, 0, rtH[0].w, rtH[0].h)
             gl.useProgram(pComp)
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < BLOOM_KERNELS.length; i++) {
                 gl.activeTexture(gl.TEXTURE0 + i)
                 gl.bindTexture(gl.TEXTURE_2D, rtV[i].tex)
                 gl.uniform1i(uComp["blurTexture" + (i + 1)], i)

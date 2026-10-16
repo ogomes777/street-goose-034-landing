@@ -30,7 +30,7 @@ import { createIdentityFireball } from "./identity-fireball.js";
   // runaway animation loops on Safari mobile.
   if (sparksRoot && !sparksRoot.children.length) {
     var frag = document.createDocumentFragment();
-    for (var si = 0; si < 28; si++) {
+    for (var si = 0; si < 12; si++) {
       var seed = (si * 61 + 17) % 101 / 101;
       var a = si * 2.399963229728653;
       var radius = 40 + (si % 7) * 8;
@@ -237,13 +237,15 @@ import { createIdentityFireball } from "./identity-fireball.js";
       // V7 final detonation. Energy compresses around the real 3D fireball,
       // a transient ice-white cobalt blast expands, then its floor reflection
       // survives exactly to the next chapter. No timer and fully reversible.
-      var finalCompression = smoothstep(.937, .963, p);
-      var finalCharge = finalCompression * (1 - smoothstep(.971, .990, p));
-      var finalBlast = smoothstep(.957, .975, p) *
+      // One deliberate crescendo, one clean shockfront, one quiet exit.
+      // Shorter flash prevents whiteout from washing out the original ink.
+      var finalCompression = smoothstep(.939, .965, p);
+      var finalCharge = finalCompression * (1 - smoothstep(.968, .987, p));
+      var finalBlast = smoothstep(.963, .978, p) *
         (1 - smoothstep(.988, .999, p));
-      var finalWave = smoothstep(.963, .998, p);
-      var finalWhiteout = smoothstep(.965, .976, p) *
-        (1 - smoothstep(.980, .992, p));
+      var finalWave = smoothstep(.964, .998, p);
+      var finalWhiteout = smoothstep(.970, .980, p) *
+        (1 - smoothstep(.983, .990, p));
       var finalFallout = smoothstep(.973, .999, p);
       section.style.setProperty("--sg-final-compression", finalCompression.toFixed(3));
       section.style.setProperty("--sg-final-charge", finalCharge.toFixed(3));
@@ -254,7 +256,7 @@ import { createIdentityFireball } from "./identity-fireball.js";
       section.style.setProperty("--sg-graffiti-drop", smoothstep(.916, 1, p).toFixed(3));
       section.style.setProperty("--sg-graffiti-light",
         Math.min(1, reveal * (.50 + orangeImpact * .4 + blueImpact * .48)).toFixed(3));
-      section.style.setProperty("--sg-graffiti-burst", sparks.toFixed(3));
+      section.style.setProperty("--sg-graffiti-burst", (sparks * .66).toFixed(3));
       section.style.setProperty("--sg-graffiti-throw", smoothstep(.892, .997, p).toFixed(3));
       section.style.setProperty("--sg-graffiti-flare", specular.toFixed(3));
       section.style.setProperty("--sg-graffiti-sweep-x",
