@@ -1,3 +1,4 @@
+import { createIdentityFireball } from "./identity-fireball.js";
 /* Street Goose 034 — Hero 3D Identity Film.
    Mascote -> transformação -> personagem -> energia orbital -> assinatura
    Street Goose. Tempo do vídeo 100% controlado pelo scroll, reaproveitando
@@ -49,6 +50,7 @@
 
   var reduced = window.SG.prefersReducedMotion();
   var canScrub = window.SG.hasGSAP && window.ScrollTrigger && !reduced;
+  var fireball = canScrub ? createIdentityFireball(section.querySelector("[data-hero3d-fireball]"), window.SG.perfTier) : null;
 
   window.SG.hero3dOrbitBoost = 0; // lido pela camada de partículas pra sincronizar com a energia do filme
 
@@ -231,6 +233,7 @@
       section.style.setProperty("--sg-graffiti-sweep-x",
         (-195 + 392 * smoothstep(.857, .977, p)).toFixed(1) + "%");
     }
+    if (fireball) fireball.update(p, orangeImpact, cobalt, blueImpact);
     composeStageTransform();
   }
 
