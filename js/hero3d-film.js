@@ -21,6 +21,31 @@
   var kicker = section.querySelector("[data-hero3d-kicker]");
   var sticky = section.querySelector(".hero3d-sticky");
   var graffiti = section.querySelector("[data-hero3d-graffiti-art]");
+  var graffitiShell = section.querySelector("[data-hero3d-graffiti]");
+  var graffitiDrawing = section.querySelector("[data-hero3d-graffiti-drawing]");
+  var sparksRoot = section.querySelector("[data-hero3d-graffiti-sparks]");
+
+  // Deterministic spark geometry. Reversible, scrub-driven; no timers or
+  // runaway animation loops on Safari mobile.
+  if (sparksRoot && !sparksRoot.children.length) {
+    var frag = document.createDocumentFragment();
+    for (var si = 0; si < 36; si++) {
+      var seed = (si * 61 + 17) % 101 / 101;
+      var a = si * 2.399963229728653;
+      var radius = 40 + (si % 7) * 8;
+      var spark = document.createElement("i");
+      spark.className = "hero3d-graffiti__spark";
+      spark.style.setProperty("--sg-spark-x", (16 + seed * 68).toFixed(2) + "%");
+      spark.style.setProperty("--sg-spark-y", (39 + Math.sin(a) * 17).toFixed(2) + "%");
+      spark.style.setProperty("--sg-spark-size", (1.5 + seed * 2.1).toFixed(2) + "px");
+      spark.style.setProperty("--sg-spark-opacity", (.36 + seed * .64).toFixed(2));
+      spark.style.setProperty("--sg-spark-dx", (Math.cos(a) * radius).toFixed(1) + "px");
+      spark.style.setProperty("--sg-spark-dy", (Math.sin(a) * radius * .85 - 30).toFixed(1) + "px");
+      frag.appendChild(spark);
+    }
+    sparksRoot.appendChild(frag);
+  }
+
 
   var reduced = window.SG.prefersReducedMotion();
   var canScrub = window.SG.hasGSAP && window.ScrollTrigger && !reduced;
@@ -47,15 +72,16 @@
     return;
   }
 
-  /* ---------------- Final-frame graffiti reveal, driven by the film's own scroll progress ---------------- */
+  /* ---------------- Code-controlled metal -> orange -> cobalt graffiti ---------------- */
   var graffitiTimeline = null;
-  if (graffiti && window.gsap && typeof window.gsap.timeline === "function") {
+  if (graffitiDrawing && window.gsap && typeof window.gsap.timeline === "function") {
     try {
       graffitiTimeline = window.gsap.timeline({ paused: true });
       graffitiTimeline.fromTo(
-        graffiti,
-        { autoAlpha: 0, y: 108, z: -360, scale: 0.68, rotationX: -34, rotationY: 12, rotationZ: -3 },
-        { autoAlpha: 1, y: 0, z: 0, scale: 1, rotationX: 0, rotationY: 0, rotationZ: 0, duration: 1, ease: "none" }
+        graffitiDrawing,
+        { autoAlpha: 0, y: 68, z: -220, scale: .78, rotationX: -21, rotationY: 5, rotationZ: -1 },
+        { autoAlpha: 1, y: 0, z: 0, scale: 1, rotationX: 0, rotationY: 0, rotationZ: 0,
+          duration: 1, ease: "none", immediateRender: false }
       );
       section.classList.add("hero3d-film--motion");
     } catch (err) {
@@ -92,8 +118,8 @@
   var KICKER_IN_END = 0.05, KICKER_HOLD_END = 0.10, KICKER_OUT_END = 0.15;
   var ORBIT_IN_START = 0.19, ORBIT_IN_END = 0.29, ORBIT_OUT_START = 0.58, ORBIT_OUT_END = 0.68;
   var SWEEP_AT = 0.71;
-  var OUT_START = 0.84;
-  var OUT_END = 0.985;
+  var OUT_START = 0.86;
+  var OUT_END = 0.995;
 
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
   function smoothstep(a, b, v) { var t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); }
@@ -171,7 +197,21 @@
       scrollScale = 1;
       finaleY = 0;
     }
-    if (graffitiTimeline) graffitiTimeline.progress(smoothstep(0.87, 1, p));
+    // The last film frame remains visible as chrome/light passes into the
+    // identical graffiti strokes. The color then turns blue at the boundary
+    // with the following Product Universe, all in this same Identity Film.
+    var reveal = smoothstep(.875, .975, p);
+    var blue = smoothstep(.94, 1, p);
+    var impact = smoothstep(.875, .912, p) * (1 - smoothstep(.958, .997, p));
+    if (graffitiTimeline) graffitiTimeline.progress(reveal);
+    if (graffitiShell) {
+      section.style.setProperty("--sg-graffiti-reveal", reveal.toFixed(3));
+      section.style.setProperty("--sg-graffiti-heat", (.24 + (1 - blue) * .5).toFixed(3));
+      section.style.setProperty("--sg-graffiti-blue", blue.toFixed(3));
+      section.style.setProperty("--sg-graffiti-light", (.48 + reveal * .48).toFixed(3));
+      section.style.setProperty("--sg-graffiti-burst", impact.toFixed(3));
+      section.style.setProperty("--sg-graffiti-throw", smoothstep(.895, .996, p).toFixed(3));
+    }
     composeStageTransform();
   }
 
