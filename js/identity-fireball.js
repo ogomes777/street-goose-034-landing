@@ -57,3 +57,40 @@ void main(){
  gl_FragColor=vec4(color,alpha*power);
 }
 `;
+  function makeShader(type,code){
+    const s=gl.createShader(type);
+    gl.shaderSource(s,code);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){
+      throw Error(gl.getShaderInfoLog(s)||"Shader invalid");
+    }
+    return s;
+  }
+  function init(){
+    if(ready||!available)return ready;
+    try{
+      gl=canvas.getContext("webgl",{alpha:true,antialias:false,depth:false,
+        premultipliedAlpha:false,powerPreference:"low-power"});
+      if(!gl){available=false;return false;}
+      const vs=makeShader(gl.VERTEX_SHADER,vert);
+      const fs=makeShader(gl.FRAGMENT_SHADER,frag);
+      program=gl.createProgram();
+      gl.attachShader(program,vs);gl.attachShader(program,fs);
+      gl.linkProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
+      if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error("WebGL link");
+      vertexBuffer=gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([
+        -1,-1,1,-1,-1,1,-1,1,1,-1,1,1
+      ]),gl.STATIC_DRAW);
+      locations={
+        pos:gl.getAttribLocation(program,"xy"),
+        res:gl.getUniformLocation(program,"res"),
+        tim:gl.getUniformLocation(program,"tim"),
+        cool:gl.getUniformLocation(program,"cool"),
+        power:gl.getUniformLocation(program,"power"),
+        burst:gl.getUniformLocation(program,"burst")
+      };
+      ready=true;host.classList.add("is-webgl");
+    }catch(e){available=false;console.warn("[SG034] Fireball CSS fallback",e);}
+    return ready;
+  }
