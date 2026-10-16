@@ -94,3 +94,34 @@ void main(){
     }catch(e){available=false;console.warn("[SG034] Fireball CSS fallback",e);}
     return ready;
   }
+  function render(now){
+    frameId=0;
+    if(!active||!visible||document.hidden)return;
+    if(lastFrame&&now-lastFrame<interval){frameId=requestAnimationFrame(render);return;}
+    lastFrame=now;
+    if(!init())return;
+    const box=canvas.getBoundingClientRect();
+    const dpr=mobile?.82:Math.min(devicePixelRatio||1,1.25);
+    const w=Math.max(2,Math.round(box.width*dpr));
+    const h=Math.max(2,Math.round(box.height*dpr));
+    if(w!==canvas.width||h!==canvas.height){
+      canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);
+    }
+    gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer);
+    gl.enableVertexAttribArray(locations.pos);
+    gl.vertexAttribPointer(locations.pos,2,gl.FLOAT,false,0,0);
+    gl.uniform2f(locations.res,w,h);
+    gl.uniform1f(locations.tim,(now-begin)/1000);
+    gl.uniform1f(locations.cool,blue);
+    gl.uniform1f(locations.power,energy);
+    gl.uniform1f(locations.burst,impact);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+    gl.drawArrays(gl.TRIANGLES,0,6);
+    frameId=requestAnimationFrame(render);
+  }
+  function sync(){
+    const run=active&&visible&&!document.hidden&&available;
+    if(run&&!frameId)frameId=requestAnimationFrame(render);
+    if(!run&&frameId){cancelAnimationFrame(frameId);frameId=0;}
+  }
