@@ -284,6 +284,43 @@ test("original Originkit 3D renderer has transparent canvas, real shaders and no
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
 });
 
+test("final film background detonates, reverses and carries blue into the Universe", async ({ page }) => {
+  const issues = watchRuntimeIssues(page);
+  await openWithoutIntro(page);
+  await waitForActiveHero3d(page);
+  const section = page.locator("[data-hero3d-film]");
+  const finale = section.locator("[data-hero3d-finale]");
+  await expect(finale).toHaveCount(1);
+  await expect(finale.locator(".sg-finale__ring")).toHaveCount(2);
+  await expect(finale).toHaveCSS("pointer-events", "none");
+  const amount = (name: string) => section.evaluate((el,key)=>
+    Number(getComputedStyle(el).getPropertyValue(key)), name);
+  await scrollHero3dTo(page, .950);
+  await expect.poll(()=>amount("--sg-final-charge")).toBeGreaterThan(.25);
+  await scrollHero3dTo(page, .980);
+  await expect.poll(()=>amount("--sg-final-blast")).toBeGreaterThan(.80);
+  await expect.poll(()=>amount("--sg-final-whiteout")).toBeGreaterThan(.15);
+  await expect.poll(()=>amount("--sg-final-wave")).toBeGreaterThan(.20);
+  await expect.poll(()=>finale.locator(".sg-finale__flash").evaluate(
+    el=>Number(getComputedStyle(el).opacity))).toBeGreaterThan(.15);
+  await scrollHero3dTo(page, .999);
+  await expect.poll(()=>amount("--sg-final-whiteout")).toBeLessThan(.02);
+  await expect.poll(()=>amount("--sg-final-blast")).toBeLessThan(.06);
+  await expect.poll(()=>amount("--sg-final-fallout")).toBeGreaterThan(.99);
+  await page.evaluate(()=>{
+    const universe=document.querySelector<HTMLElement>("[data-universe-stage]")!;
+    window.scrollTo(0,universe.offsetTop+.018*(universe.offsetHeight-innerHeight));
+  });
+  await expect.poll(()=>page.locator(".universe-sticky").evaluate(el=>
+    Number(getComputedStyle(el).getPropertyValue("--sg-universe-bridge")))).toBeGreaterThan(.75);
+  await scrollHero3dTo(page, .930);
+  await expect.poll(()=>amount("--sg-final-blast")).toBeLessThan(.02);
+  await expect.poll(()=>amount("--sg-final-fallout")).toBeLessThan(.02);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
+  expect(issues.pageErrors).toEqual([]);
+  expect(issues.consoleErrors).toEqual([]);
+});
+
 test("hero3d initializes with the desktop film contained and error-free", async ({ page }) => {
   const issues = watchRuntimeIssues(page);
   await openWithoutIntro(page);
