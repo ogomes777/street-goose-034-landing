@@ -148,10 +148,10 @@ test("original graffiti closes the Identity Film as a scroll-driven 3D reveal", 
   await waitForActiveHero3d(page);
   await scrollHero3dTo(page, 0.82);
   await waitForHero3dMetadata(page);
-  await expect.poll(() => artwork.evaluate((image) => Number(getComputedStyle(image).opacity))).toBeLessThan(0.05);
+  await expect.poll(() => section.locator("[data-hero3d-graffiti-drawing]").evaluate((el) => Number(getComputedStyle(el).opacity))).toBeLessThan(0.05);
 
   await scrollHero3dTo(page, 0.995);
-  await expect.poll(() => artwork.evaluate((image) => Number(getComputedStyle(image).opacity))).toBeGreaterThan(0.95);
+  await expect.poll(() => section.locator("[data-hero3d-graffiti-drawing]").evaluate((el) => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0.95);
   await expect.poll(() => currentFrameProgress(page)).toBeGreaterThan(0.94);
   await expect.poll(() => artwork.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   await expect(section.locator(".hero3d-stage")).toHaveCSS("opacity", "0");
@@ -223,7 +223,7 @@ test("hero3d selects the mobile film without viewport overflow", async ({ browse
   const artwork = page.locator("[data-hero3d-graffiti-art]");
   const artworkFrame = page.locator("[data-hero3d-graffiti]");
   await scrollHero3dTo(page, 0.995);
-  await expect.poll(() => artwork.evaluate((image) => Number(getComputedStyle(image).opacity))).toBeGreaterThan(0.95);
+  await expect.poll(() => section.locator("[data-hero3d-graffiti-drawing]").evaluate((el) => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0.95);
   await expect.poll(() => currentFrameProgress(page)).toBeGreaterThan(0.94);
   await expect.poll(() => artwork.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   await expect(artworkFrame).toHaveCSS("touch-action", "pan-y");
