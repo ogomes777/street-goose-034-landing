@@ -20,6 +20,7 @@
   var sweep = section.querySelector("[data-hero3d-sweep]");
   var kicker = section.querySelector("[data-hero3d-kicker]");
   var sticky = section.querySelector(".hero3d-sticky");
+  var graffiti = section.querySelector("[data-hero3d-graffiti-art]");
 
   var reduced = window.SG.prefersReducedMotion();
   var canScrub = window.SG.hasGSAP && window.ScrollTrigger && !reduced;
@@ -44,6 +45,23 @@
       ioStatic.observe(section);
     }
     return;
+  }
+
+  /* ---------------- Final-frame graffiti reveal, driven by the film's own scroll progress ---------------- */
+  var graffitiTimeline = null;
+  if (graffiti && window.gsap && typeof window.gsap.timeline === "function") {
+    try {
+      graffitiTimeline = window.gsap.timeline({ paused: true });
+      graffitiTimeline.fromTo(
+        graffiti,
+        { autoAlpha: 0, y: 108, z: -360, scale: 0.68, rotationX: -34, rotationY: 12, rotationZ: -3 },
+        { autoAlpha: 1, y: 0, z: 0, scale: 1, rotationX: 0, rotationY: 0, rotationZ: 0, duration: 1, ease: "none" }
+      );
+      section.classList.add("hero3d-film--motion");
+    } catch (err) {
+      graffitiTimeline = null;
+      section.classList.remove("hero3d-film--motion");
+    }
   }
 
   /* ---------------- Preload antecipado do vídeo (1.5 viewport antes) ---------------- */
@@ -74,7 +92,8 @@
   var KICKER_IN_END = 0.05, KICKER_HOLD_END = 0.10, KICKER_OUT_END = 0.15;
   var ORBIT_IN_START = 0.19, ORBIT_IN_END = 0.29, ORBIT_OUT_START = 0.58, ORBIT_OUT_END = 0.68;
   var SWEEP_AT = 0.71;
-  var OUT_START = 0.95;
+  var OUT_START = 0.84;
+  var OUT_END = 0.985;
 
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
   function smoothstep(a, b, v) { var t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); }
@@ -83,10 +102,11 @@
   // pelo parallax do cursor (translate/rotate) — compõe os dois num único
   // lugar pra eles nunca se sobrescreverem
   var scrollScale = 1;
+  var finaleY = 0;
   var cursorTX = 0, cursorTY = 0, cursorRY = 0, cursorRX = 0;
   function composeStageTransform() {
     stage.style.transform =
-      "translate(" + cursorTX.toFixed(2) + "px," + cursorTY.toFixed(2) + "px) " +
+      "translate(" + cursorTX.toFixed(2) + "px," + (cursorTY + finaleY).toFixed(2) + "px) " +
       "rotateY(" + cursorRY.toFixed(2) + "deg) rotateX(" + cursorRX.toFixed(2) + "deg) " +
       "scale(" + scrollScale.toFixed(4) + ")";
   }
@@ -141,14 +161,17 @@
       sweepFired = false;
     }
 
-    // saída — o filme recolhe suavemente nos últimos frames antes de liberar a stage
+    // saída — o filme sobe e recolhe enquanto o grafite entra pelo mesmo scroll.
     if (p >= OUT_START) {
-      var outT = smoothstep(OUT_START, 1, p);
-      scrollScale = 1 - outT * 0.06;
-      stage.style.opacity = String(1 - outT);
+      var outT = smoothstep(OUT_START, OUT_END, p);
+      scrollScale = 1 - outT * 0.62;
+      finaleY = -Math.min(window.innerHeight, 1200) * 0.25 * outT;
+      stage.style.opacity = String(1 - smoothstep(0.91, OUT_END, p));
     } else {
       scrollScale = 1;
+      finaleY = 0;
     }
+    if (graffitiTimeline) graffitiTimeline.progress(smoothstep(0.87, 1, p));
     composeStageTransform();
   }
 

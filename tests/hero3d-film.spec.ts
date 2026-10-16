@@ -107,6 +107,54 @@ const expectContainedWithoutOverflow = async (page: Page) => {
   });
 };
 
+test("original graffiti closes the Identity Film as a scroll-driven 3D reveal", async ({ page }) => {
+  const issues = watchRuntimeIssues(page);
+  await suppressCampaignPopup(page);
+  await page.goto("/");
+
+  const section = page.locator("[data-hero3d-film]");
+  const artwork = section.locator("[data-hero3d-graffiti-art]");
+  await expect(artwork).toHaveCount(1);
+  await expect(page.locator("section.sg-identity-graffiti")).toHaveCount(0);
+
+  const placement = await artwork.evaluate((image) => {
+    const wrapper = image.closest("[data-hero3d-graffiti]");
+    return {
+      sameSection:
+        wrapper?.closest("section[data-hero3d-film]") ===
+        document.querySelector("section[data-hero3d-film]"),
+      immediatelyAfterVideo: wrapper?.previousElementSibling?.classList.contains("hero3d-sticky") ?? false,
+      blendMode: getComputedStyle(image).mixBlendMode,
+      background: getComputedStyle(wrapper!).backgroundColor,
+      src: new URL((image as HTMLImageElement).src).pathname,
+    };
+  });
+  expect(placement).toEqual({
+    sameSection: true,
+    immediatelyAfterVideo: true,
+    blendMode: "screen",
+    background: "rgba(0, 0, 0, 0)",
+    src: "/brand/sg034-idvisual-graffiti.png",
+  });
+
+  await waitForActiveHero3d(page);
+  await scrollHero3dTo(page, 0.82);
+  await waitForHero3dMetadata(page);
+  await expect.poll(() => artwork.evaluate((image) => Number(getComputedStyle(image).opacity))).toBeLessThan(0.05);
+
+  await scrollHero3dTo(page, 0.995);
+  await expect.poll(() => artwork.evaluate((image) => Number(getComputedStyle(image).opacity))).toBeGreaterThan(0.95);
+  await expect.poll(() => currentFrameProgress(page)).toBeGreaterThan(0.94);
+  await expect.poll(() => artwork.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await expect(section.locator(".hero3d-stage")).toHaveCSS("opacity", "0");
+  await expectContainedWithoutOverflow(page);
+
+  expect(issues.pageErrors).toEqual([]);
+  expect(issues.consoleErrors).toEqual([]);
+  expect(issues.failedRequests).toEqual([]);
+  expect(issues.badResponses).toEqual([]);
+});
+
 test("hero3d initializes with the desktop film contained and error-free", async ({ page }) => {
   const issues = watchRuntimeIssues(page);
   await suppressCampaignPopup(page);
@@ -202,10 +250,15 @@ test("hero3d uses a static poster frame when reduced motion is requested", async
             ?.getAll()
             .some((candidate) => candidate.trigger === target || candidate.vars?.trigger === target),
         ),
-        compactFallback: (target as HTMLElement).offsetHeight <= window.innerHeight * 1.05,
+        compactFallback:
+          target.querySelector<HTMLElement>(".hero3d-sticky")!.offsetHeight <= window.innerHeight * 1.05,
+        graffitiVisible: (() => {
+          const art = target.querySelector<HTMLElement>("[data-hero3d-graffiti-art]");
+          return Boolean(art && getComputedStyle(art).visibility === "visible" && Number(getComputedStyle(art).opacity) > 0.95);
+        })(),
       };
     }),
-  ).toEqual({ orbitBoost: 0, hasScrubTrigger: false, compactFallback: true });
+  ).toEqual({ orbitBoost: 0, hasScrubTrigger: false, compactFallback: true, graffitiVisible: true });
 
   await section.scrollIntoViewIfNeeded();
   await waitForHero3dMetadata(page);

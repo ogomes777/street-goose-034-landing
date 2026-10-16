@@ -1,8 +1,128 @@
-/* Dedicated branding artwork between identity film and product universe.
-   Intentionally not inside the scrubbed/pinned film section. */
-.sg-identity-graffiti{position:relative;isolation:isolate;width:100%;padding:clamp(24px,4vw,72px) 12px clamp(40px,6vw,96px);background:#030303;overflow:hidden;}
-.sg-identity-graffiti::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 52% 38% at 50% 50%,rgba(160,11,12,.1),transparent 80%);}
-.sg-identity-graffiti__frame{position:relative;width:min(1450px,100%);margin:0 auto;display:grid;place-items:center;min-height:120px;}
-.sg-identity-graffiti__art{display:block;width:100%;max-height:590px;height:auto;object-fit:contain;user-select:none;-webkit-user-drag:none;pointer-events:none;filter:drop-shadow(0 22px 29px rgba(0,0,0,.62)) drop-shadow(0 0 20px rgba(210,11,16,.14));}
-@media(max-width:720px){.sg-identity-graffiti{padding:20px 4px 40px;}.sg-identity-graffiti__frame{width:100%;}.sg-identity-graffiti__art{width:100%;max-height:none;}}
-@media(prefers-reduced-motion:reduce){.sg-identity-graffiti__art{animation:none!important;transition:none!important;}}
+/* Closing artwork for the existing Identity Film.
+   The film's own scroll budget carries the artwork into view after the video. */
+.hero3d-film {
+  --hero3d-graffiti-slot: clamp(360px, 58svh, 620px);
+  height: 480svh;
+}
+
+.hero3d-graffiti {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: var(--hero3d-graffiti-slot);
+  margin: 0;
+  margin-block-start: calc(380svh - var(--hero3d-graffiti-slot));
+  padding: 0;
+  background: transparent;
+  perspective: 1200px;
+  transform-style: preserve-3d;
+  touch-action: pan-y;
+}
+
+.hero3d-graffiti__art {
+  display: block;
+  width: min(88vw, 1400px);
+  max-height: calc(var(--hero3d-graffiti-slot) - 2.5rem);
+  height: auto;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  backface-visibility: hidden;
+  transform-origin: 50% 50%;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.hero3d-film--motion .hero3d-graffiti__art {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.hero3d-film.hero3d-film--static {
+  height: auto;
+}
+
+.hero3d-film.hero3d-film--static .hero3d-sticky {
+  position: relative;
+  top: auto;
+  height: min(92svh, 900px);
+  min-height: 520px;
+}
+
+.hero3d-film.hero3d-film--static .hero3d-graffiti {
+  height: auto;
+  min-height: 0;
+  margin-block-start: 0;
+  padding: 20px 12px 56px;
+}
+
+.hero3d-film.hero3d-film--static .hero3d-graffiti__art {
+  width: min(92vw, 1400px);
+  max-height: none;
+  will-change: auto;
+}
+
+@media (max-width: 900px) {
+  .hero3d-film {
+    --hero3d-graffiti-slot: clamp(220px, 32svh, 380px);
+    height: 420svh;
+  }
+
+  .hero3d-graffiti {
+    margin-block-start: calc(320svh - var(--hero3d-graffiti-slot));
+  }
+
+  .hero3d-graffiti__art {
+    width: min(92vw, 1400px);
+  }
+}
+
+@media (max-width: 720px) {
+  .hero3d-film {
+    --hero3d-graffiti-slot: clamp(180px, 32svh, 280px);
+    height: 380svh;
+  }
+
+  .hero3d-graffiti {
+    margin-block-start: calc(280svh - var(--hero3d-graffiti-slot));
+  }
+
+  .hero3d-graffiti__art {
+    width: 94vw;
+    max-height: calc(var(--hero3d-graffiti-slot) - 24px);
+  }
+
+  .hero3d-film.hero3d-film--static .hero3d-sticky {
+    height: min(78svh, 640px);
+    min-height: 480px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero3d-film {
+    height: auto;
+  }
+
+  .hero3d-sticky {
+    position: relative;
+    top: auto;
+    height: min(92svh, 900px);
+    min-height: 520px;
+  }
+
+  .hero3d-graffiti {
+    height: auto;
+    min-height: 0;
+    margin-block-start: 0;
+    padding: 20px 12px 56px;
+  }
+
+  .hero3d-graffiti__art {
+    width: min(92vw, 1400px);
+    max-height: none;
+    will-change: auto;
+  }
+}
