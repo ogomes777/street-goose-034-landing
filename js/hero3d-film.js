@@ -201,22 +201,35 @@
     // Brighter silver carries the final logo into warm embers, followed by
     // a sweeping specular blade and a gradual cobalt light takeover.
     // Reversible on upward scroll, with no extra RAF or timer.
-    var reveal = smoothstep(.852, .962, p);
-    var warm = smoothstep(.857, .911, p);
-    var cobalt = smoothstep(.912, 1, p);
-    var specular = smoothstep(.872, .918, p) * (1 - smoothstep(.970, .997, p));
-    var impact = smoothstep(.874, .909, p) * (1 - smoothstep(.954, .993, p));
+    var reveal = smoothstep(.845, .955, p);
+    var orangeEnter = smoothstep(.849, .898, p);
+    var orangeFade = 1 - smoothstep(.921, .971, p);
+    var orangeImpact = smoothstep(.866, .900, p) * (1 - smoothstep(.914, .955, p));
+    var cobalt = smoothstep(.903, .991, p);
+    var blueImpact = smoothstep(.916, .953, p) * (1 - smoothstep(.967, .997, p));
+    var blueWave = smoothstep(.923, .997, p);
+    var specular = smoothstep(.855, .912, p) * (1 - smoothstep(.967, .997, p));
+    var sparks = Math.max(orangeImpact * .84, blueImpact);
     if (graffitiTimeline) graffitiTimeline.progress(reveal);
     if (graffitiShell) {
+      // The first hit stays orange and saturated before yielding to cobalt.
+      // The second hit is stronger but temporary, so the final frame stays
+      // legible instead of turning into a permanent white bloom.
       section.style.setProperty("--sg-graffiti-reveal", reveal.toFixed(3));
-      section.style.setProperty("--sg-graffiti-heat", ((.22 + .60 * warm) * (1 - cobalt * .92)).toFixed(3));
+      section.style.setProperty("--sg-graffiti-heat",
+        Math.min(1, (.31 + .85 * orangeEnter) * orangeFade).toFixed(3));
       section.style.setProperty("--sg-graffiti-blue", cobalt.toFixed(3));
-      section.style.setProperty("--sg-graffiti-light", (reveal * (.42 + .52 * impact)).toFixed(3));
-      section.style.setProperty("--sg-graffiti-burst", impact.toFixed(3));
-      section.style.setProperty("--sg-graffiti-throw", smoothstep(.894, .997, p).toFixed(3));
+      section.style.setProperty("--sg-orange-impact", orangeImpact.toFixed(3));
+      section.style.setProperty("--sg-blue-impact", blueImpact.toFixed(3));
+      section.style.setProperty("--sg-blue-wave", blueWave.toFixed(3));
+      section.style.setProperty("--sg-graffiti-drop", smoothstep(.916, 1, p).toFixed(3));
+      section.style.setProperty("--sg-graffiti-light",
+        Math.min(1, reveal * (.50 + orangeImpact * .4 + blueImpact * .48)).toFixed(3));
+      section.style.setProperty("--sg-graffiti-burst", sparks.toFixed(3));
+      section.style.setProperty("--sg-graffiti-throw", smoothstep(.892, .997, p).toFixed(3));
       section.style.setProperty("--sg-graffiti-flare", specular.toFixed(3));
       section.style.setProperty("--sg-graffiti-sweep-x",
-        (-180 + 360 * smoothstep(.872, .980, p)).toFixed(1) + "%");
+        (-195 + 392 * smoothstep(.857, .977, p)).toFixed(1) + "%");
     }
     composeStageTransform();
   }

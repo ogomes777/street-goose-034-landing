@@ -238,3 +238,172 @@
   .hero3d-graffiti__drawing { width:min(92vw,1400px);max-height:none;will-change:auto; }
   .hero3d-graffiti__spark, .hero3d-graffiti__blade { display:none; }
 }
+
+/* CINEMA V3 / all phases tied to GSAP scroll progress, no independent timers.
+   Separate color energy from reveal to keep chrome readable between punches. */
+.hero3d-film {
+  --sg-orange-impact: 0;
+  --sg-blue-impact: 0;
+  --sg-blue-wave: 0;
+  --sg-graffiti-drop: 0;
+}
+
+/* Hotter first act: copper orange floods the metal without flattening the
+   original linework. Static gradients avoid animating expensive filter stacks. */
+.hero3d-graffiti__ember {
+  background:
+    radial-gradient(ellipse 75% 80% at 49% 48%,
+      rgba(255,225,149,.99) 0%,
+      rgba(255,151,37,.97) 29%,
+      rgba(255,86,9,.93) 51%,
+      rgba(225,45,0,.64) 77%,
+      transparent 96%),
+    linear-gradient(103deg,
+      rgba(255,100,16,.92) 0%,
+      rgba(255,193,82,.85) 33%,
+      rgba(255,87,17,.91) 64%,
+      rgba(255,167,61,.87) 100%);
+  opacity: var(--sg-graffiti-heat);
+  mix-blend-mode: screen;
+}
+.hero3d-graffiti__cobalt {
+  background:
+    radial-gradient(ellipse 79% 88% at 51% 51%,
+      rgba(205,240,255,.98),
+      rgba(110,195,255,.97) 26%,
+      rgba(49,128,255,.96) 52%,
+      rgba(12,54,196,.88) 79%,
+      transparent 99%),
+    linear-gradient(108deg,
+      rgba(38,93,235,.95),
+      rgba(128,214,255,.96) 33%,
+      rgba(38,102,239,.95) 66%,
+      rgba(12,43,174,.98));
+  opacity: var(--sg-graffiti-blue);
+  mix-blend-mode: screen;
+}
+
+/* The lettering itself has a micro camera punch and settles lower. Individual
+   scale/translate are composed with GSAP's transform, never overwrite it. */
+.hero3d-film--motion .hero3d-graffiti__drawing {
+  scale: calc(1 + var(--sg-blue-impact) * .056 + var(--sg-orange-impact) * .018);
+  translate: 0 calc(var(--sg-graffiti-drop) * 12px);
+}
+.hero3d-graffiti__halo {
+  background:
+    radial-gradient(ellipse,
+      rgba(255,163,37,.53) 0%,
+      rgba(255,88,11,.22) 35%,
+      rgba(255,49,0,.065) 56%,
+      transparent 79%);
+  opacity: calc(var(--sg-graffiti-light) * (1 - var(--sg-graffiti-blue) * .94));
+}
+.hero3d-graffiti__halo--blue {
+  background:
+    radial-gradient(ellipse at 50% 54%,
+      rgba(150,215,255,.75) 0%,
+      rgba(45,126,255,.50) 32%,
+      rgba(11,59,199,.14) 65%,
+      transparent 87%);
+  opacity: calc(var(--sg-graffiti-light) * var(--sg-graffiti-blue) * .95 + var(--sg-blue-impact) * .34);
+}
+
+/* Microflash and expanding shock front: strong perceptual impact from only
+   two compositor-friendly transform/opacity layers; no per-frame SVG/filter. */
+.hero3d-graffiti::after {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 42% 32% at 50% 52%,
+      rgba(242,251,255,.72) 0%,
+      rgba(105,189,255,.49) 27%,
+      rgba(25,99,255,.14) 62%,
+      transparent 84%);
+  opacity: var(--sg-blue-impact);
+  transform: scale(calc(.66 + var(--sg-blue-wave) * 1.28));
+  transform-origin: 50% 53%;
+}
+.hero3d-graffiti__sparks::after {
+  content: "";
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  width: min(78vw, 930px);
+  aspect-ratio: 1;
+  border: 1.5px solid rgba(117,205,255,.87);
+  border-radius: 50%;
+  box-shadow: 0 0 15px rgba(71,154,255,.55), inset 0 0 18px rgba(32,111,243,.28);
+  opacity: calc(var(--sg-blue-impact) * .72);
+  transform: translate(-50%, -50%) scale(calc(.18 + var(--sg-blue-wave) * 1.56));
+}
+.hero3d-graffiti__blade {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(233,241,255,.18) 18%,
+    rgba(255,255,255,.99) 45%,
+    rgba(255,192,92,.96) 52%,
+    rgba(77,164,255,.38) 69%,
+    transparent 100%);
+}
+/* Outgoing blue exposure meets the next chapter, no hard black seam. */
+.hero3d-graffiti__horizon {
+  height: 47%;
+  background:
+    radial-gradient(ellipse 81% 80% at 50% 110%,
+      rgba(44,110,252,.44),
+      rgba(21,73,199,.28) 42%,
+      transparent 82%),
+    linear-gradient(to bottom,
+      transparent 0%,
+      rgba(11,35,93,.06) 31%,
+      rgba(15,48,126,.22) 66%,
+      rgba(17,53,127,.37) 100%);
+  opacity: var(--sg-graffiti-blue);
+}
+.hero3d-graffiti::before {
+  background:
+    radial-gradient(ellipse 67% 39% at 50% 48%,
+      rgba(255,128,24,.46), transparent 81%),
+    radial-gradient(ellipse 100% 76% at 50% 110%,
+      rgba(38,105,245,.55), rgba(20,62,163,.10) 61%, transparent 88%);
+  opacity: var(--sg-graffiti-light);
+}
+
+/* Intro of the product universe inherits the outgoing cobalt environment,
+   then relinquishes it as the first product settles into view. */
+.universe-sticky {
+  --sg-universe-bridge: 1;
+}
+.universe-sticky::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 100% 80% at 50% -8%,
+      rgba(38,100,232,.43),
+      rgba(18,53,139,.18) 48%,
+      transparent 87%),
+    linear-gradient(to bottom,
+      rgba(17,53,127,.37) 0%,
+      rgba(8,28,80,.13) 31%,
+      transparent 66%);
+  opacity: var(--sg-universe-bridge);
+  pointer-events: none;
+}
+@media(max-width: 720px) {
+  .hero3d-film--motion .hero3d-graffiti__drawing {
+    scale: calc(1 + var(--sg-blue-impact) * .025 + var(--sg-orange-impact) * .01);
+    translate: 0 calc(var(--sg-graffiti-drop) * 5px);
+  }
+  .hero3d-graffiti__halo { filter: blur(12px); }
+  .hero3d-graffiti::after { background: radial-gradient(ellipse 63% 27% at 50% 51%,rgba(210,238,255,.52),rgba(45,125,255,.18) 44%, transparent 86%); }
+  .hero3d-graffiti__sparks::after { width: 74vw; box-shadow: 0 0 9px rgba(71,154,255,.35); }
+}
+@media(prefers-reduced-motion: reduce) {
+  .hero3d-graffiti::after,.hero3d-graffiti__sparks::after { display:none; }
+  .universe-sticky::before { opacity:.18; }
+}

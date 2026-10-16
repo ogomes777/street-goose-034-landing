@@ -174,6 +174,41 @@ test("original graffiti closes the Identity Film as a scroll-driven 3D reveal", 
   expect(issues.badResponses).toEqual([]);
 });
 
+test("cinematic orange and cobalt impacts hand off into the product universe", async ({ page }) => {
+  await openWithoutIntro(page);
+  await waitForActiveHero3d(page);
+  const film = page.locator("[data-hero3d-film]");
+  const filmValues = () => film.evaluate((el) => {
+    const css = getComputedStyle(el);
+    return {
+      heat: Number(css.getPropertyValue("--sg-graffiti-heat")),
+      orangeImpact: Number(css.getPropertyValue("--sg-orange-impact")),
+      cobalt: Number(css.getPropertyValue("--sg-graffiti-blue")),
+      blueImpact: Number(css.getPropertyValue("--sg-blue-impact")),
+    };
+  });
+  await scrollHero3dTo(page, .902);
+  await expect.poll(async () => (await filmValues()).heat).toBeGreaterThan(.85);
+  await expect.poll(async () => (await filmValues()).orangeImpact).toBeGreaterThan(.25);
+
+  await scrollHero3dTo(page, .954);
+  await expect.poll(async () => (await filmValues()).cobalt).toBeGreaterThan(.35);
+  await expect.poll(async () => (await filmValues()).blueImpact).toBeGreaterThan(.75);
+
+  await page.evaluate(() => {
+    const universe = document.querySelector<HTMLElement>("[data-universe-stage]")!;
+    window.scrollTo(0, universe.offsetTop + .02 * (universe.offsetHeight - window.innerHeight));
+  });
+  const bridge = page.locator(".universe-sticky");
+  await expect.poll(async () => Number(await bridge.evaluate((el) => getComputedStyle(el).getPropertyValue("--sg-universe-bridge")))).toBeGreaterThan(.80);
+  await page.evaluate(() => {
+    const universe = document.querySelector<HTMLElement>("[data-universe-stage]")!;
+    window.scrollTo(0, universe.offsetTop + .25 * (universe.offsetHeight - window.innerHeight));
+  });
+  await expect.poll(async () => Number(await bridge.evaluate((el) => getComputedStyle(el).getPropertyValue("--sg-universe-bridge")))).toBeLessThan(.05);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
+});
+
 test("hero3d initializes with the desktop film contained and error-free", async ({ page }) => {
   const issues = watchRuntimeIssues(page);
   await openWithoutIntro(page);
