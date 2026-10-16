@@ -182,7 +182,7 @@
 }
 .hero3d-film--motion .hero3d-graffiti__art {
   visibility: visible;
-  opacity: 0;
+  opacity: 1;
 }
 
 /* Static users see the entire piece in normal flow with no timeline. */
