@@ -236,7 +236,7 @@ test("V5 impact pulses ignite, expand and extinguish without extra sections", as
   const orb = page.locator("[data-hero3d-fireball]");
   const value = (key: string) => film.evaluate((el, key) =>
     Number(getComputedStyle(el).getPropertyValue(key)), key);
-  await expect(page.locator(".hero3d-energy")).toHaveCount(3);
+  await expect(page.locator(".hero3d-energy")).toHaveCount(0);
   await scrollHero3dTo(page,.900);
   await expect.poll(()=>value("--sg-energy-heat")).toBeGreaterThan(.7);
   await scrollHero3dTo(page,.950);
@@ -291,8 +291,17 @@ test("final film background detonates, reverses and carries blue into the Univer
   const section = page.locator("[data-hero3d-film]");
   const finale = section.locator("[data-hero3d-finale]");
   await expect(finale).toHaveCount(1);
-  await expect(finale.locator(".sg-finale__ring")).toHaveCount(2);
+  await expect(finale.locator(".sg-finale__ring")).toHaveCount(1);
   await expect(finale).toHaveCSS("pointer-events", "none");
+  await expect(page.locator(".sg-finale__rays, .sg-finale__ring--echo")).toHaveCount(0);
+  await expect.poll(()=>finale.locator(".sg-finale__ring").evaluate(
+    el=>Number(getComputedStyle(el).borderTopWidth))).toBeLessThanOrEqual(1);
+  const redundantGlow = await page.locator("[data-hero3d-graffiti]").evaluate(el=>({
+    oldFilmFlash:getComputedStyle(el,"::after").content,
+    oldParticleShock:getComputedStyle(el.querySelector(".hero3d-graffiti__sparks")!,"::after").content
+  }));
+  expect(redundantGlow.oldFilmFlash).toBe("none");
+  expect(redundantGlow.oldParticleShock).toBe("none");
   const amount = (name: string) => section.evaluate((el,key)=>
     Number(getComputedStyle(el).getPropertyValue(key)), name);
   await scrollHero3dTo(page, .950);
