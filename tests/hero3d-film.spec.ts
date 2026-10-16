@@ -252,6 +252,38 @@ test("V5 impact pulses ignite, expand and extinguish without extra sections", as
   expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth+1)).toBeTruthy();
 });
 
+test("original Originkit 3D renderer has transparent canvas, real shaders and no CSS orb", async ({ page }) => {
+  const issues=watchRuntimeIssues(page);
+  await openWithoutIntro(page);
+  await waitForActiveHero3d(page);
+  await scrollHero3dTo(page,.938);
+  const host=page.locator("[data-hero3d-fireball]");
+  await expect(host).toHaveAttribute("data-fireball-renderer","originkit");
+  await expect.poll(()=>host.locator("canvas").evaluate(el=>(el as HTMLCanvasElement).width)).toBeGreaterThan(150);
+  const state=await host.evaluate(el=>{
+    const canvas=el.querySelector("canvas")!;
+    const gl=(canvas.getContext("webgl2")||canvas.getContext("webgl")) as WebGLRenderingContext;
+    return {
+      canvasAlpha:gl.getContextAttributes()?.alpha,
+      contextActive:!gl.isContextLost(),
+      hostBackground:getComputedStyle(el).backgroundColor,
+      styleBackground:getComputedStyle(canvas).backgroundColor,
+      originalGeometryPresent:el.querySelectorAll("canvas").length===1,
+      noFakeOrb:getComputedStyle(el,"::before").display==="none",
+      noBackdrop:Array.from(document.querySelectorAll(".hero3d-energy"))
+        .every(layer=>getComputedStyle(layer).display==="none")
+    };
+  });
+  expect(state).toEqual({
+    canvasAlpha:true,contextActive:true,hostBackground:"rgba(0, 0, 0, 0)",
+    styleBackground:"rgba(0, 0, 0, 0)",
+    originalGeometryPresent:true,noFakeOrb:true,noBackdrop:true
+  });
+  expect(issues.pageErrors).toEqual([]);
+  expect(issues.consoleErrors).toEqual([]);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
+});
+
 test("hero3d initializes with the desktop film contained and error-free", async ({ page }) => {
   const issues = watchRuntimeIssues(page);
   await openWithoutIntro(page);
