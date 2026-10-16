@@ -451,3 +451,130 @@
 @media(prefers-reduced-motion:reduce){
   .hero3d-fireball { display: none; }
 }
+
+/* V5 // two-stage energetic impact. Four cheap compositor surfaces replace
+   a heavy bloom stack. Original glyphs still render above the fireball. */
+.hero3d-film {
+  --sg-energy-heat: 0;
+  --sg-energy-cobalt: 0;
+  --sg-energy-wave: 0;
+  --sg-energy-lift: 0;
+}
+.hero3d-fireball {
+  width: min(78vw, 890px);
+  top: 49%;
+  filter: saturate(1.28) contrast(1.10);
+}
+.hero3d-fireball::before {
+  inset: 13%;
+  background:
+    radial-gradient(circle,
+      rgba(255,244,196,.95) 0%,
+      rgba(255,126,23,.77) 23%,
+      rgba(234,61,9,.42) 47%,
+      rgba(35,112,249,.20) 66%,
+      transparent 81%);
+  opacity: calc(.25 + var(--sg-energy-heat) * .45 + var(--sg-energy-cobalt) * .35);
+  filter: blur(14px);
+}
+.hero3d-fireball.is-webgl::before {
+  opacity: calc(.07 + var(--sg-energy-heat) * .22 + var(--sg-energy-cobalt) * .20);
+}
+.hero3d-energy {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+}
+.hero3d-energy--heat {
+  background:
+    radial-gradient(ellipse 40% 44% at 50% 48%,
+      rgba(255,233,163,.63) 0%,
+      rgba(255,141,29,.44) 33%,
+      rgba(248,74,8,.23) 61%,
+      transparent 91%),
+    conic-gradient(from 20deg at 50% 49%,
+      transparent 0deg,rgba(255,157,59,.12) 18deg,transparent 46deg,
+      rgba(255,74,13,.19) 91deg,transparent 124deg,
+      rgba(255,214,117,.16) 160deg,transparent 192deg,
+      rgba(255,110,25,.14) 244deg,transparent 282deg,
+      rgba(255,172,72,.17) 333deg,transparent 360deg);
+  opacity: var(--sg-energy-heat);
+  transform: scale(calc(.68 + var(--sg-energy-lift) * .34));
+  mix-blend-mode: screen;
+}
+.hero3d-energy--cobalt {
+  background:
+    radial-gradient(ellipse 54% 51% at 50% 51%,
+      rgba(218,246,255,.66) 0%,
+      rgba(75,169,255,.42) 26%,
+      rgba(26,93,239,.30) 54%,
+      transparent 87%),
+    linear-gradient(90deg,transparent 1%,
+      rgba(55,144,255,.08) 26%,
+      rgba(181,229,255,.22) 50%,
+      rgba(55,144,255,.08) 74%,transparent 99%);
+  opacity: var(--sg-energy-cobalt);
+  transform: scale(calc(.70 + var(--sg-energy-wave) * .77));
+  mix-blend-mode: screen;
+}
+.hero3d-energy--shock {
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  width: min(78vw, 1050px);
+  aspect-ratio: 1;
+  inset-inline-end: auto;
+  border-radius: 50%;
+  border: clamp(1px,.16vw,2px) solid rgba(141,218,255,.9);
+  box-shadow:
+    0 0 18px rgba(91,175,255,.51),
+    0 0 48px rgba(28,107,255,.30),
+    inset 0 0 27px rgba(57,130,255,.34);
+  opacity: calc(var(--sg-energy-cobalt) * (1 - var(--sg-energy-wave) * .78));
+  transform:
+    translate3d(-50%,-50%,0)
+    scale(calc(.22 + var(--sg-energy-wave) * 1.9));
+}
+.hero3d-film--motion .hero3d-graffiti__drawing {
+  scale: calc(
+    1 + var(--sg-blue-impact) * .088 + var(--sg-orange-impact) * .034
+  );
+}
+.hero3d-graffiti__halo--blue {
+  opacity: calc(
+    var(--sg-graffiti-light) * var(--sg-graffiti-blue) * .94
+    + var(--sg-energy-cobalt) * .28
+  );
+}
+.hero3d-graffiti__sparks::after {
+  opacity: calc(var(--sg-energy-cobalt) * .84);
+  border-color: rgba(183,233,255,.96);
+  transform: translate(-50%,-50%)
+    scale(calc(.14 + var(--sg-energy-wave) * 2.10));
+}
+@media(max-width:720px){
+  .hero3d-fireball { width:min(112vw,490px);top:50%;filter:saturate(1.18); }
+  .hero3d-energy--heat {
+    background:radial-gradient(ellipse 68% 38% at 50% 49%,
+       rgba(255,216,115,.61),rgba(255,114,14,.32) 43%,transparent 90%);
+  }
+  .hero3d-energy--cobalt {
+    background:radial-gradient(ellipse 78% 41% at 50% 51%,
+       rgba(178,228,255,.61),rgba(41,118,245,.31) 44%,transparent 91%);
+  }
+  .hero3d-energy--shock {
+    width: min(90vw,390px);
+    box-shadow:0 0 10px rgba(91,175,255,.4);
+  }
+  .hero3d-film--motion .hero3d-graffiti__drawing {
+    scale: calc(1 + var(--sg-blue-impact) * .038
+      + var(--sg-orange-impact) * .016);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .hero3d-energy {display:none;}
+}
