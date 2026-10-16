@@ -140,3 +140,24 @@ void main(){
     const t=Math.min(1,Math.max(0,(v-a)/(b-a)));
     return t*t*(3-2*t);
   }
+  return {
+    update(progress,warm,cold,boom){
+      const entry=smooth(.847,.910,progress);
+      const exit=1-smooth(.964,.999,progress);
+      energy=entry*exit*Math.min(1,.58+warm*.27+boom*.24);
+      blue=cold;impact=boom;active=energy>.025;
+      host.style.setProperty("--sg-fireball-visibility",energy.toFixed(3));
+      host.style.setProperty("--sg-fireball-expansion",
+        (1+smooth(.915,.983,progress)*.38+boom*.14).toFixed(3));
+      if(active&&!begin)begin=performance.now();
+      sync();
+    },
+    destroy(){
+      active=false;sync();observer?.disconnect();
+      document.removeEventListener("visibilitychange",sync);
+      canvas.removeEventListener("webglcontextlost",onLost);
+      if(gl&&vertexBuffer)gl.deleteBuffer(vertexBuffer);
+      if(gl&&program)gl.deleteProgram(program);
+    }
+  };
+}
