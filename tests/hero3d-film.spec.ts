@@ -229,6 +229,29 @@ test("Originkit toon fireball follows Identity Film and powers down after cobalt
     document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
 });
 
+test("V5 impact pulses ignite, expand and extinguish without extra sections", async ({ page }) => {
+  await openWithoutIntro(page);
+  await waitForActiveHero3d(page);
+  const film = page.locator("[data-hero3d-film]");
+  const orb = page.locator("[data-hero3d-fireball]");
+  const value = (key: string) => film.evaluate((el, key) =>
+    Number(getComputedStyle(el).getPropertyValue(key)), key);
+  await expect(page.locator(".hero3d-energy")).toHaveCount(3);
+  await scrollHero3dTo(page,.900);
+  await expect.poll(()=>value("--sg-energy-heat")).toBeGreaterThan(.7);
+  await expect.poll(()=>orb.evaluate(el =>
+    Number(getComputedStyle(el).getPropertyValue("--sg-fireball-expansion")))).toBeGreaterThan(1.0);
+  await scrollHero3dTo(page,.950);
+  await expect.poll(()=>value("--sg-energy-cobalt")).toBeGreaterThan(.7);
+  await expect.poll(()=>value("--sg-energy-wave")).toBeGreaterThan(.2);
+  await expect(orb).toHaveClass(/is-webgl/);
+  await scrollHero3dTo(page,.999);
+  await expect.poll(()=>value("--sg-energy-cobalt")).toBeLessThan(.03);
+  await expect.poll(()=>orb.evaluate(el =>
+    Number(getComputedStyle(el).getPropertyValue("--sg-fireball-visibility")))).toBeLessThan(.03);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth+1)).toBeTruthy();
+});
+
 test("hero3d initializes with the desktop film contained and error-free", async ({ page }) => {
   const issues = watchRuntimeIssues(page);
   await openWithoutIntro(page);
