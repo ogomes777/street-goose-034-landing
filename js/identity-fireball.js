@@ -45,10 +45,15 @@ void main(){
  float tail=exp(-pow((p.y-wave)/(.10+tailX*.31),2.))*
  smoothstep(-.10,.15,p.x)*(1.-smoothstep(.2,.82,p.x))*
  smoothstep(.24,.67,billow+flow*.34);
- float flame=(1.-smoothstep(.27,.45+flow*.10,distorted))*
- smoothstep(.16,.77,flow+billow*.32);
- float alpha=clamp(sphere*(.5+spec*.4)+rim*.45+flame*.69+
- tail*.88+(1.-smoothstep(.26,.60,d))*.16,0.,1.);
+ float flame=(1.-smoothstep(.27,.46+flow*.13,distorted))*
+ smoothstep(.12,.74,flow+billow*.35);
+ // Volumetric tongues give the ignition an explosive silhouette without
+ // an expensive new texture, render target or bloom pass.
+ float jets=pow(max(sin(a*11.+flow*5.-tim*1.3),0.),6.)*
+   smoothstep(.22,.37,d)*(1.-smoothstep(.34,.59,d));
+ float corona=(1.-smoothstep(.26,.67,d))*(.14+flow*.24);
+ float alpha=clamp(sphere*(.62+spec*.47)+rim*.55+flame*.83+
+ tail*1.04+jets*.42+corona,0.,1.);
  vec3 orange=mix(vec3(1.,.22,.014),vec3(1.,.82,.25),clamp(z*.55+spec,0.,1.));
  vec3 cobalt=mix(vec3(.07,.25,.97),vec3(.52,.87,1.),clamp(z*.52+spec,0.,1.));
  vec3 color=mix(orange,cobalt,cool);
@@ -144,11 +149,11 @@ void main(){
     update(progress,warm,cold,boom){
       const entry=smooth(.847,.910,progress);
       const exit=1-smooth(.964,.999,progress);
-      energy=entry*exit*Math.min(1,.58+warm*.27+boom*.24);
+      energy=entry*exit*Math.min(1,.76+warm*.18+boom*.28);
       blue=cold;impact=boom;active=energy>.025;
       host.style.setProperty("--sg-fireball-visibility",energy.toFixed(3));
       host.style.setProperty("--sg-fireball-expansion",
-        (1+smooth(.915,.983,progress)*.38+boom*.14).toFixed(3));
+        (1+smooth(.908,.982,progress)*.52+boom*.23).toFixed(3));
       if(active&&!begin)begin=performance.now();
       sync();
     },
