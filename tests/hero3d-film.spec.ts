@@ -209,6 +209,26 @@ test("cinematic orange and cobalt impacts hand off into the product universe", a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
 });
 
+test("Originkit toon fireball follows Identity Film and powers down after cobalt impact", async ({ page }) => {
+  await openWithoutIntro(page);
+  await waitForActiveHero3d(page);
+  const orb = page.locator("[data-hero3d-fireball]");
+  const canvas = orb.locator("canvas");
+  await expect(orb).toHaveCount(1);
+  await expect(canvas).toHaveCount(1);
+  await scrollHero3dTo(page, .917);
+  await expect.poll(() => orb.evaluate(el =>
+    Number(getComputedStyle(el).getPropertyValue("--sg-fireball-visibility")))).toBeGreaterThan(.30);
+  await expect.poll(() => canvas.evaluate(el =>
+    (el as HTMLCanvasElement).width)).toBeGreaterThan(50);
+  await expect(orb).toHaveCSS("pointer-events", "none");
+  await scrollHero3dTo(page, .999);
+  await expect.poll(() => orb.evaluate(el =>
+    Number(getComputedStyle(el).getPropertyValue("--sg-fireball-visibility")))).toBeLessThan(.03);
+  expect(await page.evaluate(() =>
+    document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
+});
+
 test("hero3d initializes with the desktop film contained and error-free", async ({ page }) => {
   const issues = watchRuntimeIssues(page);
   await openWithoutIntro(page);
