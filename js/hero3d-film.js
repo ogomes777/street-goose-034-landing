@@ -29,7 +29,7 @@
   // runaway animation loops on Safari mobile.
   if (sparksRoot && !sparksRoot.children.length) {
     var frag = document.createDocumentFragment();
-    for (var si = 0; si < 36; si++) {
+    for (var si = 0; si < 28; si++) {
       var seed = (si * 61 + 17) % 101 / 101;
       var a = si * 2.399963229728653;
       var radius = 40 + (si % 7) * 8;
@@ -197,20 +197,26 @@
       scrollScale = 1;
       finaleY = 0;
     }
-    // The last film frame remains visible as chrome/light passes into the
-    // identical graffiti strokes. The color then turns blue at the boundary
-    // with the following Product Universe, all in this same Identity Film.
-    var reveal = smoothstep(.875, .975, p);
-    var blue = smoothstep(.94, 1, p);
-    var impact = smoothstep(.875, .912, p) * (1 - smoothstep(.958, .997, p));
+    // Every chromatic phase is driven by the SAME film progress.
+    // Brighter silver carries the final logo into warm embers, followed by
+    // a sweeping specular blade and a gradual cobalt light takeover.
+    // Reversible on upward scroll, with no extra RAF or timer.
+    var reveal = smoothstep(.852, .962, p);
+    var warm = smoothstep(.857, .911, p);
+    var cobalt = smoothstep(.912, 1, p);
+    var specular = smoothstep(.872, .918, p) * (1 - smoothstep(.970, .997, p));
+    var impact = smoothstep(.874, .909, p) * (1 - smoothstep(.954, .993, p));
     if (graffitiTimeline) graffitiTimeline.progress(reveal);
     if (graffitiShell) {
       section.style.setProperty("--sg-graffiti-reveal", reveal.toFixed(3));
-      section.style.setProperty("--sg-graffiti-heat", (.24 + (1 - blue) * .5).toFixed(3));
-      section.style.setProperty("--sg-graffiti-blue", blue.toFixed(3));
-      section.style.setProperty("--sg-graffiti-light", (.48 + reveal * .48).toFixed(3));
+      section.style.setProperty("--sg-graffiti-heat", ((.22 + .60 * warm) * (1 - cobalt * .92)).toFixed(3));
+      section.style.setProperty("--sg-graffiti-blue", cobalt.toFixed(3));
+      section.style.setProperty("--sg-graffiti-light", (reveal * (.42 + .52 * impact)).toFixed(3));
       section.style.setProperty("--sg-graffiti-burst", impact.toFixed(3));
-      section.style.setProperty("--sg-graffiti-throw", smoothstep(.895, .996, p).toFixed(3));
+      section.style.setProperty("--sg-graffiti-throw", smoothstep(.894, .997, p).toFixed(3));
+      section.style.setProperty("--sg-graffiti-flare", specular.toFixed(3));
+      section.style.setProperty("--sg-graffiti-sweep-x",
+        (-180 + 360 * smoothstep(.872, .980, p)).toFixed(1) + "%");
     }
     composeStageTransform();
   }
