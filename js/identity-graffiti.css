@@ -653,6 +653,13 @@
   pointer-events: none;
   backface-visibility: hidden;
 }
+/* A controlled camera-pressure swell behind the original ID.visual mark. */
+.hero3d-graffiti .hero3d-fireball {
+  transform: translate3d(-50%,-50%,0)
+    scale(calc(var(--sg-fireball-expansion)
+      + var(--sg-final-charge) * .045
+      + var(--sg-final-blast) * .090));
+}
 .sg-finale__charge {
   inset: 0;
   background:
