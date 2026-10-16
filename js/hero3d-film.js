@@ -234,6 +234,23 @@ import { createIdentityFireball } from "./identity-fireball.js";
       section.style.setProperty("--sg-energy-wave", shockTravel.toFixed(3));
       section.style.setProperty("--sg-energy-lift",
         smoothstep(.860, .962, p).toFixed(3));
+      // V7 final detonation. Energy compresses around the real 3D fireball,
+      // a transient ice-white cobalt blast expands, then its floor reflection
+      // survives exactly to the next chapter. No timer and fully reversible.
+      var finalCompression = smoothstep(.937, .963, p);
+      var finalCharge = finalCompression * (1 - smoothstep(.971, .990, p));
+      var finalBlast = smoothstep(.957, .975, p) *
+        (1 - smoothstep(.988, .999, p));
+      var finalWave = smoothstep(.963, .998, p);
+      var finalWhiteout = smoothstep(.965, .976, p) *
+        (1 - smoothstep(.980, .992, p));
+      var finalFallout = smoothstep(.973, .999, p);
+      section.style.setProperty("--sg-final-compression", finalCompression.toFixed(3));
+      section.style.setProperty("--sg-final-charge", finalCharge.toFixed(3));
+      section.style.setProperty("--sg-final-blast", finalBlast.toFixed(3));
+      section.style.setProperty("--sg-final-wave", finalWave.toFixed(3));
+      section.style.setProperty("--sg-final-whiteout", finalWhiteout.toFixed(3));
+      section.style.setProperty("--sg-final-fallout", finalFallout.toFixed(3));
       section.style.setProperty("--sg-graffiti-drop", smoothstep(.916, 1, p).toFixed(3));
       section.style.setProperty("--sg-graffiti-light",
         Math.min(1, reveal * (.50 + orangeImpact * .4 + blueImpact * .48)).toFixed(3));
@@ -243,7 +260,10 @@ import { createIdentityFireball } from "./identity-fireball.js";
       section.style.setProperty("--sg-graffiti-sweep-x",
         (-195 + 392 * smoothstep(.857, .977, p)).toFixed(1) + "%");
     }
-    if (fireball) fireball.update(p, orangeImpact, cobalt, blueImpact);
+    if (fireball) fireball.update(p,
+      Math.min(1, orangeImpact + (typeof finalCharge === "number" ? finalCharge : 0) * .27),
+      cobalt,
+      Math.min(1, blueImpact + (typeof finalBlast === "number" ? finalBlast : 0) * .48));
     composeStageTransform();
   }
 

@@ -625,3 +625,169 @@
 @media(prefers-reduced-motion:reduce) {
   .hero3d-graffiti .hero3d-fireball {display:none!important;}
 }
+
+/* V7: final background detonation with a real three-beat cinematic arc:
+   compression, white-blue shockfront, cobalt light spilling into the first
+   Product Universe. All phases are scrubbed by existing ScrollTrigger.
+   The original Originkit 3D ball and SG034 graffiti remain untouched.
+   No expensive animated blur, extra RAF, extra sticky scene or black matte. */
+.hero3d-film {
+  --sg-final-charge: 0;
+  --sg-final-blast: 0;
+  --sg-final-wave: 0;
+  --sg-final-whiteout: 0;
+  --sg-final-fallout: 0;
+  --sg-final-compression: 0;
+}
+.sg-finale {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+  touch-action: pan-y;
+}
+.sg-finale > span {
+  position: absolute;
+  pointer-events: none;
+  backface-visibility: hidden;
+}
+/* A controlled camera-pressure swell behind the original ID.visual mark. */
+.hero3d-graffiti .hero3d-fireball {
+  transform: translate3d(-50%,-50%,0)
+    scale(calc(var(--sg-fireball-expansion)
+      + var(--sg-final-charge) * .045
+      + var(--sg-final-blast) * .090));
+}
+.sg-finale__charge {
+  inset: 0;
+  background:
+    radial-gradient(ellipse 25% 31% at 50% 47%,
+      rgba(255,255,229,.49),
+      rgba(255,167,54,.4) 27%,
+      rgba(255,73,19,.18) 52%,
+      transparent 81%),
+    radial-gradient(ellipse 60% 53% at 50% 52%,
+      rgba(255,98,14,.27),transparent 79%);
+  opacity: var(--sg-final-charge);
+  transform: scale(calc(1 - var(--sg-final-compression) * .18));
+  transform-origin: 50% 49%;
+  mix-blend-mode: screen;
+}
+/* A quick, bright center ignition, deliberately not a persistent white veil. */
+.sg-finale__flash {
+  inset: 0;
+  background:
+    radial-gradient(ellipse 31% 25% at 50% 48%,
+      rgba(255,255,255,.97),
+      rgba(202,238,255,.82) 25%,
+      rgba(67,166,255,.49) 48%,
+      rgba(25,96,255,.13) 70%,
+      transparent 92%);
+  opacity: var(--sg-final-whiteout);
+  transform: scale(calc(.61 + var(--sg-final-wave) * 1.12));
+  transform-origin: 50% 49%;
+  mix-blend-mode: screen;
+}
+.sg-finale__ring {
+  top: 49%;
+  left: 50%;
+  width: min(76vmin, 1040px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: clamp(1px,.16vw,2px) solid rgba(169,226,255,.91);
+  box-shadow: 0 0 18px rgba(115,203,255,.55),
+    0 0 40px rgba(24,107,255,.24),
+    inset 0 0 24px rgba(68,162,255,.25);
+  opacity: calc(var(--sg-final-blast) * (1 - var(--sg-final-wave) * .84));
+  transform: translate3d(-50%, -50%, 0)
+    scale(calc(.16 + var(--sg-final-wave) * 2.45));
+}
+.sg-finale__ring--echo {
+  border-color: rgba(85,150,255,.72);
+  width: min(62vmin, 810px);
+  opacity: calc(var(--sg-final-blast) * (1 - var(--sg-final-wave)) * .5);
+  transform: translate3d(-50%, -50%, 0)
+    scale(calc(.17 + var(--sg-final-wave) * 2.03));
+  box-shadow: 0 0 14px rgba(72,150,255,.43);
+}
+.sg-finale__rays {
+  inset: 0;
+  background: conic-gradient(from -9deg at 50% 48%,
+    transparent 0deg, rgba(149,212,255,.14) 8deg,transparent 18deg,
+    transparent 62deg,rgba(210,240,255,.21) 70deg,transparent 83deg,
+    transparent 148deg,rgba(51,128,255,.18) 160deg,transparent 170deg,
+    transparent 229deg,rgba(155,205,255,.15) 236deg,transparent 249deg,
+    transparent 298deg,rgba(98,175,255,.18) 310deg,transparent 327deg);
+  opacity: calc(var(--sg-final-blast) * (1 - var(--sg-final-wave) * .65));
+  transform: scale(calc(.48 + var(--sg-final-wave) * 1.62));
+  mix-blend-mode: screen;
+}
+/* The shock becomes a blue floor light, not a rectangular transition. */
+.sg-finale__fallout {
+  inset: 0;
+  background:
+    radial-gradient(ellipse 95% 81% at 50% 108%,
+      rgba(81,161,255,.53) 0%,
+      rgba(32,105,248,.31) 28%,
+      rgba(19,64,176,.15) 55%,
+      transparent 85%),
+    linear-gradient(to bottom,
+      transparent 29%,
+      rgba(25,78,206,.07) 59%,
+      rgba(24,72,184,.27) 100%);
+  opacity: var(--sg-final-fallout);
+  transform: translate3d(0,calc((1 - var(--sg-final-fallout)) * 7%),0);
+}
+/* Very small punch; avoid fighting GSAP's actual transform composition. */
+.hero3d-film--motion .hero3d-graffiti__drawing {
+  scale: calc(1
+    + var(--sg-blue-impact) * .038
+    + var(--sg-orange-impact) * .016
+    + var(--sg-final-charge) * .012
+    + var(--sg-final-blast) * .061);
+}
+.hero3d-graffiti__horizon {
+  opacity: calc(var(--sg-graffiti-blue) * .70 + var(--sg-final-fallout) * .28);
+}
+/* The Universe starts with the same cobalt afterglow and naturally decays
+   over its opening scroll without referring back to a now-invisible film. */
+.universe-sticky::before {
+  background:
+    radial-gradient(ellipse 99% 82% at 50% -10%,
+      rgba(80,153,255,.61),
+      rgba(32,102,242,.27) 38%,
+      rgba(18,58,172,.09) 69%,
+      transparent 87%),
+    linear-gradient(to bottom,
+      rgba(24,73,181,.34),
+      rgba(9,30,85,.11) 33%,
+      transparent 72%);
+}
+@media(max-width:720px) {
+  .sg-finale__ring {
+    width: min(83vw, 440px);
+    border-width: 1px;
+    box-shadow: 0 0 10px rgba(115,203,255,.48);
+  }
+  .sg-finale__ring--echo { width:min(69vw,355px); }
+  .sg-finale__charge {
+    background: radial-gradient(ellipse 48% 29% at 50% 49%,
+      rgba(255,207,108,.68), rgba(255,97,26,.37) 39%,
+      transparent 89%);
+  }
+  .sg-finale__flash {
+    background: radial-gradient(ellipse 54% 27% at 50% 49%,
+      rgba(248,252,255,.83),rgba(93,181,255,.35) 40%,transparent 90%);
+  }
+  .sg-finale__rays { opacity: calc(var(--sg-final-blast) * .35); }
+  .hero3d-film--motion .hero3d-graffiti__drawing {
+    scale: calc(1 + var(--sg-final-blast) * .023
+      + var(--sg-blue-impact) * .025
+      + var(--sg-orange-impact) * .01);
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .sg-finale { display:none; }
+}
