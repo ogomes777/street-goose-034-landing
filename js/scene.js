@@ -4,11 +4,10 @@
 (function () {
   "use strict";
 
+  // The capability probe in motion.js already created (and released) a test
+  // context; a second throwaway context here only cost time and a GPU slot.
   function hasWebGL() {
-    try {
-      var c = document.createElement("canvas");
-      return !!(window.WebGLRenderingContext && (c.getContext("webgl") || c.getContext("experimental-webgl")));
-    } catch (e) { return false; }
+    return !!window.WebGLRenderingContext && window.SG.perfTier !== "low";
   }
 
   var THREE_OK = typeof window.THREE !== "undefined" && hasWebGL();
@@ -45,14 +44,24 @@
       sync();
     });
 
+    var retired = false;
+    window.addEventListener("sg:perf-low", function () {
+      retired = true; stop();
+      canvas.style.display = "none";
+    });
+
     function sync() {
-      var shouldRun = visible && !document.hidden && !overlayOpen;
+      var shouldRun = visible && !document.hidden && !overlayOpen && !retired;
       if (shouldRun && !running) start();
       if (!shouldRun && running) stop();
     }
 
     function start() {
-      if (!ctx) ctx = setup();
+      if (!ctx) {
+        // A renderer that can't be created (no WebGL, context limit) must
+        // never break the page: the static fallback simply stays.
+        try { ctx = setup(); } catch (e) { ctx = null; retired = true; }
+      }
       if (!ctx) return;
       running = true;
       ctx.raf = requestAnimationFrame(loop);

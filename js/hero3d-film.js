@@ -1,4 +1,5 @@
 import { createIdentityFireball } from "./identity-fireball.js";
+import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
 /* Street Goose 034 — Hero 3D Identity Film.
    Mascote -> transformação -> personagem -> energia orbital -> assinatura
    Street Goose. Tempo do vídeo 100% controlado pelo scroll, reaproveitando
@@ -14,6 +15,7 @@ import { createIdentityFireball } from "./identity-fireball.js";
   if (!section) return;
 
   var video = section.querySelector("[data-hero3d-video]");
+  preferLightSource(video);
   var canvas = section.querySelector("[data-hero3d-canvas]");
   var glow = section.querySelector("[data-hero3d-glow]");
   var stage = section.querySelector("[data-hero3d-stage]");
@@ -50,7 +52,7 @@ import { createIdentityFireball } from "./identity-fireball.js";
 
   var reduced = window.SG.prefersReducedMotion();
   var canScrub = window.SG.hasGSAP && window.ScrollTrigger && !reduced;
-  var fireball = canScrub ? createIdentityFireball(section.querySelector("[data-hero3d-fireball]"), window.SG.perfTier) : null;
+  var fireball = canScrub && window.SG.perfTier !== "low" ? createIdentityFireball(section.querySelector("[data-hero3d-fireball]"), window.SG.perfTier) : null;
 
   window.SG.hero3dOrbitBoost = 0; // lido pela camada de partículas pra sincronizar com a energia do filme
 
@@ -97,6 +99,7 @@ import { createIdentityFireball } from "./identity-fireball.js";
   var hero3dST = null;
   var duration = 0;
   function startPreload() {
+    section.classList.add("is-near");
     if (video.getAttribute("preload") === "auto") return;
     video.setAttribute("preload", "auto");
     video.load();
@@ -140,10 +143,11 @@ import { createIdentityFireball } from "./identity-fireball.js";
   }
 
   var sweepFired = false;
+  var seekVideo = createVideoScrubber(video);
 
   function applyProgress(p) {
     if (videoReady && isFinite(duration) && duration > 0) {
-      video.currentTime = Math.max(0, Math.min(duration, p * duration));
+      seekVideo(Math.max(0, Math.min(duration, p * duration)));
     }
 
     // transição de entrada: a linha central colapsa enquanto o filme emerge do preto

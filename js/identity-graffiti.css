@@ -893,3 +893,12 @@
 @media (prefers-reduced-motion: reduce) {
   .sg-finale { display: none; }
 }
+
+/* The 380 KB mask is requested by the browser as soon as the rule applies,
+   even far below the fold. Until the identity film is near (.is-near, set by
+   js/hero3d-film.js), the layer stays hidden and unmasked. */
+.hero3d-film:not(.is-near) .hero3d-graffiti__ink {
+  visibility: hidden;
+  -webkit-mask-image: none;
+  mask-image: none;
+}

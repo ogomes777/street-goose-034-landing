@@ -22,14 +22,12 @@
  <link rel="icon" type="image/png" href="assets/logos/web/favicon.png" />
  <link rel="apple-touch-icon" href="assets/logos/web/favicon.png" />
 
- <link rel="preload" as="image" href="assets/heroes/web/hero-poster.jpg" fetchpriority="high" />
- <link rel="preload" as="video" href="assets/INTRO-LOADER-STREET-small.mp4" type="video/mp4" />
+ <link rel="preload" as="image" href="assets/heroes/web/hero-poster-960.jpg" fetchpriority="high" />
 
  <link rel="stylesheet" href="styles.css" />
  <link rel="stylesheet" href="/js/identity-graffiti.css?v=20261015-alpha-cinema-2" />
  <link rel="stylesheet" href="/js/drop-film.css" />
   <link rel="stylesheet" href="/js/drop-film-finale.css?v=20261015-lens-idle-2" />
- <link rel="preload" as="image" href="/brand/drop-lupa-034.webp" fetchpriority="high" />
 <link rel="manifest" href="/manifest.webmanifest">
  <meta name="theme-color" content="#111111">
  <link rel="apple-touch-icon" href="/icons/street-192.png">
@@ -37,17 +35,18 @@
 <body>
  <div class="intro-loader" data-intro-loader role="dialog" aria-modal="true" aria-label="Street Goose 034 — abertura">
  <video class="intro-loader-video" data-intro-video autoplay muted playsinline preload="auto" aria-hidden="true">
- <source src="assets/INTRO-LOADER-STREET-small.mp4" type="video/mp4" />
+ <source src="assets/INTRO-LOADER-STREET-540.mp4" type="video/mp4" media="(max-width: 900px)" />
+ <source src="assets/INTRO-LOADER-STREET-720.mp4" type="video/mp4" />
  </video>
  <div class="intro-loader-stars" aria-hidden="true"></div>
  <div class="intro-loader-content">
- <img src="assets/logos/web/logo-street-goose-034.webp" alt="Street Goose 034" width="220" height="59" />
+ <img src="assets/logos/web/logo-street-goose-034-480.webp" alt="Street Goose 034" width="220" height="59" />
  <span class="intro-loader-line" aria-hidden="true"></span>
  <p>UMA NOVA ÓTICA DE RUA</p>
  <button type="button" data-intro-skip>Pular intro <span aria-hidden="true"></span></button>
  </div>
  <button type="button" data-intro-sound style="position:absolute;right:24px;bottom:24px;z-index:5">Ativar som</button>
- <audio data-intro-audio src="assets/INTRO-LOADER-STREET.MP3" preload="auto"></audio>
+ <audio data-intro-audio src="assets/INTRO-LOADER-STREET.MP3" preload="metadata"></audio>
  </div>
   <script>
     (function () {
@@ -147,7 +146,7 @@
 
  <header class="site-header" data-header>
  <a class="brand" href="#top" aria-label="Street Goose 034 — início">
- <img class="brand-mark" src="assets/logos/web/logo-street-goose-034.webp" alt="Street Goose 034" width="220" height="59" />
+ <img class="brand-mark" src="assets/logos/web/logo-street-goose-034-480.webp" alt="Street Goose 034" width="220" height="59" />
  </a>
  <nav class="desktop-nav" aria-label="Navegação principal">
  <a href="#colecao" data-i18n="nav.colecao">Coleção</a>
@@ -192,7 +191,7 @@
 
  <nav class="mobile-menu" id="mobile-menu" data-mobile-menu aria-hidden="true" aria-label="Navegação mobile">
  <div class="mobile-menu-head">
- <img class="brand-mark" src="assets/logos/web/logo-street-goose-034.webp" alt="Street Goose 034" width="170" height="45" />
+ <img class="brand-mark" src="assets/logos/web/logo-street-goose-034-480.webp" alt="Street Goose 034" width="170" height="45" />
  <button class="menu-close" aria-label="Fechar menu" data-menu-toggle>×</button>
  </div>
  <a href="#colecao" data-menu-toggle>Coleção</a>
@@ -234,11 +233,11 @@
     <section class="hero" aria-label="Destaques Street Goose" data-hero style="--accent:#FF5A00">
  <div class="hero-media">
  <video class="hero-video" data-hero-video muted loop playsinline webkit-playsinline="true" x-webkit-airplay="allow" preload="metadata"
-          poster="assets/heroes/web/hero-poster.jpg">
+          poster="assets/heroes/web/hero-poster-960.jpg">
  <source data-src-desktop src="assets/heroes/web/hero-film.mp4" type="video/mp4" media="(min-width:901px) and (min-height:521px)" />
  <source data-src-mobile src="assets/heroes/web/hero-film-mobile.mp4" type="video/mp4" />
  </video>
- <img class="hero-fallback-img" data-hero-image src="assets/heroes/web/hero-poster.jpg" alt="" aria-hidden="true" />
+ <img class="hero-fallback-img" data-hero-image src="assets/heroes/web/hero-poster-960.jpg" srcset="assets/heroes/web/hero-poster-960.jpg 960w, assets/heroes/web/hero-poster.jpg 1920w" sizes="100vw" alt="" aria-hidden="true" fetchpriority="high" decoding="async" />
  <div class="hero-scrim"></div>
  <canvas class="hero-canvas" data-hero-canvas aria-hidden="true"></canvas>
  </div>
@@ -281,7 +280,7 @@
     <section class="scroll-film" data-scroll-film aria-label="Filme cinematográfico Street Goose 034" style="--accent:#4FC3F7">
  <div class="scroll-film-sticky">
  <video class="scroll-film-video" data-film-video muted playsinline webkit-playsinline="true" preload="none"
-          poster="assets/heroes/web/film-scrub-poster.jpg">
+          data-lazy-poster>
  <source data-src-desktop src="assets/heroes/web/film-scrub.mp4" type="video/mp4" media="(min-width:901px) and (min-height:521px)" />
  <source data-src-mobile src="assets/heroes/web/film-scrub-mobile.mp4" type="video/mp4" />
  </video>
@@ -289,7 +288,7 @@
  <div class="scroll-film-lens-glow" data-film-lens-glow aria-hidden="true"></div>
  <canvas class="scroll-film-canvas" data-film-canvas aria-hidden="true"></canvas>
  <div class="scroll-film-product-wrap" data-film-product-wrap>
- <img class="scroll-film-product" data-film-product src="assets/lupa-animacao-png.png" alt="Street Goose 034" />
+ <picture><source srcset="assets/lupa-animacao.webp" type="image/webp"><img class="scroll-film-product" data-film-product src="assets/lupa-animacao-png.png" alt="Street Goose 034" width="900" height="900" decoding="async" /></picture>
  </div>
  <div class="scroll-film-copy" data-film-copy>
  <p class="scroll-film-index" data-film-chapter>CAPÍTULO 01</p>
@@ -358,7 +357,7 @@
             <span class="hero3d-graffiti__blade"></span>
           </span>
           <img class="hero3d-graffiti__source" data-hero3d-graffiti-art
-            src="/brand/sg034-idvisual-cutout.webp"
+            src="/brand/sg034-idvisual-cutout.webp" crossorigin="anonymous"
             alt="Grafite ID.visual com assinatura SG 034 em traços originais, agora sem fundo"
             width="1916" height="821" loading="lazy" decoding="async" />
         </span>
@@ -442,7 +441,7 @@
  <div class="final-act-canvas" data-final-act-canvas aria-hidden="true"></div>
  <div class="final-act-glow" aria-hidden="true"></div>
  <div class="final-act-sweep" aria-hidden="true"></div>
- <img class="final-act-product" data-final-act-product src="assets/lupa-animacao-png.png" alt="Street Goose 034" loading="lazy" width="900" height="900">
+ <picture><source srcset="assets/lupa-animacao.webp" type="image/webp"><img class="final-act-product" data-final-act-product src="assets/lupa-animacao-png.png" alt="Street Goose 034" loading="lazy" decoding="async" width="900" height="900"></picture>
  <div class="final-act-copy reveal-up">
  <p class="kicker">STREET GOOSE 034</p>
  <h2>A rua muda.<br>O olhar também.</h2>
@@ -490,7 +489,7 @@
 
  <footer>
  <div class="brand footer-brand">
- <img class="brand-mark" src="assets/logos/web/logo-street-goose-034.webp" alt="Street Goose 034" width="190" height="51" />
+ <img class="brand-mark" src="assets/logos/web/logo-street-goose-034-480.webp" alt="Street Goose 034" width="190" height="51" />
  </div>
  <p>Visão, rua e presença. Street Goose 034.</p>
  <div class="footer-links">
@@ -637,7 +636,6 @@
  </div>
 
   <script type="module" src="/js/intro-entry.js"></script>
-  <script defer src="/vendor/gsap-3.12.5.min.js"></script>
   <script defer src="/drop-rig.js?v=20261014-joints-1"></script>
   <script defer src="/entry-popup.js?v=20261015-lens-idle-2"></script>
   <script type="module" src="/src/main.tsx"></script>

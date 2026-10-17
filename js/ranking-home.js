@@ -1,5 +1,5 @@
 import { RewardsService } from '../src/services/RewardsService.ts';
-import { gemHtml, levelGem, medalHtml } from './level-gems.js';
+import { gemHtml, levelGem, liveGems, medalHtml } from './level-gems.js';
 export async function mountRankingHome(root) {
   const list = root.querySelector('[data-ranking-preview-list]');
   const esc = window.SG.esc;
@@ -24,10 +24,6 @@ export async function mountRankingHome(root) {
     root._sgCrystals?.();
     list.innerHTML = page.rows.length ? page.rows.map(card).join('') : '<p class="sg-ranking-preview-empty">A primeira estrela pode ser você. Entre na sua conta para começar.</p>';
     list.querySelectorAll('.sg-rank-avatar img').forEach(img => img.addEventListener('error', () => { const host = img.parentElement; host.textContent = host.dataset.initial; }, { once: true }));
-    if (page.rows.length) {
-      import('../src/components/ranking-crystal/gem-field.ts')
-        .then(mod => { if (root.isConnected) { const field = mod.mountGemField(list, { hoverSelector: '.sg-ranking-preview-card' }); root._sgCrystals = field.destroy; } })
-        .catch(error => console.warn('[SG034] Ranking crystal module failed to load, keeping SVG gems.', error));
-    }
+    if (page.rows.length) root._sgCrystals = liveGems(list, { hoverSelector: '.sg-ranking-preview-card' }).destroy;
   } catch (_) { list.innerHTML = '<p class="sg-ranking-preview-empty">Explore o ranking para acompanhar os participantes e sua evolução.</p>'; }
 }

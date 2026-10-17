@@ -1,0 +1,126 @@
+/* SG Community on the home: an app screen, not a web block. Graphite panel,
+   app bar with live state, feed cards with story rings, onboarding cards.
+   Light on the GPU: no large blurs, only small glass pills. */
+.sgc-home {
+  --sgc-metal: conic-gradient(from 210deg, #f4f4f2, #8d9096 25%, #e9eaec 50%, #7c7f85 75%, #f4f4f2);
+  --sgc-hot: conic-gradient(from 210deg, var(--accent), #ffb37a 30%, #ffd9b8 45%, var(--accent) 70%, #c23a00 85%, var(--accent));
+  --sgc-line: color-mix(in srgb, var(--text) 10%, transparent);
+  --sgc-panel: linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, var(--surface)), var(--surface));
+}
+/* Never let any state of the mural overflow into the next chapter. */
+.sgc-home .sgc-mosaic:has(> .sgc-app) { display: block; }
+.sgc-home .sgc-mosaic > .sgc-app { grid-column: 1 / -1; }
+
+.sgc-home .sgc-ring { position: relative; display: inline-grid; place-items: center; flex: none; padding: 2.5px; border-radius: 50%; background: var(--sgc-metal); }
+.sgc-home .sgc-ring.is-hot { background: var(--sgc-hot); }
+.sgc-home .sgc-ring .sgc-avatar { width: 34px; height: 34px; font-size: 13px; box-shadow: 0 0 0 2.5px #0b0b0b; }
+
+/* App frame */
+.sgc-home .sgc-app {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--sgc-line);
+  border-radius: 30px;
+  background: var(--sgc-panel);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent), 0 40px 90px -60px #000;
+}
+.sgc-home .sgc-app-bar,
+.sgc-home .sgc-home-bar > .sgc-app-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--sgc-line);
+}
+.sgc-home .sgc-home-bar > .sgc-app-bar {
+  margin-bottom: 14px;
+  border: 1px solid var(--sgc-line);
+  border-radius: 18px;
+  background: var(--sgc-panel);
+}
+.sgc-home .sgc-app-logo {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 11px;
+  background: linear-gradient(140deg, #ff7a2a, var(--accent) 55%, #b33a00);
+  color: #0b0b0b;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  box-shadow: inset 0 1px 0 #ffffff55;
+}
+.sgc-home .sgc-app-title { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.sgc-home .sgc-app-title b { font-size: 15px; letter-spacing: -.01em; color: var(--text); }
+.sgc-home .sgc-app-title small { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.sgc-home .sgc-app-title small i { position: relative; width: 6px; height: 6px; border-radius: 50%; background: #3ddc84; }
+/* Live pulse on the compositor (transform/opacity), never an animated shadow. */
+.sgc-home .sgc-app-title small i::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; background: #3ddc8440; animation: sgc-live 2.4s ease-out infinite; }
+.sgc-home .sgc-app-chips { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.sgc-home .sgc-app-chip { padding: 6px 11px; border: 1px solid var(--sgc-line); border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+
+/* Body: feed preview + onboarding */
+.sgc-home .sgc-app-body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: clamp(20px, 3vw, 40px); padding: clamp(16px, 2vw, 24px); align-items: center; }
+.sgc-home .sgc-app-feed { display: grid; grid-template-columns: 1.3fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; height: clamp(300px, 34vw, 470px); }
+.sgc-home .sgc-app-card { position: relative; margin: 0; overflow: hidden; border-radius: 22px; background: var(--surface-2); border: 1px solid var(--sgc-line); min-height: 0; }
+.sgc-home .sgc-app-card--1 { grid-row: span 2; }
+.sgc-home .sgc-app-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.sgc-home .sgc-app-card figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 14px 14px; background: linear-gradient(to top, #000000c0, transparent); }
+.sgc-home .sgc-app-who { display: flex; align-items: center; gap: 10px; color: #fff; }
+.sgc-home .sgc-app-who b { display: block; font-size: 13px; }
+.sgc-home .sgc-app-who small { display: block; font-size: 11px; color: #ffffffb8; }
+.sgc-home .sgc-app-card--1::after {
+  content: "Campanha";
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #0b0b0b99;
+  color: #fff;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.sgc-home .sgc-app-onboard h3 { margin: 10px 0 20px; font-size: clamp(28px, 3vw, 46px); line-height: 1; letter-spacing: -.045em; color: var(--text); }
+.sgc-home .sgc-app-onboard .kicker { color: var(--accent); }
+.sgc-home .sgc-app-steps { list-style: none; margin: 0 0 22px; padding: 0; display: grid; gap: 10px; }
+.sgc-home .sgc-app-steps li {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--sgc-line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.sgc-home .sgc-app-steps b { display: block; font-size: 15px; color: var(--text); }
+.sgc-home .sgc-app-steps small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--muted); }
+.sgc-home .sgc-app-step-ico { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.sgc-home .sgc-app-step-ico svg { width: 22px; height: 22px; fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sgc-home .sgc-app-cta { width: 100%; min-height: 52px; border-radius: 14px; justify-content: center; }
+
+/* Feed tiles when there are approved posts: same app language. */
+.sgc-home .sgc-tile { border-radius: 22px; border-color: var(--sgc-line); }
+.sgc-home .sgc-tile-likes { border: 1px solid #ffffff22; }
+
+@keyframes sgc-live { 0% { transform: scale(.6); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }
+
+@media (max-width: 860px) {
+  .sgc-home .sgc-app-body { grid-template-columns: 1fr; }
+  .sgc-home .sgc-app-feed { height: clamp(240px, 72vw, 380px); }
+  .sgc-home .sgc-app { border-radius: 24px; }
+}
+@media (max-width: 520px) {
+  .sgc-home .sgc-app-chip:not(:first-child) { display: none; }
+  .sgc-home .sgc-app-bar { padding: 12px 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sgc-home .sgc-app-title small i::after { animation: none; }
+}

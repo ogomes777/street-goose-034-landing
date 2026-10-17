@@ -68,24 +68,38 @@
     }
   }
   // progresso da página como linha fina dentro da pílula
+  // Page height is cached (re-measured on resize and every 500ms): reading
+  // scrollHeight inside a scroll frame forces a synchronous layout whenever
+  // another scroll-linked script has just touched a style.
+  var maxScroll = 0, lastPct = "", lastTintAt = 0;
+  function measure() { maxScroll = document.documentElement.scrollHeight - window.innerHeight; }
   function updateProgress() {
     if (!header) return;
-    var max = document.documentElement.scrollHeight - window.innerHeight;
-    var pct = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
-    header.style.setProperty("--hdr-progress", pct.toFixed(4));
+    if (!maxScroll) measure();
+    var pct = maxScroll > 0 ? Math.min(1, Math.max(0, window.scrollY / maxScroll)) : 0;
+    var value = pct.toFixed(3);
+    if (value === lastPct) return;
+    lastPct = value;
+    header.style.setProperty("--hdr-progress", value);
   }
   var ticking = false;
   function onScroll() {
     if (ticking) return;
     ticking = true;
-    requestAnimationFrame(function () { ticking = false; updateTint(); updateProgress(); });
+    requestAnimationFrame(function (now) {
+      ticking = false;
+      updateProgress();
+      // The tint only changes at section boundaries: a hit-test every ~120ms
+      // is enough and keeps elementsFromPoint out of most scroll frames.
+      if (now - lastTintAt > 120) { lastTintAt = now; updateTint(); }
+    });
   }
   if (header) {
     addEventListener("scroll", onScroll, { passive: true });
-    addEventListener("resize", onScroll, { passive: true });
+    addEventListener("resize", function () { measure(); onScroll(); }, { passive: true });
     // slides do hero, universo de produtos e overlays trocam de cor sem
     // rolagem: confere de leve a cada 500ms com a aba visível
-    setInterval(function () { if (!document.hidden) { updateTint(); updateProgress(); } }, 500);
+    setInterval(function () { if (!document.hidden) { measure(); updateTint(); updateProgress(); } }, 500);
     updateTint();
     updateProgress();
   }

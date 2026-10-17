@@ -153,6 +153,15 @@
   // normal (lockScroll já rodou logo acima, então o unlock em finish() bate certo).
   window.SG.skipIntro = finish;
 
+  // Data saver or 2G: the opening film would eat the whole connection while
+  // the store waits. Stop its download and go straight to the landing.
+  var introConn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (introConn && (introConn.saveData || /(^|-)2g$/.test(introConn.effectiveType || ""))) {
+    if (video) { try { video.pause(); video.querySelectorAll("source").forEach(function (s) { s.removeAttribute("src"); }); video.removeAttribute("src"); video.load(); } catch (e) {} }
+    if (introAudio) { try { introAudio.pause(); introAudio.removeAttribute("src"); introAudio.load(); } catch (e) {} }
+    setTimeout(finish, 0); // after the rest of this module has initialised
+  }
+
   // A faixa de abertura é um arquivo separado do vídeo. Ela também funciona
   // como relógio de fallback enquanto o MP4 não está disponível no checkout;
   // com vídeo presente, o relógio do vídeo continua sendo a fonte de verdade.

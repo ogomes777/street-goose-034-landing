@@ -1,3 +1,4 @@
+import { preferLightSource } from "./video-scrub.js";
 /* Street Goose 034 — hero film + campaign slider
    Uma origem de verdade para o slide ativo. Nunca reseta a página.
    O vídeo é UMA instância persistente: nunca é recriado nem pausado por troca
@@ -28,6 +29,9 @@
   var track = heroEl.querySelector("[data-hero-track]");
   var video = heroEl.querySelector("[data-hero-video]");
   var fallbackImg = heroEl.querySelector("[data-hero-image]");
+  // Slow connection on a large screen: the 1080p film (≈22 MB) would stall;
+  // the 720p cut (≈4 MB) plays smoothly (see js/video-scrub.js).
+  if (preferLightSource(video)) { try { video.load(); } catch (e) {} }
   // Vite fingerprints the poster referenced by the HTML. Preserve that resolved
   // URL for the reduced-motion video slide instead of falling back to the
   // legacy runtime string from data.js (which is intentionally not bundled).
