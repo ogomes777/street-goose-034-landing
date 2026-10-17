@@ -109,3 +109,14 @@ Remover: `delete from public.admins where user_id = (select id from auth.users w
 - [x] Topo do painel: saldo em caixa, entradas e saídas de 30 dias, a receber, pedidos aguardando, vendas, fotos, clientes, newsletter — números ao vivo (atualiza a cada 20 s e na hora de cada ação), contagem animada e mini-gráficos; cada cartão abre a seção dele.
 - [x] Aba Financeiro: período (hoje, 7/30 dias, mês, 12 meses, tudo), comparação com o período anterior, resultado, vendas e ticket médio, reembolsos, gráfico entradas × saídas com dica e teclado, categorias, peças que mais venderam e o livro-caixa com busca/filtro e "Ver pedido".
 - [x] Visual: painel sempre escuro com luz ambiente, cartões de vidro, abas com ícone e indicador deslizante, entrada em cascata, esqueletos, brilho nos botões; tudo desliga com prefers-reduced-motion.
+
+## Constelação 034 — ranking da home com cristal WebGL (Single Clear Faceted / Originkit)
+- [x] Shader e construção por planos do Originkit preservados (`src/components/ranking-crystal/crystal-shader.ts`); adaptações documentadas no topo do arquivo: alpha pré-multiplicado real (sem retângulo/halo), `uOrigin` para viewport/scissor por slot, `uAmbient` (0 no tema escuro = look original; luz-base só no tema claro)
+- [x] Cena de comparação isolada `dev/crystal-compare/` (fora do build): original verbatim × adaptado, mesmo preset `#6C64BF` — diferença média 0,13/255 na mesma pose (resíduo = degrau de resolução)
+- [x] Um único contexto WebGL2 para os 3 cards (`CrystalField.ts`), program/planes compartilhados, planes calculados uma vez por preset, uniforms estáticos só na troca de preset
+- [x] RAF só existe com a seção visível, aba visível e sem reduced motion; reduced motion (inclusive alterado em runtime) = pose estática sem loop; retomada sem salto
+- [x] DPR limitado (2 desktop / 1,5 touch), orçamento de pixels, governador de qualidade com histerese (`crystal-quality.ts`, testado)
+- [x] Fallback: sem WebGL2 / erro de shader / context lost → gema SVG do tier no mesmo slot; context restored → volta ao vivo
+- [x] Presets por tier centralizados (`crystal-presets.ts`): mesma ótica do preset original, cor do tier de `LEVEL_GEMS` normalizada para a luminância de `#6C64BF`; rotação mais calma nos cards (speed 34, hover boost 40% em vez de 200%)
+- [x] Cards: nome em destaque, avatar real (só https) com inicial de fallback, XP tabular, nível + pedra, 1º lugar com hairline dourada; hover 3px só em pointer fino; canvas `aria-hidden` e `pointer-events:none` (scroll touch começando na pedra funciona)
+- [x] Testado em Chromium headless (SwiftShader, sem GPU): 1440/1024/768/390/360, temas claro/escuro, nome longo, avatar quebrado, tiers mistos, build de produção com CSP. Não medido: FPS em GPU real, Safari/iOS, Firefox, aparelhos Android reais
