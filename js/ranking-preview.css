@@ -1,0 +1,176 @@
+/* CONSTELAÇÃO 034 — home ranking cards with the shared WebGL crystal.
+   Hierarchy: name > XP > position/level; the stone is presence, not noise. */
+#top .sg-ranking-preview-head { margin-bottom: clamp(28px,3vw,40px); }
+#top .sg-ranking-preview-list {
+  position: relative;
+  gap: 16px;
+  min-height: 156px;
+}
+#top .sg-ranking-preview-card {
+  --card-line: color-mix(in srgb,var(--text) 9%,transparent);
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px minmax(0,1fr) 84px;
+  grid-template-areas: "medal body stone";
+  align-items: center;
+  gap: 18px;
+  min-height: 156px;
+  padding: 18px 16px 18px 22px;
+  border: 1px solid var(--card-line);
+  border-radius: 22px;
+  background:
+    radial-gradient(70% 90% at 92% 50%,color-mix(in srgb,var(--gem-color,#c9c9ff) 6%,transparent),transparent 70%),
+    linear-gradient(180deg,color-mix(in srgb,var(--text) 3%,var(--surface)),var(--surface));
+  box-shadow: inset 0 1px 0 color-mix(in srgb,#fff 6%,transparent), 0 18px 40px -32px #000c;
+  transition: translate .22s cubic-bezier(.2,.7,.2,1), border-color .22s ease, box-shadow .22s ease;
+}
+/* First place: one quiet gold hairline on the top edge, nothing more. */
+#top .sg-ranking-preview-card--1::before {
+  content: "";
+  position: absolute;
+  inset: -1px 18% auto;
+  height: 1px;
+  background: linear-gradient(90deg,transparent,#e2bd6e,transparent);
+  opacity: .75;
+  pointer-events: none;
+}
+#top .sg-rank-medal { grid-area: medal; display: grid; place-items: center; }
+#top .sg-rank-body { grid-area: body; min-width: 0; }
+#top .sg-rank-pos {
+  margin: 0 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+#top .sg-ranking-preview-card--1 .sg-rank-pos { color: #d9b56a; }
+#top .sg-rank-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font: inherit;
+  min-width: 0;
+}
+#top .sg-rank-id b {
+  min-width: 0;
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -.015em;
+  color: var(--text);
+  overflow-wrap: break-word;
+  word-break: normal;
+  white-space: normal;
+}
+#top .sg-rank-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 1px solid var(--card-line);
+  background: color-mix(in srgb,var(--text) 7%,var(--surface));
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+#top .sg-rank-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#top .sg-rank-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--card-line);
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+#top .sg-rank-xp { color: var(--text-2); }
+#top .sg-rank-xp strong { font-size: 15px; font-weight: 700; color: var(--text); }
+
+/* Stone slot: fixed box so the renderer never shifts layout. */
+#top .sg-rank-stone {
+  grid-area: stone;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 120px;
+  justify-self: end;
+}
+#top .sg-rank-stone .sg-level-gem { width: 52px; height: 52px; transition: opacity .4s ease; }
+#top .sg-ranking-crystal-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+#top .sg-ranking-preview-list.has-crystal .sg-ranking-crystal-canvas { opacity: 1; }
+#top .sg-ranking-preview-list.has-crystal .sg-rank-stone .sg-level-gem { opacity: 0; }
+
+@media (hover:hover) and (pointer:fine) {
+  #top .sg-ranking-preview-card:hover {
+    translate: 0 -3px;
+    border-color: color-mix(in srgb,var(--gem-color,#fff) 22%,var(--card-line));
+    box-shadow: inset 0 1px 0 color-mix(in srgb,#fff 9%,transparent), 0 24px 46px -30px #000e;
+  }
+}
+
+:root[data-theme="light"] #top .sg-ranking-preview-card {
+  --card-line: rgba(20,20,18,.1);
+  background:
+    radial-gradient(70% 90% at 92% 50%,color-mix(in srgb,var(--gem-color,#9a9ad8) 10%,transparent),transparent 70%),
+    linear-gradient(180deg,#ffffff,#f8f7f4);
+  box-shadow: inset 0 1px 0 #fff, 0 16px 34px -28px rgba(20,20,18,.35);
+}
+:root[data-theme="light"] #top .sg-ranking-preview-card--1::before { background: linear-gradient(90deg,transparent,#b8892e,transparent); }
+:root[data-theme="light"] #top .sg-ranking-preview-card--1 .sg-rank-pos { color: #85601a; }
+
+/* Tablet: three columns stay; medal and stone share the top row so the
+   name gets the full card width instead of a sliver between them. */
+@media (max-width:1180px) and (min-width:761px) {
+  #top .sg-ranking-preview-card {
+    grid-template-columns: minmax(0,1fr) 64px;
+    grid-template-areas: "medal stone" "body body";
+    align-items: center;
+    row-gap: 10px;
+    padding: 18px 16px 20px 18px;
+  }
+  #top .sg-rank-medal { justify-content: start; }
+  #top .sg-rank-stone { width: 64px; height: 92px; }
+  #top .sg-rank-id b { font-size: 16px; }
+  #top .sg-rank-avatar { width: 26px; height: 26px; }
+}
+@media (max-width:760px) {
+  #top .sg-ranking-preview-list { grid-template-columns: 1fr; gap: 12px; }
+  #top .sg-ranking-preview-card {
+    grid-template-columns: 36px minmax(0,1fr) 72px;
+    gap: 14px;
+    min-height: 136px;
+    padding: 16px 12px 16px 16px;
+    border-radius: 20px;
+  }
+  #top .sg-rank-stone { width: 72px; height: 104px; }
+  #top .sg-rank-id b { font-size: 17px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  #top .sg-ranking-preview-card,
+  #top .sg-ranking-crystal-canvas,
+  #top .sg-rank-stone .sg-level-gem { transition: none; }
+  #top .sg-ranking-preview-card:hover { translate: none; }
+}
+#top .sg-ranking-preview-list.has-crystal .sg-rank-stone .sg-level-gem :is(svg),
+#top .sg-ranking-preview-list.has-crystal .sg-rank-stone .sg-level-gem::before,
+#top .sg-ranking-preview-list.has-crystal .sg-rank-stone .sg-level-gem::after { animation: none; }
