@@ -46,6 +46,8 @@
   color: var(--muted);
 }
 #top .sg-ranking-preview-card--1 .sg-rank-pos { color: #d9b56a; }
+#top .sg-ranking-preview-card--2 .sg-rank-pos { color: #c9d0da; }
+#top .sg-ranking-preview-card--3 .sg-rank-pos { color: #d9b38e; }
 #top .sg-rank-id {
   display: flex;
   align-items: center;
@@ -125,6 +127,8 @@
 }
 :root[data-theme="light"] #top .sg-ranking-preview-card--1::before { background: linear-gradient(90deg,transparent,#b8892e,transparent); }
 :root[data-theme="light"] #top .sg-ranking-preview-card--1 .sg-rank-pos { color: #85601a; }
+:root[data-theme="light"] #top .sg-ranking-preview-card--2 .sg-rank-pos { color: #5f6b79; }
+:root[data-theme="light"] #top .sg-ranking-preview-card--3 .sg-rank-pos { color: #8a5a35; }
 
 /* Tablet: three columns stay; medal and stone share the top row so the
    name gets the full card width instead of a sliver between them. */

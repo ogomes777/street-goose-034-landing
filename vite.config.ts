@@ -82,6 +82,8 @@ function obfuscateAppChunks(): Plugin {
     apply: "build",
     enforce: "post",
     generateBundle(_options, bundle) {
+      // Profiling builds only (readable stacks): SG_NO_OBFUSCATE=1 npm run build
+      if (process.env.SG_NO_OBFUSCATE === "1") return;
       for (const file of Object.values(bundle)) {
         if (file.type !== "chunk") continue;
         const ids = (file.moduleIds ?? []).map(toPosix);

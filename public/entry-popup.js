@@ -106,6 +106,8 @@
   }
   function startFilm() {
     if(!film)return;
+    warmDrop();
+    ensureRig();
     settleFilm(false);film.classList.toggle('is-lite',!!lite);
     if(reducedMotion.matches||!window.gsap)return;
     film.classList.remove('is-settled');film.classList.add('is-playing');
@@ -217,9 +219,17 @@
     renderMotion();if(document.hidden)timeline.pause();
   }
 
-  if (film) {
-    if (window.SGDropRig) rig = window.SGDropRig(film.querySelector('[data-drop-pose]'), lite);
+  // The WebGL rig (context, shaders, pose atlas) is only built when the popup
+  // actually opens; most visits never pay for it.
+  function warmDrop() { document.documentElement.classList.add('sg-drop-warm'); }
+  document.addEventListener('sg:intro-complete', warmDrop, { once: true });
+  function ensureRig() {
+    if (rig || !film || !window.SGDropRig || (window.SG && window.SG.perfTier === 'low')) return rig;
+    rig = window.SGDropRig(film.querySelector('[data-drop-pose]'), lite);
     if (rig) window.addEventListener('resize', function(){if(popupEl.classList.contains('is-open')) settleFilm(true);rig.resize();}, {passive:true});
+    return rig;
+  }
+  if (film) {
     var burstHost = film.querySelector('[data-drop-burst]');
     if (burstHost) {
       var totalA = lite ? 12 : 32, totalB = lite ? 8 : 24;

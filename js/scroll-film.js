@@ -1,3 +1,4 @@
+import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
 /* Street Goose 034 — Scroll Film + Floating Product
    O scroll controla o tempo do vídeo (fase 1) e depois a jornada do produto
    flutuante (fase 2). Tudo reversível: rolar pra cima desfaz tudo, sempre
@@ -9,6 +10,22 @@
   if (!section) return;
 
   var video = section.querySelector("[data-film-video]");
+  preferLightSource(video);
+  // The poster is below the fold: fetch it only when the chapter gets close,
+  // so it never competes with the hero for the first second of bandwidth.
+  if (video && video.hasAttribute("data-lazy-poster")) {
+    var filmPoster = new URL("../assets/heroes/web/film-scrub-poster.jpg", import.meta.url).href;
+    if ("IntersectionObserver" in window) {
+      var posterObserver = new IntersectionObserver(function (entries) {
+        if (!entries.some(function (e) { return e.isIntersecting; })) return;
+        video.poster = filmPoster;
+        posterObserver.disconnect();
+      }, { rootMargin: "1500px 0px" });
+      posterObserver.observe(section);
+    } else {
+      video.poster = filmPoster;
+    }
+  }
   var scrim = section.querySelector("[data-film-scrim]");
   var lensGlow = section.querySelector("[data-film-lens-glow]");
   var canvas = section.querySelector("[data-film-canvas]");
@@ -92,11 +109,12 @@
     .to(productWrap, { scale: 2.1, autoAlpha: 0, duration: 0.12, ease: "power2.in" }, 0.88);
 
   var VIDEO_END = 0.55, TRANS_END = 0.68;
+  var seekVideo = createVideoScrubber(video);
 
   function applyProgress(p) {
     if (videoReady && p <= VIDEO_END) {
       var t = (p / VIDEO_END) * duration;
-      if (isFinite(t)) video.currentTime = Math.max(0, Math.min(duration, t));
+      if (isFinite(t)) seekVideo(Math.max(0, Math.min(duration, t)));
     }
 
     if (p <= VIDEO_END) {

@@ -7,7 +7,9 @@ export function mountInteractionGuide(host){
  const fallback=host.querySelector('.sg-guide-fallback');
  fallback.innerHTML='<svg viewBox="0 0 100 88" width="100" height="88" aria-hidden="true"><circle class="sg-guide-wave" cx="31" cy="24" r="11" fill="none" stroke="currentColor" stroke-width="1.5"/><path class="sg-guide-arrow" d="M31 19 L31 62 L43 51 L51 69 L59 65 L51 47 L66 47 Z" fill="currentColor" stroke="#7c5726" stroke-width="1"/><path class="sg-guide-highlight" d="M33 22 L33 56 L43 47 L52 47" fill="none" stroke="#ffe7ae" stroke-width="1.5"/></svg>';
  async function initialise(){
-  if(loading||sceneState||disposed)return;loading=true;
+  // A whole WebGL context for a 100px cursor only pays off on strong devices;
+  // everyone else keeps the animated SVG fallback.
+  if(loading||sceneState||disposed||(window.SG&&window.SG.perfTier!=='high'))return;loading=true;
   try{
    const THREE=await import('three');if(disposed)return;
    const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'low-power'});

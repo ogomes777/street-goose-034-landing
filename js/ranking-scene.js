@@ -170,10 +170,12 @@ export async function mountRankingScene(host) {
     if (stopped || !host.isConnected) return;
     const canvas = host.querySelector('canvas');
     const small = matchMedia('(max-width: 720px), (pointer: coarse)').matches;
+    // Calm tier: same scene, a fraction of the stars, low resolution, 30 fps.
+    const calm = window.SG?.perfTier === 'low';
     let renderer;
     try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' }); }
     catch (_) { return; }
-    const pixelRatio = Math.min(devicePixelRatio || 1, small ? 1.25 : 1.6);
+    const pixelRatio = calm ? 1 : Math.min(devicePixelRatio || 1, small ? 1.25 : 1.6);
     renderer.setPixelRatio(pixelRatio);
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -203,12 +205,12 @@ export async function mountRankingScene(host) {
     };
 
     // 1 · Nebula: a screen-filling backdrop that always covers the view.
-    const nebulaUniforms = { uTime: { value: 0 }, uOctaves: { value: small ? 4 : 6 } }; timeUniforms.push(nebulaUniforms.uTime);
+    const nebulaUniforms = { uTime: { value: 0 }, uOctaves: { value: calm ? 3 : small ? 4 : 6 } }; timeUniforms.push(nebulaUniforms.uTime);
     const nebula = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ vertexShader: NEBULA_VERT, fragmentShader: NEBULA_FRAG, uniforms: nebulaUniforms, depthWrite: false, depthTest: false, toneMapped: false }));
     nebula.position.z = -90; nebula.renderOrder = -10; camera.add(nebula);
 
     // 2 · Background stars with individual twinkle.
-    const STARS = small ? 1600 : 3600;
+    const STARS = calm ? 700 : small ? 1600 : 3600;
     const starPos = new Float32Array(STARS * 3), starSize = new Float32Array(STARS), starSeed = new Float32Array(STARS), starColor = new Float32Array(STARS * 3);
     const starPalette = [[.75, .82, 1], [1, 1, 1], [1, .9, .75], [.85, .78, 1]];
     for (let i = 0; i < STARS; i++) {
@@ -225,7 +227,7 @@ export async function mountRankingScene(host) {
     stars.renderOrder = -5; scene.add(stars);
 
     // 3 · Spiral galaxy: two logarithmic arms, bulge, star-forming knots, dust.
-    const GALAXY = small ? 16000 : 46000, R = 7.4;
+    const GALAXY = calm ? 7000 : small ? 16000 : 46000, R = 7.4;
     const aRadius = new Float32Array(GALAXY), aAngle = new Float32Array(GALAXY), aHeight = new Float32Array(GALAXY), aSize = new Float32Array(GALAXY), aSeed = new Float32Array(GALAXY), aColor = new Float32Array(GALAXY * 3);
     const core = new THREE.Color('#fff0d4'), warm = new THREE.Color('#ffb877'), pink = new THREE.Color('#ff6fbf'), violet = new THREE.Color('#9c6bff'), cyan = new THREE.Color('#62b6ff'), tmp = new THREE.Color();
     for (let i = 0; i < GALAXY; i++) {
@@ -328,7 +330,7 @@ export async function mountRankingScene(host) {
     let paused = media.matches;
     const fineHover = matchMedia('(hover: hover) and (pointer: fine)');
     const pointer = { x: 0, y: 0, tx: 0, ty: 0 };
-    const minFrame = small ? 32 : 15;
+    const minFrame = calm || small ? 32 : 15;
     const button = host.querySelector('[data-scene-toggle]');
     function syncButton() {
       host.closest('.is-ranking')?.classList.toggle('ranking-motion-paused', paused);
@@ -405,11 +407,13 @@ export async function mountRankingScene(host) {
     const intersection = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; if (!visible) { cancelAnimationFrame(frame); frame = 0; } else resume(); }); intersection.observe(host);
     canvas.addEventListener('webglcontextlost', lost); document.addEventListener('visibilitychange', visibility); media.addEventListener('change', motion);
     host.addEventListener('pointermove', move); host.addEventListener('pointerleave', leave);
+    const retire = () => { if (!paused) toggle(); };
+    window.addEventListener('sg:perf-low', retire);
     if (button) button.addEventListener('click', toggle);
     host.classList.add('has-webgl'); syncButton(); resize(); resume();
     cleanup = () => {
       cancelAnimationFrame(frame); observer.disconnect(); intersection.disconnect(); document.removeEventListener('visibilitychange', visibility); media.removeEventListener('change', motion); canvas.removeEventListener('webglcontextlost', lost);
-      host.removeEventListener('pointermove', move); host.removeEventListener('pointerleave', leave);
+      host.removeEventListener('pointermove', move); host.removeEventListener('pointerleave', leave); window.removeEventListener('sg:perf-low', retire);
       if (button) button.removeEventListener('click', toggle);
       const geometries = new Set(), materials = new Set();
       scene.traverse(object => { if (object.geometry) geometries.add(object.geometry); if (object.material) (Array.isArray(object.material) ? object.material : [object.material]).forEach(m => materials.add(m)); });

@@ -45,7 +45,7 @@ for (let y = 0; y < height; y++) {
 }
 await mkdir(dirname(output), { recursive: true });
 await sharp(pixels, { raw: { width, height, channels: 4 } })
-  .webp({ quality: 95, alphaQuality: 100, effort: 6 })
+  .webp({ quality: 82, alphaQuality: 88, effort: 6 })
   .toFile(output);
 const bytes = (await stat(output)).size;
 console.log("SG034 matte-free graffiti:", width + "x" + height, bytes + " bytes");

@@ -129,3 +129,14 @@ Remover: `delete from public.admins where user_id = (select id from auth.users w
 - [x] Medalhas redesenhadas (fita de cetim, argola, borda serrilhada, bisel polido, louros gravados)
 - [x] Removidos `js/gem-geometry.js` e `js/ranking-gems-scene.js` (pedras Three.js antigas)
 - [x] Testado em Chromium headless (SwiftShader): ranking 1440/390, benefícios, home claro/escuro, lista longa com rolagem, pausa, fechar/reabrir 3× (1 contexto vivo), build de produção com CSP. Não medido: FPS em GPU real, Safari/iOS
+
+## Estabilidade e performance em aparelhos fracos + SG Community como app
+- [x] Nível de aparelho (`window.SG.perfTier` low/medium/high) por saveData/2G, memória, núcleos, iOS < 15 e microbenchmark; `?perf=low|medium|high` força para teste. Low = sem cenas WebGL, posters e vídeos leves
+- [x] Guarda em runtime (`js/perf-guard.js`): FPS ruim na rolagem por 2 janelas seguidas ou GPU fraca (sondada em idle) → `sg:perf-low` desliga as cenas WebGL (cenas, diretor, fireball, cristais, galáxia em modo calmo) sem recarregar a página
+- [x] Boot sem cascata de imports (`js/boot-core.js`, `js/boot-shop.js`), espera do catálogo limitada a 2 s, personagem só no primeiro scroll/idle, intro sem bloquear o bootstrap
+- [x] Vídeos de scroll com um seek por vez (`js/video-scrub.js`) e fonte leve em conexão lenta; intro 540p/720p (era 8,7 MB), poster do hero 960w, logo 480w WebP, lupa WebP (875 KB → 67 KB)
+- [x] Loops de rAF dormem quando parados; header/progresso leem o tamanho da página em cache; orçamento de camadas/blur (`js/perf-budget.css`)
+- [x] Medido (Chromium, perfil celular fraco: CPU 4×, 150 ms, 1,6 Mbps): página utilizável 15–17 s → 7,5–8 s, 4,9 MB → 2,8 MB, rolagem p50 33–67 ms → 17 ms
+- [x] SG Community na home com cara de app (`js/community-app.css`): barra "Mural 034 / Ao vivo", feed em cards com anel de story, onboarding em passos. Bug corrigido: o estado vazio/erro não invade mais a Constelação 034
+- [x] "2º lugar" prata e "3º lugar" bronze bege nos cards do ranking
+- [x] Não medido: GPU real, Safari/iOS, aparelhos Android reais

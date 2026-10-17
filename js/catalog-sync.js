@@ -5,7 +5,8 @@
    produtos novos. main.tsx espera `catalogReady` antes do router montar a
    rota da URL, então /categoria/... já nasce com a lista certa:
      - com cache local: aplica na hora e revalida em segundo plano;
-     - sem cache (1ª visita): espera o banco por até 1,5s.
+     - sem cache (1ª visita): espera o banco por até 1,5s;
+     - em qualquer caso, no máximo 2s no total (rede lenta).
    Se a revalidação mudar algo, "sg:catalog" avisa quem já está na tela
    (página de categoria, sacola, favoritos, preços). */
 var CACHE_KEY = "sgCatalog";
@@ -46,14 +47,20 @@ try {
 
 function timeout(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
 
-export var catalogReady = loadService().then(function () {
+// The whole wait is bounded: on a slow network the shop boots with the cache or
+// the factory catalog, and anything that arrives later is announced through
+// "sg:catalog" (pages, bag, favourites and prices already listen to it).
+var released = false;
+var sync = loadService().then(function () {
   if (cachedRows) {
     lastJson = JSON.stringify(cachedRows);
     apply(cachedRows);
+    if (released) window.dispatchEvent(new CustomEvent("sg:catalog"));
     refresh().catch(function () {});
     return;
   }
   return Promise.race([refresh().catch(function () {}), timeout(1500)]);
 }).catch(function () {});
+export var catalogReady = Promise.race([sync, timeout(2000)]).then(function () { released = true; });
 
 window.SG.catalog = { refresh: refresh };

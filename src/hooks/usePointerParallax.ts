@@ -98,6 +98,14 @@ export function usePointerParallax(heroRef: RefObject<HTMLElement>) {
     let frameId = 0;
     let previousFrameAt = performance.now();
     let destroyed = false;
+    // Every custom property on the hero root restyles its whole subtree, so a
+    // property is only written when its rounded value actually changes.
+    const written = new Map<string, string>();
+    const write = (property: string, value: string) => {
+      if (written.get(property) === value) return;
+      written.set(property, value);
+      element.style.setProperty(property, value);
+    };
 
     const measureSection = () => {
       const rect = element.getBoundingClientRect();
@@ -119,11 +127,13 @@ export function usePointerParallax(heroRef: RefObject<HTMLElement>) {
     const onPointerMove = (event: PointerEvent) => {
       if (!isVisible || event.pointerType === "touch") return;
       updatePointerTarget(event.clientX, event.clientY, performance.now());
+      wake();
     };
 
     const onPointerLeave = () => {
       state.pointerTarget = { x: 0, y: 0 };
       state.pointerSpeedTarget = 0;
+      wake();
     };
 
     const onTouchMove = (event: TouchEvent) => {
@@ -132,6 +142,7 @@ export function usePointerParallax(heroRef: RefObject<HTMLElement>) {
       const now = performance.now();
       state.lastTouchAt = now;
       updatePointerTarget(touch.clientX, touch.clientY, now);
+      wake();
     };
 
     const onScroll = () => {
@@ -142,6 +153,7 @@ export function usePointerParallax(heroRef: RefObject<HTMLElement>) {
       state.scrollProgressTarget = getScrollProgress(scrollY, sectionStart, scrollTravel);
       state.lastScrollY = scrollY;
       state.lastScrollAt = now;
+      wake();
     };
 
     const writeFrame = (now: number) => {
@@ -160,8 +172,10 @@ export function usePointerParallax(heroRef: RefObject<HTMLElement>) {
 
       const isCoarse = coarsePointerQuery.matches;
       const touchInfluence = isCoarse ? clamp(1 - (now - state.lastTouchAt) / 1400, 0, 1) : 1;
-      const proceduralX = isCoarse ? Math.sin(now * 0.00042) * 0.055 + state.scrollVelocity * 0.11 : 0;
-      const proceduralY = isCoarse ? Math.cos(now * 0.00031) * 0.03 + Math.abs(state.scrollVelocity) * 0.035 : 0;
+      // Touch devices: no endless JS sway (the CSS breathe animation gives idle
+      // life on the compositor); only scroll velocity nudges the character.
+      const proceduralX = isCoarse ? state.scrollVelocity * 0.11 : 0;
+      const proceduralY = isCoarse ? Math.abs(state.scrollVelocity) * 0.035 : 0;
       const targetX = isCoarse
         ? lerp(proceduralX, state.pointerTarget.x * 0.62, touchInfluence)
         : state.pointerTarget.x;
@@ -181,7 +195,7 @@ export function usePointerParallax(heroRef: RefObject<HTMLElement>) {
       state.eyewear.x = damp(state.eyewear.x, state.head.x, 16.5, deltaSeconds);
       state.eyewear.y = damp(state.eyewear.y, state.head.y, 16.5, deltaSeconds);
 
-      const style = element.style;
+      const style = { setProperty: write };
       style.setProperty("--sg-head-ry", `${(state.head.x * 8).toFixed(3)}deg`);
       style.setProperty("--sg-head-rx", `${(-state.head.y * 5).toFixed(3)}deg`);
       style.setProperty("--sg-head-x", `${(state.head.x * 5).toFixed(3)}px`);
@@ -213,6 +227,23 @@ export function usePointerParallax(heroRef: RefObject<HTMLElement>) {
       style.setProperty("--sg-scroll-z", `${(exit * 70).toFixed(2)}px`);
       style.setProperty("--sg-scene-opacity", (1 - exit * 0.16).toFixed(3));
 
+      // Settled (no input, springs at rest): stop until the next pointer/scroll/touch.
+      const settled =
+        Math.abs(state.head.x - targetX * controlStrength) < 0.0008 &&
+        Math.abs(state.head.y - targetY * controlStrength) < 0.0008 &&
+        Math.abs(state.body.x - state.head.x * 0.26) < 0.0008 &&
+        Math.abs(state.body.y - state.head.y * 0.24) < 0.0008 &&
+        Math.abs(state.eyewear.x - state.head.x) < 0.0008 &&
+        Math.abs(state.eyewear.y - state.head.y) < 0.0008 &&
+        Math.abs(state.scrollProgress - state.scrollProgressTarget) < 0.0005 &&
+        state.pointerSpeed < 0.002 && Math.abs(state.scrollVelocity) < 0.002 &&
+        state.pointerSpeedTarget === 0 && state.scrollVelocityTarget === 0;
+      if (!settled) frameId = window.requestAnimationFrame(writeFrame);
+    };
+
+    const wake = () => {
+      if (frameId || destroyed || !isVisible || document.hidden || reducedMotionQuery.matches) return;
+      previousFrameAt = performance.now();
       frameId = window.requestAnimationFrame(writeFrame);
     };
 
@@ -229,7 +260,7 @@ export function usePointerParallax(heroRef: RefObject<HTMLElement>) {
         frameId = 0;
       }
 
-      if (reducedMotionQuery.matches) resetVisualVariables(element);
+      if (reducedMotionQuery.matches) { resetVisualVariables(element); written.clear(); }
     };
 
     const onVisibilityChange = () => syncFrameLoop();

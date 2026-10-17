@@ -30,11 +30,16 @@
   var progressBar = document.querySelector("[data-page-progress-bar]");
   if (progressBar && !window.SG.prefersReducedMotion()) {
     var progressTicking = false;
+    // Cached page height (see header-nav.js): no forced layout in scroll frames.
+    var progressMax = 0;
+    var measureProgress = function () { progressMax = document.documentElement.scrollHeight - window.innerHeight; };
+    setInterval(function () { if (!document.hidden) measureProgress(); }, 1000);
+    addEventListener("resize", measureProgress, { passive: true });
     var updateProgress = function () {
       progressTicking = false;
-      var max = document.documentElement.scrollHeight - window.innerHeight;
-      var pct = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
-      progressBar.style.transform = "scaleX(" + pct + ")";
+      if (!progressMax) measureProgress();
+      var pct = progressMax > 0 ? Math.min(1, Math.max(0, window.scrollY / progressMax)) : 0;
+      progressBar.style.transform = "scaleX(" + pct.toFixed(4) + ")";
     };
     var requestProgressUpdate = function () {
       if (progressTicking) return;

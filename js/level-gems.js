@@ -70,6 +70,10 @@ export function medalHtml(position) {
    refresh() when only part of it changed. */
 export function liveGems(root, options) {
   let field = null, dead = false, paused = false;
+  // Calm tier: the posters are the same render, frozen; no WebGL at all.
+  if (window.SG && window.SG.perfTier === 'low') return { refresh() {}, setPaused() {}, destroy() {} };
+  const retire = () => { field?.destroy(); field = null; dead = true; };
+  window.addEventListener('sg:perf-low', retire, { once: true });
   if (getComputedStyle(root).position === 'static') root.style.position = 'relative';
   import('../src/components/ranking-crystal/gem-field.ts')
     .then(mod => { if (dead || !root.isConnected) return; field = mod.mountGemField(root, options); if (paused) field.setPaused(true); })
@@ -77,6 +81,6 @@ export function liveGems(root, options) {
   return {
     refresh() { field?.refresh(); },
     setPaused(value) { paused = value; field?.setPaused(value); },
-    destroy() { dead = true; field?.destroy(); field = null; },
+    destroy() { dead = true; window.removeEventListener('sg:perf-low', retire); field?.destroy(); field = null; },
   };
 }

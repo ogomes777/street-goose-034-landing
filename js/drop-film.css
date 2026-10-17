@@ -231,3 +231,7 @@
  .sg-drop-prices b { font-size:7px; letter-spacing:0; padding:4px 5px; white-space:nowrap; }
 }
 @media(prefers-reduced-motion:reduce) { .sg-drop-copy-atmosphere i { display:none; } }
+
+/* Pose atlas (174 KB) only once the drop is about to play (html.sg-drop-warm,
+   set by entry-popup.js when the intro ends or the popup opens). */
+html:not(.sg-drop-warm) .sg-drop-body, html:not(.sg-drop-warm) .sg-drop-arm { background-image: none; }

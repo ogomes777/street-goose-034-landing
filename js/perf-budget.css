@@ -1,0 +1,28 @@
+/* Rendering budget. Every rule here removes work the browser would otherwise
+   redo on each scroll frame; none of them change layout. */
+
+/* Closed dialogs keep no GPU layers and no live blur. */
+.popup:not(.is-open) *,
+.quickview:not(.is-open) * { will-change: auto !important; }
+.popup:not(.is-open) .popup-backdrop {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Full-screen fixed grain/noise is re-composited over the whole page on every
+   frame; at 5 % opacity it is invisible on a phone screen. */
+@media (pointer: coarse) {
+  .noise, .grain { display: none; }
+}
+
+/* Calm tier (js/motion.js, js/perf-guard.js): no live blur, no idle loops. */
+.sg-perf-low .noise,
+.sg-perf-low .grain { display: none; }
+.sg-perf-low * {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.sg-perf-low .sg-atmosphere__particle,
+.sg-perf-low .sg-atmosphere__haze,
+.sg-perf-low .sg-atmosphere__ring,
+.sg-perf-low .intro-loader-stars { animation: none !important; }

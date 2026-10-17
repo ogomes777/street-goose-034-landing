@@ -3,6 +3,8 @@ import '../js/copy-typography.css';
 import '../js/landing-refinement.css';
 import '../js/ranking-preview.css';
 import '../js/gem-crystals.css';
+import '../js/community-app.css';
+import '../js/perf-budget.css';
 import { createRoot } from "react-dom/client";
 import { InteractiveCharacterHero } from "./components/interactive-character/InteractiveCharacterHero";
 
@@ -15,13 +17,27 @@ type StreetGooseWindow = Window &
 
 async function bootstrap() {
   void import('../js/landing-refinement.js').catch(() => {});
+  // The character chapter sits below the hero: render it (and fetch its art)
+  // on the first scroll or once the boot is idle, whichever comes first, so it
+  // never competes with the first paint. (Its root is empty until then, so a
+  // viewport observer would fire immediately.)
   const heroRoot = document.getElementById("interactive-character-root");
+  let renderCharacter = () => {};
   if (heroRoot) {
-    createRoot(heroRoot).render(
-      <StrictMode>
-        <InteractiveCharacterHero />
-      </StrictMode>,
-    );
+    let rendered = false;
+    renderCharacter = () => {
+      if (rendered) return;
+      rendered = true;
+      window.removeEventListener("scroll", renderCharacter);
+      createRoot(heroRoot).render(
+        <StrictMode>
+          <InteractiveCharacterHero />
+        </StrictMode>,
+      );
+      // The chapter now has height: scroll-driven sections below must re-measure.
+      requestAnimationFrame(() => requestAnimationFrame(() => (window as StreetGooseWindow).ScrollTrigger?.refresh()));
+    };
+    window.addEventListener("scroll", renderCharacter, { passive: true });
   }
 
   const [{ gsap }, { ScrollTrigger }] = await Promise.all([import("gsap"), import("gsap/ScrollTrigger")]);
@@ -29,46 +45,16 @@ async function bootstrap() {
   legacyWindow.gsap = gsap;
   legacyWindow.ScrollTrigger = ScrollTrigger;
 
-  await import("../js/motion.js");
-  await import("../js/music-player.js");
-  await import("../js/intro-loader.js");
-  await import("../js/data.js");
-  await import("../js/hero.js");
-  await import("../js/config.js");
-  await import("../js/theme.js");
-  await import("../js/i18n.js");
-  await import("../js/settings-menu.js");
-  await import("../js/auth-modal.js");
-  await import("../js/account-menu.js");
-  await import("../js/header-nav.js");
-  await import("../js/mobile-account.js");
-  await import("../js/toast.js");
-  await import("../js/catalog.js");
+  // Two grouped chunks instead of ~40 sequential round trips; evaluation
+  // order is unchanged (see js/boot-core.js and js/boot-shop.js).
+  await import("../js/boot-core.js");
   // produtos do banco (/admin → Produtos) antes de qualquer coisa que leia o
-  // catálogo — ver js/catalog-sync.js (cache na hora, 1ª visita espera ≤1,5s)
+  // catálogo — ver js/catalog-sync.js (cache na hora, 1ª visita espera ≤2s no total)
   const { catalogReady } = await import("../js/catalog-sync.js");
   await catalogReady;
-  await import("../js/price-sync.js");
-  // sacola e favoritos antes do router: ele monta a rota da URL na hora em
-  // que carrega, e /checkout lê window.SG.cart no mount (deep link ou F5 em
-  // /checkout mostrava "sacola vazia" com itens). Os dois só dependem do
-  // catálogo; corações renderizados depois são sincronizados pelos
-  // MutationObservers do wishlist.js.
-  await import("../js/cart.js");
-  await import("../js/wishlist.js");
-  await import("../js/category-portals.js");
-  await import("../js/router.js");
-  await import("../js/nav-routes.js");
-  await import("../js/products.js");
-  await import("../js/scroll-film.js");
-  await import("../js/hero3d-film.js");
-  await import("../js/product-universe.js");
-  await import("../js/drift-product.js");
-  await import("../js/checkout.js");
-  await import("../js/community-home.js");
-  await import("../js/main.js");
-  await import("../js/final-act-motion.js");
-  await import("../js/payment-terminal.js");
+  await import("../js/boot-shop.js");
+  if ("requestIdleCallback" in window) requestIdleCallback(renderCharacter, { timeout: 1500 });
+  else setTimeout(renderCharacter, 300);
 
   // sg-perf-low nasce de navigator.hardwareConcurrency/deviceMemory + innerWidth
   // < 720 — ou seja, praticamente todo celular (Safari nem expõe deviceMemory,
@@ -78,8 +64,9 @@ async function bootstrap() {
   // pra reduzir densidade de partícula/DPR dentro de cada cena, nunca pra
   // decidir se a cena existe. Só prefers-reduced-motion (preferência real do
   // usuário, não palpite de capacidade do aparelho) pode pular o carregamento.
+  const lowTier = () => (window as unknown as { SG?: { perfTier?: string } }).SG?.perfTier === "low";
   const loadThreeScenes = async () => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || lowTier()) return;
     const three = await import("three");
     legacyWindow.THREE = three;
     await import("../js/scene.js");
@@ -147,6 +134,7 @@ async function bootstrap() {
         (entries) => {
           if (!entries.some((entry) => entry.isIntersecting)) return;
           obs.disconnect();
+          if (lowTier()) return;
           void ensureDirector().then(loader);
         },
         { rootMargin: "500px 0px" },

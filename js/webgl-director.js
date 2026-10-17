@@ -49,7 +49,7 @@
   }
 
   function activate(id, container) {
-    if (!scenes[id]) return;
+    if (!scenes[id] || retired) return;
     var wasActive = activeId === id && canvas.parentElement === container;
     activeId = id;
     if (canvas.parentElement !== container) container.appendChild(canvas);
@@ -61,6 +61,7 @@
       if (s && s.onFrame) s.onFrame(0);
       if (s) renderer.render(s.scene, s.camera);
     }
+    run();
   }
   function deactivate(id) {
     if (activeId === id) activeId = null;
@@ -98,18 +99,28 @@
   var overlayOpen = document.body.classList.contains("category-page-open");
   window.addEventListener("sg:overlay", function (e) { overlayOpen = !!(e.detail && e.detail.open); });
 
+  // The loop only exists while a scene is active (and stops for good if the
+  // runtime guard drops the device to the calm tier).
   var clock = new THREE.Clock();
+  var raf = 0, retired = false;
   function tick() {
-    requestAnimationFrame(tick);
-    if (!activeId || contextLost || overlayOpen) return;
+    raf = 0;
+    if (!activeId || contextLost || retired) return;
+    raf = requestAnimationFrame(tick);
+    if (overlayOpen) return;
     var s = scenes[activeId];
     if (!s) return;
     var dt = Math.min(clock.getDelta(), 0.05);
     if (s.onFrame) s.onFrame(dt);
     renderer.render(s.scene, s.camera);
   }
+  function run() { if (!raf && activeId && !retired) { clock.getDelta(); raf = requestAnimationFrame(tick); } }
   clock.start();
-  tick();
+  window.addEventListener("sg:perf-low", function () {
+    retired = true; activeId = null;
+    if (raf) cancelAnimationFrame(raf); raf = 0;
+    canvas.style.display = "none";
+  });
 
   var resizeTimer;
   addEventListener("resize", function () {

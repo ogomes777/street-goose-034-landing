@@ -13,7 +13,7 @@ export function mountRewardsPage(root, _params, onClose) {
   var dataCache = null;
   var pending = new Set();
   var copiedCodes = new Set();
-  var memberLogo = new URL("../assets/logos/web/logo-street-goose-034.webp", import.meta.url).href;
+  var memberLogo = new URL("../assets/logos/web/logo-street-goose-034-480.webp", import.meta.url).href;
   var KIND = { coupon: "CUPOM", gift: "BRINDE", discount: "DESCONTO" };
   var MESSAGES = {
     level_too_low: "Seu nível ainda não libera essa recompensa.",

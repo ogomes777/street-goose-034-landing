@@ -59,8 +59,9 @@ export function createIdentityFireball(host, perfTier) {
   };
   document.addEventListener("visibilitychange",visibility);
 
-  return {
+  const api = {
     update(progress, warm, cobalt, boom) {
+      if (destroyed) return;
       const enter=smooth(.850,.911,progress);
       const leave=1-smooth(.966,.999,progress);
       const strength=enter*leave;
@@ -76,6 +77,11 @@ export function createIdentityFireball(host, perfTier) {
       observer?.disconnect();
       document.removeEventListener("visibilitychange",visibility);
       if (reactRoot) reactRoot.unmount();
+      reactRoot = null;
+      host.style.setProperty("--sg-fireball-visibility", "0");
     }
   };
+  // Runtime guard (js/perf-guard.js): this device can't keep up, drop the scene.
+  window.addEventListener("sg:perf-low", () => api.destroy(), { once: true });
+  return api;
 }
