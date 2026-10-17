@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import '../js/copy-typography.css';
 import '../js/landing-refinement.css';
 import '../js/ranking-preview.css';
+import '../js/gem-crystals.css';
 import { createRoot } from "react-dom/client";
 import { InteractiveCharacterHero } from "./components/interactive-character/InteractiveCharacterHero";
 

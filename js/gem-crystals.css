@@ -1,0 +1,58 @@
+/* Tier stones everywhere (home, ranking, benefits): a still render of the
+   refractive crystal (poster) under a live WebGL layer from gem-field.ts.
+   Boxes are portrait so the tall level-1 crystal and the faceted cuts share
+   one footprint and never shift layout when the live layer takes over. */
+.sg-level-gem.sg-level-gem {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 47px;
+  color: inherit;
+  filter: none;
+  perspective: none;
+}
+.sg-level-gem.sg-level-gem::before,
+.sg-level-gem.sg-level-gem::after { content: none; }
+.sg-level-gem-poster {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: opacity .45s ease;
+}
+.has-gem-crystal [data-gem-slot] .sg-level-gem-poster { opacity: 0; }
+
+.sg-gem-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+.has-gem-crystal > .sg-gem-canvas { opacity: 1; }
+
+/* Context sizes */
+.ranking-row .sg-level-gem.sg-level-gem { width: 42px; height: 54px; }
+.ranking-me .sg-level-gem.sg-level-gem { width: 44px; height: 56px; }
+.ranking-gem-collection .sg-level-gem.sg-level-gem { width: 84px; height: 100px; margin-bottom: 14px; }
+.rw-level .sg-level-gem.sg-level-gem { width: 60px; height: 72px; margin: 12px 0 0; }
+.rw-status .sg-level-gem.sg-level-gem, .rw-hero .sg-level-gem.sg-level-gem { width: 64px; height: 76px; }
+@media (max-width: 480px) {
+  .ranking-gem-collection .sg-level-gem.sg-level-gem { width: 66px; height: 80px; }
+  .ranking-row .sg-level-gem.sg-level-gem { width: 34px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-level-gem-poster, .sg-gem-canvas { transition: none; }
+}
+
+/* Podium stones: positioned every frame by ranking-scene.js over the pedestals. */
+.ranking-stage-gems { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.ranking-stage-gem { position: absolute; left: 0; top: 0; width: 70px; height: 82px; display: grid; place-items: center; will-change: transform; }
+.ranking-stage-gem .sg-level-gem-poster { width: 100%; height: 100%; object-fit: contain; }
+.ranking-stage:not(.has-webgl) .ranking-stage-gems { display: none; }
