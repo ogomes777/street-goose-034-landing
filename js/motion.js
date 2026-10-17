@@ -32,10 +32,17 @@
     if (ios && Number(ios[1]) < 15) return "low";
     // The GPU is read later, in idle time (js/perf-guard.js): creating a
     // context here would block the first paint on exactly the weak devices.
-    // ~2–4 ms on a current phone, 15+ ms on an entry-level one.
-    var t0 = performance.now(), x = 0;
-    for (var i = 0; i < 300000; i++) x += Math.sqrt(i) * 1.0001;
-    var bench = performance.now() - t0;
+    // ~2–4 ms on a current phone, 15+ ms on an entry-level one. Best of three
+    // short runs (one GC pause must not condemn a good phone), and no property
+    // lookups inside the timed loop: the production obfuscator rewrites
+    // `Math.sqrt` into a string-array call, which measured the obfuscator
+    // (31 ms on a desktop) instead of the device.
+    var sqrt = Math.sqrt, now = performance.now.bind(performance), x = 0, bench = Infinity;
+    for (var run = 0; run < 3; run++) {
+      var t0 = now();
+      for (var i = 0; i < 100000; i++) x += sqrt(i) * 1.0001;
+      bench = Math.min(bench, (now() - t0) * 3);
+    }
     window.SG.perfBench = x > 0 ? Math.round(bench * 10) / 10 : 0;
     if (bench > 22) return "low";
     if (bench > 9) score -= 1;
