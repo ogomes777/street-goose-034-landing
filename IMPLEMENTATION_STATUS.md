@@ -120,3 +120,12 @@ Remover: `delete from public.admins where user_id = (select id from auth.users w
 - [x] Presets por tier centralizados (`crystal-presets.ts`): mesma ótica do preset original, cor do tier de `LEVEL_GEMS` normalizada para a luminância de `#6C64BF`; rotação mais calma nos cards (speed 34, hover boost 40% em vez de 200%)
 - [x] Cards: nome em destaque, avatar real (só https) com inicial de fallback, XP tabular, nível + pedra, 1º lugar com hairline dourada; hover 3px só em pointer fino; canvas `aria-hidden` e `pointer-events:none` (scroll touch começando na pedra funciona)
 - [x] Testado em Chromium headless (SwiftShader, sem GPU): 1440/1024/768/390/360, temas claro/escuro, nome longo, avatar quebrado, tiers mistos, build de produção com CSP. Não medido: FPS em GPU real, Safari/iOS, Firefox, aparelhos Android reais
+
+## Sete pedras em vidro real + galáxia do ranking
+- [x] Um sistema único de pedras (`src/components/ranking-crystal/`): ótica do Originkit (Fresnel, refração, dispersão, reflexões internas) para os 7 níveis. Nível 1 = exatamente o cristal da home (diferença média 0,13/255 contra o original). Níveis 2–7 mantêm os formatos de antes (step-cut, oval, cluster, gota, trilliant, brilhante) como sólidos convexos facetados (`gem-geometry.ts`), com IOR real de cada mineral e cor por absorção (Beer-Lambert) em vez de luz tingida
+- [x] Mesmas pedras vivas em: cards da home, pódio, lista "Cada nome", "Sua jornada", "Sete pedras" e página de benefícios — um contexto WebGL por página (`gem-field.ts`), canvas preso à área visível em páginas longas, pausa pelo botão "Pausar animação" e por reduced motion
+- [x] Posters estáticos das 7 pedras (mesmo renderizador, PNG com alpha, 63 KB no total) em `public/brand/level-gems/`: header (badge de nível), primeiro frame e fallback sem WebGL
+- [x] Pódio "Estrelas em ascensão": galáxia espiral em shader (até 46 mil estrelas com rotação diferencial na GPU), nebulosa procedural com poeira, céu com cintilação, feixes de luz, piso com anéis, deriva de câmera e parallax no mouse; joias do pódio = cristais alinhados aos pedestais por projeção
+- [x] Medalhas redesenhadas (fita de cetim, argola, borda serrilhada, bisel polido, louros gravados)
+- [x] Removidos `js/gem-geometry.js` e `js/ranking-gems-scene.js` (pedras Three.js antigas)
+- [x] Testado em Chromium headless (SwiftShader): ranking 1440/390, benefícios, home claro/escuro, lista longa com rolagem, pausa, fechar/reabrir 3× (1 contexto vivo), build de produção com CSP. Não medido: FPS em GPU real, Safari/iOS

@@ -13,27 +13,70 @@ export const PODIUM_GEM_LEVELS = Object.freeze([7, 6, 5]);
 export function levelGem(level) {
   return LEVEL_GEMS[Math.max(0, Math.min(LEVEL_GEMS.length - 1, (Number(level) || 1) - 1))];
 }
+const tierNumber = level => Math.max(1, Math.min(LEVEL_GEMS.length, Math.round(Number(level)) || 1));
+/* Still render of the same refractive crystal shown live (brand/level-gems).
+   It is what you see before WebGL starts, and the fallback without it. */
+export function gemPosterSrc(level) {
+  return '/brand/level-gems/level-' + tierNumber(level) + '.png?v=2';
+}
 export function gemHtml(level) {
-  const gem = levelGem(level);
-  const points = gem.outline.split(' ').map(p => p.split(',').map(Number));
-  return '<span class="sg-level-gem sg-level-gem--' + gem.cut + '" data-level="' + (Number(level) || 1) + '" style="--gem-color:' + gem.color + '" role="img" aria-label="' + gem.name + ', nível ' + (Number(level) || 1) + '"><svg viewBox="0 0 64 64" aria-hidden="true">' +
-    points.map((p, i) => '<polygon points="32,32 ' + p.join(',') + ' ' + points[(i + 1) % points.length].join(',') + '" fill="currentColor" opacity="' + (.3 + (i % 4) * .18) + '"/>').join('') +
-    '<polygon points="' + points.map(p => p.join(',')).join(' ') + '" fill="none" stroke="currentColor" stroke-width="1"/><path d="M24 23 32 16 40 24 32 35Z" fill="#fff" opacity=".45"/></svg></span>';
+  const n = tierNumber(level);
+  const gem = levelGem(n);
+  return '<span class="sg-level-gem sg-level-gem--' + gem.cut + '" data-gem-slot data-level="' + n + '" style="--gem-color:' + gem.color + '" role="img" aria-label="' + gem.name + ', nível ' + n + '"><img class="sg-level-gem-poster" src="' + gemPosterSrc(n) + '" alt="" width="96" height="112" decoding="async" loading="lazy"></span>';
 }
 let medalSerial = 0;
+/* Struck-metal medal: satin ribbon with a fold, metal loop, milled rim,
+   polished bevel, engraved laurels; the place number sits on top in HTML. */
 export function medalHtml(position) {
   if (position > 3) return '<span class="ranking-number">' + String(position).padStart(2, '0') + '</span>';
   const name = ['ouro', 'prata', 'bronze'][position - 1];
   const id = 'sg-medal-' + (++medalSerial);
-  const shades = position === 1 ? ['#fff8b6','#f8d56a','#bc781e','#6b3d0d'] : position === 2 ? ['#ffffff','#dce5f3','#8c9bb5','#465269'] : ['#ffe1b9','#dba077','#965235','#512c23'];
+  // highlight, light, mid, shadow, deep
+  const m = position === 1 ? ['#fffbe0', '#f9df8a', '#d9a63c', '#8f5a12', '#4a2c06']
+    : position === 2 ? ['#ffffff', '#e8eef8', '#aab6c9', '#5d6a80', '#2a3242']
+    : ['#ffe6c8', '#e8b48a', '#b46f45', '#6b3a22', '#36190c'];
+  const ribbon = position === 1 ? ['#1b2a5c', '#3150a8', '#0d1636'] : position === 2 ? ['#1d2f55', '#3a5a9a', '#0c1630'] : ['#281b4f', '#4a3497', '#130b2b'];
+  const stripe = position === 1 ? '#e8c46a' : position === 2 ? '#d7dee9' : '#d39a6f';
+  const leaves = Array.from({ length: 7 }, (_, k) => {
+    const a = (200 + k * 21) * Math.PI / 180, r = 17.2, x = 32 + Math.cos(a) * r, y = 49 + Math.sin(a) * r, rot = (200 + k * 21) + 70;
+    const b = (340 - k * 21) * Math.PI / 180, x2 = 32 + Math.cos(b) * r, y2 = 49 + Math.sin(b) * r, rot2 = (340 - k * 21) - 70;
+    return '<ellipse cx="' + x.toFixed(2) + '" cy="' + y.toFixed(2) + '" rx="1.15" ry="2.6" transform="rotate(' + rot + ' ' + x.toFixed(2) + ' ' + y.toFixed(2) + ')"/><ellipse cx="' + x2.toFixed(2) + '" cy="' + y2.toFixed(2) + '" rx="1.15" ry="2.6" transform="rotate(' + rot2 + ' ' + x2.toFixed(2) + ' ' + y2.toFixed(2) + ')"/>';
+  }).join('');
   return `<span class="ranking-medal ranking-medal--${position}" role="img" aria-label="${position}º lugar, medalha de ${name}"><svg viewBox="0 0 64 76" aria-hidden="true"><defs>
-    <linearGradient id="${id}-ribbon" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f75c67"/><stop offset=".32" stop-color="#a81735"/><stop offset=".52" stop-color="#ff9a9d"/><stop offset=".7" stop-color="#c3294c"/><stop offset="1" stop-color="#64152c"/></linearGradient>
-    <linearGradient id="${id}-blue"><stop stop-color="#9fc5ff"/><stop offset=".35" stop-color="#2854ad"/><stop offset=".55" stop-color="#7ca6ec"/><stop offset="1" stop-color="#182c68"/></linearGradient>
-    <linearGradient id="${id}-metal" x1=".1" y1="0" x2=".9" y2="1"><stop stop-color="${shades[0]}"/><stop offset=".25" stop-color="${shades[1]}"/><stop offset=".48" stop-color="${shades[0]}"/><stop offset=".64" stop-color="${shades[2]}"/><stop offset=".86" stop-color="${shades[1]}"/><stop offset="1" stop-color="${shades[3]}"/></linearGradient>
-    <radialGradient id="${id}-face" cx=".32" cy=".24" r=".82"><stop stop-color="${shades[0]}"/><stop offset=".5" stop-color="${shades[1]}"/><stop offset="1" stop-color="${shades[2]}"/></radialGradient>
-  </defs><path d="M11 2 27 2 38 29 24 36Z" fill="url(#${id}-blue)" stroke="#b5c7ef" stroke-opacity=".45"/><path d="M37 2 53 2 40 36 26 29Z" fill="url(#${id}-ribbon)" stroke="#ffacb4" stroke-opacity=".4"/><path d="m16 3 11 28m20-28-11 28" stroke="#fff" stroke-opacity=".3" stroke-width="2"/>
-  <ellipse cx="32" cy="50" rx="27" ry="25" fill="${shades[3]}"/><circle cx="32" cy="47" r="26" fill="url(#${id}-metal)" stroke="${shades[0]}" stroke-width=".6"/><circle cx="32" cy="47" r="21" fill="url(#${id}-face)" stroke="${shades[3]}" stroke-opacity=".4"/><circle cx="32" cy="47" r="23.5" fill="none" stroke="${shades[3]}" stroke-width="1.8" stroke-dasharray=".6 1.4"/><circle cx="32" cy="47" r="22.5" fill="none" stroke="${shades[0]}" stroke-width=".6"/><circle cx="32" cy="47" r="19.5" fill="none" stroke="${shades[0]}" stroke-opacity=".65" stroke-width=".7"/>
-  <path d="m25 35-2-6 5 3 4-6 4 6 5-3-2 6Z" fill="url(#${id}-metal)" stroke="${shades[3]}" stroke-width=".5"/><path d="M22 61q10 6 20 0" fill="none" stroke="${shades[3]}" stroke-width=".8"/>
-  <path d="M17 56q-8-10 0-20m30 20q8-10 0-20M14 39l4 2m-5 3 4 2m-4 3 4 2m0 4 3-2m30-14-4 2m5 3-4 2m4 3-4 2m0 4-3-2" fill="none" stroke="${shades[3]}" stroke-opacity=".32" stroke-width="1.4" stroke-linecap="round"/>
-  <path d="M13 33q12-14 32-5" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="2" stroke-linecap="round"/><path d="m48 27 1-4 1 4 4 1-4 1-1 4-1-4-4-1Z" fill="#fff" opacity=".9"/></svg><b>${position}</b></span>`;
+    <linearGradient id="${id}-rib" x1="0" y1="0" x2="1" y2="0"><stop stop-color="${ribbon[2]}"/><stop offset=".3" stop-color="${ribbon[1]}"/><stop offset=".55" stop-color="${ribbon[0]}"/><stop offset=".8" stop-color="${ribbon[1]}"/><stop offset="1" stop-color="${ribbon[2]}"/></linearGradient>
+    <linearGradient id="${id}-rim" x1=".15" y1="0" x2=".85" y2="1"><stop stop-color="${m[0]}"/><stop offset=".22" stop-color="${m[1]}"/><stop offset=".5" stop-color="${m[2]}"/><stop offset=".72" stop-color="${m[3]}"/><stop offset=".88" stop-color="${m[2]}"/><stop offset="1" stop-color="${m[4]}"/></linearGradient>
+    <linearGradient id="${id}-bevel" x1=".85" y1="1" x2=".15" y2="0"><stop stop-color="${m[0]}"/><stop offset=".35" stop-color="${m[1]}"/><stop offset=".7" stop-color="${m[3]}"/><stop offset="1" stop-color="${m[4]}"/></linearGradient>
+    <radialGradient id="${id}-face" cx=".36" cy=".3" r=".85"><stop stop-color="${m[0]}"/><stop offset=".35" stop-color="${m[1]}"/><stop offset=".75" stop-color="${m[2]}"/><stop offset="1" stop-color="${m[3]}"/></radialGradient>
+    <linearGradient id="${id}-shine" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".85"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+  </defs>
+  <path d="M15 1h12l9 24-8 6Z" fill="url(#${id}-rib)"/><path d="M37 1h12l-13 30-8-6Z" fill="url(#${id}-rib)"/>
+  <path d="M19.5 1h3l8.2 21.8-2 1.6Z" fill="${stripe}" opacity=".9"/><path d="M41.5 1h3l-10.6 24.6-2-1.5Z" fill="${stripe}" opacity=".9"/>
+  <path d="M28 25l8 6 8-6" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="1.4"/>
+  <ellipse cx="32" cy="29.5" rx="4.2" ry="2.6" fill="none" stroke="url(#${id}-rim)" stroke-width="2"/>
+  <circle cx="32" cy="50" r="24.5" fill="#000" opacity=".35"/>
+  <circle cx="32" cy="49" r="24" fill="url(#${id}-rim)"/>
+  <circle cx="32" cy="49" r="23.1" fill="none" stroke="${m[4]}" stroke-opacity=".55" stroke-width="1.3" stroke-dasharray=".7 1.05"/>
+  <circle cx="32" cy="49" r="20.6" fill="url(#${id}-bevel)"/>
+  <circle cx="32" cy="49" r="19" fill="url(#${id}-face)"/>
+  <circle cx="32" cy="49" r="19" fill="none" stroke="${m[4]}" stroke-opacity=".45" stroke-width=".8"/>
+  <g fill="${m[3]}" opacity=".55">${leaves}</g>
+  <path d="M27.5 35.5l1.6-3.2 2.9 2.2 2.9-2.2 1.6 3.2Z" fill="${m[1]}" stroke="${m[3]}" stroke-width=".5"/>
+  <path d="M14 42a19 19 0 0 1 27-11" fill="none" stroke="url(#${id}-shine)" stroke-width="3" stroke-linecap="round"/>
+  <path d="M47.5 34l.7-2.6.7 2.6 2.6.7-2.6.7-.7 2.6-.7-2.6-2.6-.7Z" fill="#fff" opacity=".9"/>
+</svg><b>${position}</b></span>`;
+}
+/* Live crystal layer over every gemHtml() slot inside root (lazy, one WebGL
+   context per root). Call again after replacing root.innerHTML, or use
+   refresh() when only part of it changed. */
+export function liveGems(root, options) {
+  let field = null, dead = false, paused = false;
+  if (getComputedStyle(root).position === 'static') root.style.position = 'relative';
+  import('../src/components/ranking-crystal/gem-field.ts')
+    .then(mod => { if (dead || !root.isConnected) return; field = mod.mountGemField(root, options); if (paused) field.setPaused(true); })
+    .catch(error => console.warn('[SG034] Crystal module failed to load, keeping gem posters.', error));
+  return {
+    refresh() { field?.refresh(); },
+    setPaused(value) { paused = value; field?.setPaused(value); },
+    destroy() { dead = true; field?.destroy(); field = null; },
+  };
 }

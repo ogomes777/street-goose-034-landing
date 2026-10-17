@@ -1,6 +1,5 @@
-import { gemHtml, levelGem, medalHtml, PODIUM_GEM_LEVELS } from './level-gems.js';
+import { gemHtml, gemPosterSrc, levelGem, liveGems, medalHtml, PODIUM_GEM_LEVELS } from './level-gems.js';
 import { mountRankingScene } from './ranking-scene.js';
-import { mountRankingGems } from './ranking-gems-scene.js';
 import { mountRankingNumbers } from './ranking-numbers.js';
 
 export function mountRankingPage(root, _params, onClose) {
@@ -9,7 +8,7 @@ export function mountRankingPage(root, _params, onClose) {
   root.classList.add('is-ranking');
   root.innerHTML = "<div class=\"ranking-galaxy\" aria-hidden=\"true\"></div><div class=\"app-page-head ranking-page-head\"><div><p class=\"ranking-kicker\">STREET GOOSE CONSTELAÇÃO 034</p><h1>Ranking Street Goose</h1></div><button class=\"app-page-close\" type=\"button\" data-app-close aria-label=\"Fechar ranking\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M6 6l12 12M18 6L6 18\"/></svg></button></div><div class=\"app-page-body ranking-page-body\" data-ranking-body><div class=\"ranking-loading\" role=\"status\">Conectando ao universo 034…</div></div>";
   const body = root.querySelector('[data-ranking-body]');
-  let destroyed = false, version = 0, stopScene = null, stopGems = null, stopNumbers = null, unsubscribe = null, timer = null, svc = null;
+  let destroyed = false, version = 0, stopScene = null, gems = null, stopNumbers = null, unsubscribe = null, timer = null, svc = null;
   let rows = [], total = 0, levels = [], me = null, busy = false, session = null;
   function avatar(r) {
     let url = '';
@@ -23,7 +22,7 @@ export function mountRankingPage(root, _params, onClose) {
   }
   function sceneHtml() {
     const leaders = rows.slice(0, 3);
-    return '<section class="ranking-stage" data-ranking-stage aria-label="Pódio dos três primeiros"><div class="ranking-stage-top"><span>THE 034 CONSTELLATION</span><span class="ranking-stage-live">XP REAL</span></div><canvas aria-hidden="true"></canvas><div class="ranking-stage-fallback" aria-hidden="true">' + [1, 0, 2].map(i => '<div class="ranking-plinth ranking-plinth--' + (i + 1) + '">' + gemHtml(PODIUM_GEM_LEVELS[i]) + '<b>' + (i + 1) + '</b></div>').join('') + '</div><div class="ranking-stage-leaders">' + [1, 0, 2].map(i => {
+    return '<section class="ranking-stage" data-ranking-stage aria-label="Pódio dos três primeiros"><div class="ranking-stage-top"><span>THE 034 CONSTELLATION</span><span class="ranking-stage-live">XP REAL</span></div><canvas aria-hidden="true"></canvas><div class="ranking-stage-gems" aria-hidden="true">' + [0, 1, 2].map(i => '<span class="ranking-stage-gem ranking-stage-gem--' + (i + 1) + '" data-gem-slot data-podium="' + i + '" data-level="' + PODIUM_GEM_LEVELS[i] + '"><img class="sg-level-gem-poster" src="' + gemPosterSrc(PODIUM_GEM_LEVELS[i]) + '" alt="" decoding="async"></span>').join('') + '</div><div class="ranking-stage-fallback" aria-hidden="true">' + [1, 0, 2].map(i => '<div class="ranking-plinth ranking-plinth--' + (i + 1) + '">' + gemHtml(PODIUM_GEM_LEVELS[i]) + '<b>' + (i + 1) + '</b></div>').join('') + '</div><div class="ranking-stage-leaders">' + [1, 0, 2].map(i => {
       const r = leaders[i];
       return '<div class="ranking-stage-member ranking-stage-member--' + (i + 1) + '" data-podium-level="' + PODIUM_GEM_LEVELS[i] + '">' + medalHtml(i + 1) + '<b>' + (r ? esc(r.handle) : 'Lugar em aberto') + '</b><span>' + (r ? fmt(r.totalXp) + ' XP' : 'A próxima estrela pode ser você') + '</span><small class="ranking-stage-stone">' + esc(levelGem(PODIUM_GEM_LEVELS[i]).name) + " " + esc((levels.find(l => l.levelNumber === PODIUM_GEM_LEVELS[i]) || {}).name || 'Nível ' + PODIUM_GEM_LEVELS[i]) + '</small></div>';
     }).join('') + "</div><div class=\"ranking-stage-bottom\"><span>ESTILO PRESENÇA LEGADO</span><button type=\"button\" data-scene-toggle aria-pressed=\"false\">Pausar animação</button></div></section>";
@@ -52,15 +51,16 @@ export function mountRankingPage(root, _params, onClose) {
     mountRankingScene(body.querySelector('[data-ranking-stage]')).then(dispose => {
       if (destroyed || v !== version) dispose(); else stopScene = dispose;
     });
-    const collection = body.querySelector('.ranking-gem-collection');
-    if (collection) mountRankingGems(collection).then(dispose => { if (destroyed || v !== version) dispose(); else stopGems = dispose; }).catch(() => {});
+    if (gems) gems.destroy();
+    gems = liveGems(body, { clampToViewport: true, hoverSelector: '.ranking-row, .ranking-gem-collection li', alwaysDark: true });
+    gems.setPaused(!!root.classList.contains('ranking-motion-paused'));
     body.querySelectorAll('.ranking-avatar img').forEach(img => img.addEventListener('error', () => { img.parentElement.textContent = 'G'; }, { once: true }));
   }
   async function load() {
     const v = ++version;
     busy = true;
     if (stopScene) { stopScene(); stopScene = null; }
-    if (stopGems) { stopGems(); stopGems = null; }
+    if (gems) { gems.destroy(); gems = null; }
     if (stopNumbers) { stopNumbers(); stopNumbers = null; }
     try {
       svc = (await import('../src/services/RewardsService.ts')).RewardsService;
@@ -85,6 +85,7 @@ export function mountRankingPage(root, _params, onClose) {
       next.rows.forEach(r => { if (!ids.has(r.userId)) { rows.push(r); ids.add(r.userId); } });
       if (!next.rows.length && rows.length < total) { await load(); return; }
       body.querySelector('[data-ranking-list]').innerHTML = listHtml();
+      if (gems) gems.refresh();
       if (stopNumbers) stopNumbers();
       stopNumbers = mountRankingNumbers(body);
       body.querySelector('[data-ranking-pagination]').innerHTML = paginationHtml();
@@ -92,6 +93,7 @@ export function mountRankingPage(root, _params, onClose) {
       if (!destroyed && v === version) { body.querySelector('[data-ranking-list-error]').textContent = 'Não carregou. Tente novamente.'; button.disabled = false; button.textContent = "Tentar carregar mais "; }
     } finally { if (v === version) busy = false; }
   }
+  body.addEventListener('sg:ranking-motion', e => { if (gems) gems.setPaused(!!e.detail?.paused); });
   body.addEventListener('click', e => {
     if (e.target.closest('[data-ranking-login]') && window.SG.auth) window.SG.auth.open();
     if (e.target.closest('[data-ranking-refresh]') && !busy) load();
@@ -109,5 +111,5 @@ export function mountRankingPage(root, _params, onClose) {
   function key(e) { if (e.key === 'Escape') onClose(); }
   document.addEventListener('keydown', key);
   load();
-  return () => { destroyed = true; version++; clearTimeout(timer); if (stopScene) stopScene(); if (stopGems) stopGems(); if (stopNumbers) stopNumbers(); if (unsubscribe) unsubscribe(); document.removeEventListener('keydown', key); document.removeEventListener('visibilitychange', focusRefresh); root.classList.remove('is-ranking', 'ranking-motion-paused'); };
+  return () => { destroyed = true; version++; clearTimeout(timer); if (stopScene) stopScene(); if (gems) gems.destroy(); if (stopNumbers) stopNumbers(); if (unsubscribe) unsubscribe(); document.removeEventListener('keydown', key); document.removeEventListener('visibilitychange', focusRefresh); root.classList.remove('is-ranking', 'ranking-motion-paused'); };
 }

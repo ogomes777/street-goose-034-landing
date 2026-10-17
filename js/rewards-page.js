@@ -1,4 +1,4 @@
-import { gemHtml, levelGem } from './level-gems.js';
+import { gemHtml, levelGem, liveGems } from './level-gems.js';
 /* Street Goose 034 — /recompensas. Lista o que o lojista publicou no painel
    (só recompensas ativas); resgate validado no servidor (nível e uso único),
    nunca aplicado direto pela UI. Logado: mostra seu nível, o que ainda está
@@ -39,6 +39,7 @@ export function mountRewardsPage(root, _params, onClose) {
     return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
   }
 
+  var gems = null;
   async function render(refresh) {
     var version = ++renderVersion;
     var mod = await import("../src/services/RewardsService.ts");
@@ -116,6 +117,8 @@ export function mountRewardsPage(root, _params, onClose) {
     var empty = '<div class="rw-empty"><span class="rw-empty-mark" aria-hidden="true">034</span><div><h3>' + (activeTab === 'wallet' ? 'Seus resgates ficam aqui.' : 'O próximo benefício começa aqui.') + '</h3><p>' + (activeTab === 'wallet' ? 'Resgate uma recompensa disponível para guardar seu cupom nesta área.' : 'Ainda não há recompensas publicadas. Continue acumulando XP; os benefícios aparecem quando a equipe liberar.') + "</p><a class=\"text-link\" href=\"/comunidade\">Explorar a comunidade </a></div></div>";
     bodyEl.innerHTML = "<div class=\"rw-intro\"><p class=\"rw-eyebrow\">SG 034. RECOMPENSAS</p><h2>Presença tem <em>valor.</em></h2><p>Acumule XP. Evolua de nível. Aproveite o que a Street Goose preparou para você.</p></div>" + '<div class="rw-overview">' + hero + metrics + '</div>' +
       '<section class="rw-section"><div class="rw-section-head"><div><p class="rw-eyebrow">SEUS BENEFÍCIOS</p><h2>Recompensas & cupons</h2></div></div><div class="rw-tabs" role="tablist" aria-label="Recompensas"><button type="button" role="tab" aria-controls="rw-benefits-panel" aria-selected="' + (activeTab === 'available') + '" data-reward-tab="available">Recompensas <span>' + rewards.length + '</span></button><button type="button" role="tab" aria-controls="rw-benefits-panel" aria-selected="' + (activeTab === 'wallet') + '" data-reward-tab="wallet">Meus resgates <span>' + redemptions.length + '</span></button></div><div id="rw-benefits-panel" role="tabpanel" aria-label="' + (activeTab === 'wallet' ? 'Meus resgates' : 'Recompensas') + '">' + (list ? '<div class="rewards-grid">' + list + '</div>' : empty) + '</div></section>' + roadmap + earn + xpHistory + guide;
+    if (gems) gems.destroy();
+    gems = liveGems(bodyEl, { clampToViewport: true, hoverSelector: '.rw-level' });
     var selectedTab = bodyEl.querySelector('[data-reward-tab="' + activeTab + '"]');
     if (focusTab && selectedTab) selectedTab.focus({ preventScroll: true });
     focusTab = false;
@@ -197,6 +200,7 @@ export function mountRewardsPage(root, _params, onClose) {
   render();
   return function destroy() {
     destroyed = true;
+    if (gems) { gems.destroy(); gems = null; }
     root.classList.remove("is-rewards");
     if (unsubscribe) unsubscribe();
     document.removeEventListener("keydown", onKeydown);

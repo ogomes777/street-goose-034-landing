@@ -8,9 +8,16 @@
    - uAmbient: optional uniform base luminance added to the studio environment
      (0 = the original look; used only by the light theme so the refracted
      "room" is bright like the page around it);
-   - pixels that miss the solid exit early (alpha 0). */
+   - pixels that miss the solid exit early (alpha 0);
+   - uRot (world->object mat3) replaces the inline rotY/rotZ pair: for the
+     Originkit crystal it is exactly rotY(-angle)*rotZ(-wobble), and it lets
+     other cuts be posed (and clusters be composed) with the same optics;
+   - uOffset places one solid of a multi-part stone (zero otherwise);
+   - uAbsorb: Beer-Lambert absorption along each internal path, per channel
+     (zero = clear glass, i.e. the original). Coloured gems get their body
+     colour from it instead of from a tinted light. */
 
-export const MAX_PLANES = 64;
+export const MAX_PLANES = 96;
 export const DEG = Math.PI / 180;
 
 export const ADVANCED_DEFAULTS = {
@@ -70,8 +77,9 @@ out vec4 outColor;
 uniform vec2 uRes;
 uniform vec2 uOrigin;
 uniform float uTime;
-uniform float uAngle;
-uniform float uWobble;
+uniform mat3 uRot;
+uniform vec3 uOffset;
+uniform vec3 uAbsorb;
 uniform int uCount;
 uniform vec4 uPlanes[${MAX_PLANES}];
 uniform float uPpu;
@@ -100,10 +108,8 @@ uniform float uReflect;
 uniform float uGrain;
 uniform float uVignette;
 
-vec3 rotY(vec3 v, float a) { float c = cos(a), s = sin(a); return vec3(v.x * c + v.z * s, v.y, -v.x * s + v.z * c); }
-vec3 rotZ(vec3 v, float a) { float c = cos(a), s = sin(a); return vec3(v.x * c - v.y * s, v.x * s + v.y * c, v.z); }
-vec3 toObj(vec3 v) { return rotY(rotZ(v, -uWobble), -uAngle); }
-vec3 toWorld(vec3 v) { return rotZ(rotY(v, uAngle), uWobble); }
+vec3 toObj(vec3 v) { return uRot * v; }
+vec3 toWorld(vec3 v) { return v * uRot; }
 
 float panel(vec2 a, vec4 b) {
     vec2 q = abs(a - b.xy) - b.zw;
@@ -153,6 +159,7 @@ float channel(vec3 p, vec3 rd, vec3 n0, float ior, int ch) {
         vec3 n;
         float t = exitPlane(p, d, n);
         p += d * t;
+        w *= exp(-uAbsorb[ch] * t);
         vec3 o = refract(d, -n, ior);
         if (dot(o, o) > 1e-6) {
             float c = clamp(dot(o, n), 0.0, 1.0);
@@ -177,7 +184,7 @@ void main() {
     vec3 cam = T - f * uCamDist;
     vec3 s = T + vec3(sxy.x, 0.0, 0.0) + u * sxy.y;
     vec3 rdW = normalize(s - cam);
-    vec3 ro = toObj(cam);
+    vec3 ro = toObj(cam - uOffset);
     vec3 rd = toObj(rdW);
 
     float tN = -1e9;

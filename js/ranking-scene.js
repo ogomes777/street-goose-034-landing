@@ -1,7 +1,167 @@
 import { levelGem, PODIUM_GEM_LEVELS } from './level-gems.js';
-import { createGemGeometry, createGemMaterial } from './gem-geometry.js';
 
-/* Decorative only: names, places and XP remain accessible HTML from real data. */
+/* Decorative only: names, places and XP remain accessible HTML from real data.
+   The three podium stones are the shared refractive crystals (gem-field),
+   drawn in HTML slots this scene keeps aligned with the pedestals. Everything
+   that moves here (galaxy rotation, twinkle, nebula drift) runs in shaders,
+   so a frame costs no per-particle CPU work. */
+
+const GALAXY_VERT = `
+uniform float uTime;
+uniform float uScale;
+attribute float aRadius;
+attribute float aAngle;
+attribute float aHeight;
+attribute float aSize;
+attribute float aSeed;
+attribute vec3 aColor;
+varying vec3 vColor;
+void main() {
+  // Differential rotation: inner orbits turn faster, so the arms slowly wind.
+  float a = aAngle + uTime * 0.16 / (0.45 + aRadius);
+  vec3 p = vec3(cos(a) * aRadius, aHeight, sin(a) * aRadius);
+  vec4 mv = modelViewMatrix * vec4(p, 1.0);
+  gl_Position = projectionMatrix * mv;
+  float twinkle = 0.82 + 0.18 * sin(uTime * (0.6 + aSeed * 2.4) + aSeed * 61.0);
+  gl_PointSize = min(48.0, aSize * uScale * twinkle / -mv.z);
+  vColor = aColor;
+}`;
+
+const POINT_FRAG = `
+varying vec3 vColor;
+void main() {
+  vec2 c = gl_PointCoord - 0.5;
+  float d = dot(c, c) * 4.0;
+  float a = exp(-d * 5.0) + 0.35 * exp(-d * 40.0);
+  if (a < 0.004) discard;
+  gl_FragColor = vec4(vColor * a, a);
+}`;
+
+const STAR_VERT = `
+uniform float uTime;
+uniform float uScale;
+attribute float aSize;
+attribute float aSeed;
+attribute vec3 aColor;
+varying vec3 vColor;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * mv;
+  float tw = 0.55 + 0.45 * pow(0.5 + 0.5 * sin(uTime * (0.8 + aSeed * 3.1) + aSeed * 97.0), 3.0);
+  gl_PointSize = min(14.0, aSize * uScale * tw / -mv.z);
+  vColor = aColor * (0.6 + 0.4 * tw);
+}`;
+
+const NEBULA_VERT = `
+varying vec2 vUv;
+void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+
+const NEBULA_FRAG = `
+uniform float uTime;
+uniform float uOctaves;
+varying vec2 vUv;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+float fbm(vec2 p) {
+  float v = 0.0, a = 0.5;
+  for (int i = 0; i < 6; i++) {
+    if (float(i) >= uOctaves) break;
+    v += a * noise(p);
+    p = p * 2.02 + vec2(1.7, 9.2);
+    a *= 0.5;
+  }
+  return v;
+}
+void main() {
+  vec2 uv = vUv * vec2(3.4, 2.0);
+  float t = uTime * 0.012;
+  vec2 q = vec2(fbm(uv + vec2(0.0, t)), fbm(uv + vec2(5.2, 1.3) - t));
+  vec2 r = vec2(fbm(uv + 2.4 * q + vec2(1.7, 9.2) + t), fbm(uv + 2.4 * q + vec2(8.3, 2.8)));
+  float n = fbm(uv + 2.6 * r);
+  vec3 col = vec3(0.012, 0.010, 0.032);
+  col = mix(col, vec3(0.19, 0.07, 0.34), smoothstep(0.32, 0.78, n));
+  col = mix(col, vec3(0.62, 0.18, 0.52), smoothstep(0.58, 0.92, n) * r.x);
+  col += vec3(0.08, 0.20, 0.55) * smoothstep(0.45, 0.85, q.y) * 0.55 * n;
+  col += vec3(1.0, 0.72, 0.45) * pow(smoothstep(0.7, 1.0, n), 3.0) * 0.35;
+  float dust = smoothstep(0.52, 0.72, fbm(uv * 1.6 - r * 1.3 + 3.0));
+  col *= 1.0 - 0.62 * dust;
+  // Brighter band behind the galaxy, deep space toward the corners.
+  vec2 c = vUv - vec2(0.5, 0.62);
+  col *= 0.35 + 0.95 * exp(-dot(c * vec2(1.1, 2.2), c * vec2(1.1, 2.2)) * 2.4);
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+const BEAM_VERT = `
+varying vec2 vUv;
+varying float vFacing;
+void main() {
+  vUv = uv;
+  vec3 n = normalize(normalMatrix * normal);
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vFacing = abs(dot(n, normalize(-mv.xyz)));
+  gl_Position = projectionMatrix * mv;
+}`;
+
+const BEAM_FRAG = `
+uniform vec3 uColor;
+uniform float uOpacity;
+uniform float uTime;
+varying vec2 vUv;
+varying float vFacing;
+void main() {
+  float fade = pow(1.0 - vUv.y, 2.2) * smoothstep(0.0, 0.06, vUv.y);
+  float core = pow(vFacing, 2.5);
+  float shimmer = 0.85 + 0.15 * sin(vUv.y * 18.0 - uTime * 1.6);
+  float a = fade * core * uOpacity * shimmer;
+  gl_FragColor = vec4(uColor * a, a);
+}`;
+
+const FLOOR_FRAG = `
+uniform vec3 uColor;
+uniform float uTime;
+varying vec2 vUv;
+void main() {
+  vec2 p = vUv * 2.0 - 1.0;
+  float r = length(p);
+  if (r > 1.0) discard;
+  float glow = exp(-r * r * 3.2) * 0.55;
+  float rings = 0.0;
+  for (int i = 1; i <= 4; i++) {
+    float rr = float(i) * 0.22;
+    rings += exp(-pow((r - rr) * 90.0, 2.0)) * (0.35 + 0.1 * sin(uTime * 0.8 + float(i)));
+  }
+  float edge = exp(-pow((r - 0.985) * 70.0, 2.0)) * 1.2;
+  float sweep = pow(max(0.0, cos(atan(p.y, p.x) - uTime * 0.35)), 24.0) * smoothstep(1.0, 0.2, r) * 0.25;
+  float a = (glow + rings + edge + sweep) * smoothstep(1.0, 0.92, r);
+  gl_FragColor = vec4(uColor * a, a);
+}`;
+
+const STREAK_FRAG = `
+uniform float uLife;
+varying vec2 vUv;
+void main() {
+  float head = smoothstep(0.0, 1.0, vUv.x);
+  float body = pow(head, 3.0) * exp(-pow((vUv.y - 0.5) * 7.0, 2.0));
+  float a = body * sin(3.14159 * uLife);
+  gl_FragColor = vec4(vec3(0.85, 0.9, 1.0) * a, a);
+}`;
+
+function gauss(rand) {
+  let u = 0, v = 0;
+  while (u === 0) u = rand();
+  while (v === 0) v = rand();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function mulberry(seed) {
+  let a = seed | 0;
+  return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
 export async function mountRankingScene(host) {
   let stopped = false, cleanup = () => {};
   const dispose = () => { stopped = true; cleanup(); };
@@ -9,186 +169,247 @@ export async function mountRankingScene(host) {
     const THREE = await import('three');
     if (stopped || !host.isConnected) return;
     const canvas = host.querySelector('canvas');
+    const small = matchMedia('(max-width: 720px), (pointer: coarse)').matches;
     let renderer;
-    try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' }); }
+    try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' }); }
     catch (_) { return; }
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, innerWidth < 640 ? 1.25 : 1.6));
+    const pixelRatio = Math.min(devicePixelRatio || 1, small ? 1.25 : 1.6);
+    renderer.setPixelRatio(pixelRatio);
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = .95;
+    renderer.toneMappingExposure = 1;
+    const rand = mulberry(34);
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(38, 1, .1, 80);
-    camera.position.set(0, 3.9, 10.8); camera.lookAt(0, 1.5, 0);
-    scene.add(new THREE.HemisphereLight(0xd8c5ff, 0x151025, 1.4));
-    const key = new THREE.DirectionalLight(0xffe5c1, 2); key.position.set(-3, 6, 4); scene.add(key);
-    const rim = new THREE.PointLight(0x9d73ff, 4, 16); rim.position.set(4, 3, -3); scene.add(rim);
-    const blue = new THREE.PointLight(0x62abff, 2, 14); blue.position.set(-4, 2, 2); scene.add(blue);
-    const group = new THREE.Group(); scene.add(group);
-    const podiums = [], crystals = [], rings = [], glows = [], satellites = [], textures = [];
+    const camera = new THREE.PerspectiveCamera(38, 1, .1, 120);
+    const camBase = new THREE.Vector3(0, 3.9, 10.8), lookAt = new THREE.Vector3(0, 1.5, 0);
+    camera.position.copy(camBase); camera.lookAt(lookAt);
+    scene.add(camera);
+    const textures = [], timeUniforms = [], scaleUniforms = [];
+
+    // Lights for the polished pedestals.
+    scene.add(new THREE.HemisphereLight(0xb9a4ff, 0x0b0814, .9));
+    const key = new THREE.DirectionalLight(0xffe2bd, 2.2); key.position.set(-3, 6, 5); scene.add(key);
+    const rim = new THREE.PointLight(0xa070ff, 6, 18); rim.position.set(4, 4, -3); scene.add(rim);
+    const blue = new THREE.PointLight(0x5aa8ff, 3.5, 16); blue.position.set(-5, 2, 1); scene.add(blue);
+
     const glowCanvas = document.createElement('canvas'); glowCanvas.width = glowCanvas.height = 128;
-    const ctx = glowCanvas.getContext('2d'); const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-    gradient.addColorStop(0, '#ffffff'); gradient.addColorStop(.15, '#ffffffaa'); gradient.addColorStop(.45, '#ffffff22'); gradient.addColorStop(1, '#ffffff00');
-    ctx.fillStyle = gradient; ctx.fillRect(0, 0, 128, 128);
+    const gctx = glowCanvas.getContext('2d'); const grad = gctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grad.addColorStop(0, '#ffffff'); grad.addColorStop(.12, '#ffffffb0'); grad.addColorStop(.4, '#ffffff26'); grad.addColorStop(1, '#ffffff00');
+    gctx.fillStyle = grad; gctx.fillRect(0, 0, 128, 128);
     const glowTexture = new THREE.CanvasTexture(glowCanvas); textures.push(glowTexture);
-    const metalColors = [0xf3cb79, 0xc2cde3, 0xbd835e];
-    const heights = [1.65, 1.05, .7], slots = [0, -2, 2];
-    [0, 1, 2].forEach(i => {
-      const column = new THREE.Group(); column.position.x = slots[i]; group.add(column); podiums.push(column);
-      const h = heights[i];
-      const metal = new THREE.MeshStandardMaterial({ color: metalColors[i], metalness: .8, roughness: .28 });
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(.79, .9, h, 48), new THREE.MeshStandardMaterial({ color: 0x242135, metalness: .85, roughness: .27 }));
-      body.position.y = h / 2; column.add(body);
-      [.08, h - .04, h - .16].forEach(y => {
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(.79, .025, 8, 64), metal);
-        ring.rotation.x = Math.PI / 2; ring.position.y = y; column.add(ring);
-      });
-      const top = new THREE.Mesh(new THREE.CylinderGeometry(.79, .79, .07, 48), metal); top.position.y = h; column.add(top);
-      const gem = levelGem(PODIUM_GEM_LEVELS[i]);
-      const material = createGemMaterial(THREE, gem.color);
-      const size = i === 0 ? .65 : .5;
-      const crystal = new THREE.Mesh(createGemGeometry(THREE, gem, size), material);
-      crystal.scale.y = 1.22; crystal.position.y = h + 1.05; column.add(crystal); crystals.push(crystal);
-      const orbit = new THREE.Mesh(new THREE.TorusGeometry(i === 0 ? .91 : .72, .014, 6, 80), new THREE.MeshBasicMaterial({ color: metalColors[i], transparent: true, opacity: .65 }));
-      orbit.rotation.set(1.1, .2, -.3); orbit.position.y = h + 1.05; column.add(orbit); rings.push(orbit);
-      const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: gem.color, transparent: true, opacity: .32, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
-      glow.position.set(0, h + 1.05, -.3); glow.scale.set(2.5, 2.5, 1); column.add(glow); glows.push(glow);
-      const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: metalColors[i], transparent: true, opacity: .95, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
-      moon.scale.set(.2, .2, 1); column.add(moon); satellites.push(moon);
-      // Fine etched lines on the front of each plinth.
-      for (let j = 0; j < 10; j++) {
-        const line = new THREE.Mesh(new THREE.BoxGeometry(.008, h - .24, .008), new THREE.MeshBasicMaterial({ color: metalColors[i], transparent: true, opacity: .25 }));
-        const angle = (j - 4.5) * .13; line.position.set(Math.sin(angle) * .81, h / 2, Math.cos(angle) * .81); column.add(line);
+    const glow = (color, opacity, size) => {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color, transparent: true, opacity, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
+      s.scale.set(size, size, 1); return s;
+    };
+
+    // 1 · Nebula: a screen-filling backdrop that always covers the view.
+    const nebulaUniforms = { uTime: { value: 0 }, uOctaves: { value: small ? 4 : 6 } }; timeUniforms.push(nebulaUniforms.uTime);
+    const nebula = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ vertexShader: NEBULA_VERT, fragmentShader: NEBULA_FRAG, uniforms: nebulaUniforms, depthWrite: false, depthTest: false, toneMapped: false }));
+    nebula.position.z = -90; nebula.renderOrder = -10; camera.add(nebula);
+
+    // 2 · Background stars with individual twinkle.
+    const STARS = small ? 1600 : 3600;
+    const starPos = new Float32Array(STARS * 3), starSize = new Float32Array(STARS), starSeed = new Float32Array(STARS), starColor = new Float32Array(STARS * 3);
+    const starPalette = [[.75, .82, 1], [1, 1, 1], [1, .9, .75], [.85, .78, 1]];
+    for (let i = 0; i < STARS; i++) {
+      const theta = (rand() - .5) * 2.4, phi = (rand() - .35) * 1.3, r = 35 + rand() * 25;
+      starPos.set([Math.sin(theta) * Math.cos(phi) * r, Math.sin(phi) * r + 4, -Math.cos(theta) * Math.cos(phi) * r], i * 3);
+      starSize[i] = (rand() < .04 ? 0.5 : 0.18 + rand() * 0.2); starSeed[i] = rand();
+      starColor.set(starPalette[i % 4], i * 3);
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3)); starGeo.setAttribute('aSize', new THREE.BufferAttribute(starSize, 1));
+    starGeo.setAttribute('aSeed', new THREE.BufferAttribute(starSeed, 1)); starGeo.setAttribute('aColor', new THREE.BufferAttribute(starColor, 3));
+    const starUniforms = { uTime: { value: 0 }, uScale: { value: 1 } }; timeUniforms.push(starUniforms.uTime); scaleUniforms.push(starUniforms.uScale);
+    const stars = new THREE.Points(starGeo, new THREE.ShaderMaterial({ vertexShader: STAR_VERT, fragmentShader: POINT_FRAG, uniforms: starUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    stars.renderOrder = -5; scene.add(stars);
+
+    // 3 · Spiral galaxy: two logarithmic arms, bulge, star-forming knots, dust.
+    const GALAXY = small ? 16000 : 46000, R = 7.4;
+    const aRadius = new Float32Array(GALAXY), aAngle = new Float32Array(GALAXY), aHeight = new Float32Array(GALAXY), aSize = new Float32Array(GALAXY), aSeed = new Float32Array(GALAXY), aColor = new Float32Array(GALAXY * 3);
+    const core = new THREE.Color('#fff0d4'), warm = new THREE.Color('#ffb877'), pink = new THREE.Color('#ff6fbf'), violet = new THREE.Color('#9c6bff'), cyan = new THREE.Color('#62b6ff'), tmp = new THREE.Color();
+    for (let i = 0; i < GALAXY; i++) {
+      const kind = rand();
+      let r, angle, h, size, color;
+      if (kind < .16) { // bulge
+        r = Math.abs(gauss(rand)) * .75; angle = rand() * Math.PI * 2; h = gauss(rand) * .32 * Math.exp(-r);
+        size = .045 + rand() * .05; color = tmp.copy(core).lerp(warm, Math.min(1, r / .9));
+      } else {
+        r = .35 + Math.pow(rand(), 1.35) * R;
+        const arm = (i % 2) * Math.PI;
+        const spread = gauss(rand) * (.22 + .1 * r / R) * (kind < .82 ? 1 : 3.2);
+        angle = arm + 2.35 * Math.log(r + .35) + spread;
+        h = gauss(rand) * .1 * (1 - .5 * r / R);
+        size = .028 + rand() * .035;
+        const t = r / R;
+        color = t < .22 ? tmp.copy(warm).lerp(pink, t / .22) : t < .55 ? tmp.copy(pink).lerp(violet, (t - .22) / .33) : tmp.copy(violet).lerp(cyan, (t - .55) / .45);
+        if (kind > .965) { size *= 2.6; color = tmp.copy(pink).lerp(new THREE.Color('#ffd3ee'), .4); } // star-forming knots
+        else if (kind > .9) { color = tmp.clone().multiplyScalar(.35); } // dusty, dimmer
       }
+      aRadius[i] = r; aAngle[i] = angle; aHeight[i] = h; aSize[i] = size; aSeed[i] = rand();
+      const bright = .55 + rand() * .45;
+      aColor.set([color.r * bright, color.g * bright, color.b * bright], i * 3);
+    }
+    const galaxyGeo = new THREE.BufferGeometry();
+    galaxyGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(GALAXY * 3), 3));
+    [['aRadius', aRadius], ['aAngle', aAngle], ['aHeight', aHeight], ['aSize', aSize], ['aSeed', aSeed]].forEach(([n, a]) => galaxyGeo.setAttribute(n, new THREE.BufferAttribute(a, 1)));
+    galaxyGeo.setAttribute('aColor', new THREE.BufferAttribute(aColor, 3));
+    galaxyGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), R + 1);
+    const galaxyUniforms = { uTime: { value: 0 }, uScale: { value: 1 } }; timeUniforms.push(galaxyUniforms.uTime); scaleUniforms.push(galaxyUniforms.uScale);
+    const galaxy = new THREE.Points(galaxyGeo, new THREE.ShaderMaterial({ vertexShader: GALAXY_VERT, fragmentShader: POINT_FRAG, uniforms: galaxyUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    const galaxyRoot = new THREE.Group(); galaxyRoot.position.set(0, 4.3, -8.5); galaxyRoot.rotation.set(1.08, 0, -.32); scene.add(galaxyRoot);
+    galaxyRoot.add(galaxy);
+    const coreGlow = [glow(0xffe1b3, .85, 2.6), glow(0xff9ccc, .35, 6.5), glow(0x8a63ff, .22, 15)];
+    coreGlow.forEach(s => { s.position.copy(galaxyRoot.position); s.renderOrder = -4; scene.add(s); });
+
+    // 4 · Ringed planet with a lit limb.
+    const planet = new THREE.Group(); planet.position.set(3.9, 4.35, -8); planet.rotation.z = -.35; scene.add(planet);
+    planet.add(new THREE.Mesh(new THREE.SphereGeometry(.62, 40, 24), new THREE.MeshStandardMaterial({ color: 0x15112b, emissive: 0x1f1542, emissiveIntensity: .35, metalness: .2, roughness: .6 })));
+    const planetRing = new THREE.Mesh(new THREE.RingGeometry(.84, 1.3, 96), new THREE.MeshBasicMaterial({ color: 0xc9b8ff, side: THREE.DoubleSide, transparent: true, opacity: .3, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
+    planetRing.rotation.x = 1.2; planet.add(planetRing);
+    const planetHalo = glow(0x8f74ff, .3, 2.8); planetHalo.position.z = -.4; planet.add(planetHalo);
+
+    // 5 · Podium: polished columns, metal rims, light shafts, floor.
+    const group = new THREE.Group(); scene.add(group);
+    const metalColors = [0xf3cb79, 0xc8d3e8, 0xc58a62];
+    const heights = [1.65, 1.05, .7], slotsX = [0, -2.05, 2.05];
+    const anchors = [], gemGlows = [], beams = [];
+    const bodyMaterial = new THREE.MeshPhysicalMaterial({ color: 0x1c1830, metalness: .9, roughness: .2, clearcoat: 1, clearcoatRoughness: .08 });
+    [0, 1, 2].forEach(i => {
+      const column = new THREE.Group(); column.position.x = slotsX[i]; group.add(column);
+      const h = heights[i];
+      const metal = new THREE.MeshPhysicalMaterial({ color: metalColors[i], metalness: 1, roughness: .22, clearcoat: .6, emissive: metalColors[i], emissiveIntensity: .08 });
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(.8, .9, h, 64), bodyMaterial); body.position.y = h / 2; column.add(body);
+      [.06, h - .05, h - .17].forEach(y => { const ring = new THREE.Mesh(new THREE.TorusGeometry(.8, .022, 10, 96), metal); ring.rotation.x = Math.PI / 2; ring.position.y = y; column.add(ring); });
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(.8, .8, .06, 64), metal); top.position.y = h; column.add(top);
+      const topGlow = new THREE.Mesh(new THREE.CircleGeometry(.72, 64), new THREE.MeshBasicMaterial({ color: metalColors[i], transparent: true, opacity: .32, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
+      topGlow.rotation.x = -Math.PI / 2; topGlow.position.y = h + .035; column.add(topGlow);
+      const beamUniforms = { uColor: { value: new THREE.Color(metalColors[i]) }, uOpacity: { value: i === 0 ? .5 : .36 }, uTime: { value: 0 } }; timeUniforms.push(beamUniforms.uTime);
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(.82, .62, 3.2, 48, 1, true), new THREE.ShaderMaterial({ vertexShader: BEAM_VERT, fragmentShader: BEAM_FRAG, uniforms: beamUniforms, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false }));
+      beam.position.y = h + 1.6; column.add(beam); beams.push(beam);
+      const anchor = new THREE.Object3D(); anchor.position.y = h + 1.12; column.add(anchor); anchors.push(anchor);
+      const g = glow(new THREE.Color(levelGem(PODIUM_GEM_LEVELS[i]).color), .3, i === 0 ? 2.6 : 2.1); g.position.set(0, h + 1.12, -.35); column.add(g); gemGlows.push(g);
     });
-    // Orbiting energy links the three symbols without moving their ranking labels.
-    const energy = new THREE.Group(); energy.position.y = 1.7; scene.add(energy);
-    const energyGeometry = new THREE.BufferGeometry(), energyPositions = new Float32Array(180 * 3);
-    for (let i = 0; i < 180; i++) {
-      const angle = i / 180 * Math.PI * 2, radius = 3.3 + Math.sin(angle * 3) * .1;
-      energyPositions.set([Math.cos(angle) * radius, Math.sin(angle * 2) * .32, Math.sin(angle) * 1.45], i * 3);
+    const floorUniforms = { uColor: { value: new THREE.Color(0xa77bff) }, uTime: { value: 0 } }; timeUniforms.push(floorUniforms.uTime);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 9.6), new THREE.ShaderMaterial({ vertexShader: NEBULA_VERT, fragmentShader: FLOOR_FRAG, uniforms: floorUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    floor.rotation.x = -Math.PI / 2; floor.position.y = .005; group.add(floor);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(4.75, 4.85, .08, 96), new THREE.MeshPhysicalMaterial({ color: 0x0e0b18, metalness: .7, roughness: .3, clearcoat: 1 }));
+    base.position.y = -.045; group.add(base);
+
+    // 6 · A rare shooting star.
+    const streakUniforms = { uLife: { value: 0 } };
+    const streak = new THREE.Mesh(new THREE.PlaneGeometry(3.2, .035), new THREE.ShaderMaterial({ vertexShader: NEBULA_VERT, fragmentShader: STREAK_FRAG, uniforms: streakUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    streak.visible = false; scene.add(streak);
+    let nextStreak = 6 + rand() * 6, streakStart = -1;
+
+    // HTML slots for the podium crystals.
+    const gemSlots = [0, 1, 2].map(i => host.querySelector('[data-podium="' + i + '"]'));
+    const gemScale = [1.1, .95, .95];
+    const v = new THREE.Vector3(), vTop = new THREE.Vector3(), vBottom = new THREE.Vector3(), up = new THREE.Vector3(0, .8, 0);
+    let width = 1, height = 1;
+    function placeGems() {
+      anchors.forEach((anchor, i) => {
+        const slot = gemSlots[i]; if (!slot) return;
+        anchor.getWorldPosition(v);
+        vTop.copy(v).add(up).project(camera);
+        vBottom.copy(v).sub(up).project(camera);
+        v.project(camera);
+        const x = (v.x + 1) / 2 * width, y = (1 - v.y) / 2 * height;
+        const hPx = Math.abs(vTop.y - vBottom.y) / 2 * height * 1.3 * gemScale[i];
+        const wPx = hPx * .86;
+        const size = Math.round(wPx) + 'px';
+        if (slot.style.width !== size) { slot.style.width = size; slot.style.height = Math.round(hPx) + 'px'; }
+        slot.style.transform = 'translate3d(' + (x - wPx / 2).toFixed(1) + 'px,' + (y - hPx / 2).toFixed(1) + 'px,0)';
+      });
     }
-    energyGeometry.setAttribute('position', new THREE.BufferAttribute(energyPositions, 3));
-    energy.add(new THREE.Points(energyGeometry, new THREE.PointsMaterial({ map: glowTexture, color: 0x92dbff, size: .11, transparent: true, opacity: .7, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false })));
-    const floor = new THREE.Mesh(new THREE.CylinderGeometry(4.1, 4.1, .06, 80), new THREE.MeshBasicMaterial({ color: 0x171322 }));
-    floor.position.y = -.07; group.add(floor);
-    const atmosphere = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshBasicMaterial({ map: glowTexture, color: 0xb26aff, transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false }));
-    atmosphere.rotation.x = -Math.PI / 2; atmosphere.position.y = -.12; group.add(atmosphere);
-    const neon = new THREE.Mesh(new THREE.TorusGeometry(4.12, .025, 8, 100), new THREE.MeshBasicMaterial({ color: 0x9653ff, transparent: true, opacity: .9, toneMapped: false }));
-    neon.rotation.x = Math.PI / 2; neon.position.y = -.01; group.add(neon);
-    [3.3, 3.75, 4.1].forEach(radius => {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, .012, 5, 100), new THREE.MeshBasicMaterial({ color: 0xa991d4, transparent: true, opacity: .25 }));
-      ring.rotation.x = Math.PI / 2; ring.position.y = -.015; group.add(ring);
-    });
-    // A single procedural nebula texture adds depth without bloom or asset downloads.
-    const nebulaCanvas = document.createElement('canvas'); nebulaCanvas.width = nebulaCanvas.height = 512;
-    const nebulaCtx = nebulaCanvas.getContext('2d');
-    for (let i = 0; i < 110; i++) {
-      const angle = i * .13, radius = 14 + i * 1.65;
-      const x = 256 + Math.cos(angle) * radius, y = 256 + Math.sin(angle) * radius * .52;
-      const cloud = nebulaCtx.createRadialGradient(x, y, 0, x, y, 38);
-      cloud.addColorStop(0, i % 3 ? '#8547d945' : '#33bde849'); cloud.addColorStop(1, '#00000000');
-      nebulaCtx.fillStyle = cloud; nebulaCtx.fillRect(x - 38, y - 38, 76, 76);
-    }
-    const nebulaTexture = new THREE.CanvasTexture(nebulaCanvas); textures.push(nebulaTexture);
-    const nebula = new THREE.Mesh(new THREE.PlaneGeometry(20, 14), new THREE.MeshBasicMaterial({ map: nebulaTexture, transparent: true, opacity: .9, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
-    nebula.position.set(0, 3.4, -7); nebula.rotation.z = -.28; scene.add(nebula);
-    const galaxyGeometry = new THREE.BufferGeometry(), galaxyPositions = new Float32Array(1100 * 3), galaxyColors = new Float32Array(1100 * 3);
-    for (let i = 0; i < 1100; i++) {
-      const radius = .3 + Math.sqrt(Math.random()) * 5.8, angle = radius * .82 + (i % 3) * Math.PI * 2 / 3 + (Math.random() - .5) * .32;
-      galaxyPositions.set([Math.cos(angle) * radius, (Math.random() - .5) * .18, Math.sin(angle) * radius], i * 3);
-      const color = new THREE.Color().lerpColors(new THREE.Color('#ffeac1'), new THREE.Color('#8865e8'), radius / 6); galaxyColors.set([color.r, color.g, color.b], i * 3);
-    }
-    galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(galaxyPositions, 3)); galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(galaxyColors, 3));
-    const galaxy = new THREE.Points(galaxyGeometry, new THREE.PointsMaterial({ map: glowTexture, size: .14, vertexColors: true, transparent: true, opacity: .9, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
-    galaxy.position.set(0, 3.4, -5); galaxy.rotation.set(.48, 0, -.22); scene.add(galaxy);
-    // Fine luminous orbital arcs surround the rotating galaxy; halos use the same tiny texture.
-    const cosmos = new THREE.Group(); cosmos.position.set(0, 3.3, -5.5); scene.add(cosmos);
-    const cosmicOrbits = [];
-    [0x9d6bff, 0x4cd8ff, 0xff8acb].forEach((color, i) => {
-      const orbit = new THREE.Group(); orbit.rotation.set(.35 + i * .35, i * .55, -.3 + i * .4); cosmos.add(orbit);
-      const radius = 4.4 + i * .32;
-      const arc = new THREE.Mesh(new THREE.TorusGeometry(radius, .015, 5, 120, Math.PI * 1.55), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .7, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false })); orbit.add(arc);
-      const aura = new THREE.Mesh(new THREE.TorusGeometry(radius, .055, 5, 120, Math.PI * 1.55), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .12, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false })); orbit.add(aura);
-      const comet = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color, transparent: true, opacity: .9, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
-      comet.position.x = radius; comet.scale.set(.65, .65, 1); orbit.add(comet); cosmicOrbits.push(orbit);
-    });
-    const nucleus = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0xccadff, transparent: true, opacity: .48, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
-    nucleus.position.set(-.7, 3.6, -6); nucleus.scale.set(4, 4, 1); scene.add(nucleus);
-    const planet = new THREE.Group(); planet.position.set(3.5, 4.7, -5); planet.rotation.z = -.35; scene.add(planet);
-    planet.add(new THREE.Mesh(new THREE.SphereGeometry(.72, 24, 16), new THREE.MeshStandardMaterial({ color: 0x15132e, emissive: 0x201841, emissiveIntensity: .35, metalness: .25, roughness: .6 })));
-    const planetRing = new THREE.Mesh(new THREE.RingGeometry(.95, 1.38, 64), new THREE.MeshBasicMaterial({ color: 0xb0a1ee, side: THREE.DoubleSide, transparent: true, opacity: .5, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
-    planetRing.rotation.x = 1.15; planet.add(planetRing);
-    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0x8267ed, opacity: .5, toneMapped: false, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); halo.scale.set(3.3, 3.3, 1); halo.position.z = -.5; planet.add(halo);
-    const positions = new Float32Array(800 * 3), colors = new Float32Array(800 * 3);
-    const palette = [new THREE.Color('#dabdff'), new THREE.Color('#fff0cd'), new THREE.Color('#89bcff')];
-    for (let i = 0; i < 800; i++) {
-      const a = i * 2.399963, r = 2 + Math.random() * 10;
-      positions[i * 3] = Math.cos(a) * r; positions[i * 3 + 1] = (Math.random() - .3) * 11; positions[i * 3 + 2] = -2 - Math.random() * 8;
-      const c = palette[i % 3]; colors.set([c.r, c.g, c.b], i * 3);
-    }
-    const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); starGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    const starBase = positions.slice();
-    const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({ map: glowTexture, size: .18, vertexColors: true, transparent: true, opacity: .9, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false })); scene.add(stars);
-    let contextLost = false, animationTime = 0, frame = 0, visible = true, paused = matchMedia('(prefers-reduced-motion: reduce)').matches, last = 0;
+
+    let contextLost = false, animationTime = 0, frame = 0, visible = true, last = 0;
     const media = matchMedia('(prefers-reduced-motion: reduce)');
+    let paused = media.matches;
+    const fineHover = matchMedia('(hover: hover) and (pointer: fine)');
+    const pointer = { x: 0, y: 0, tx: 0, ty: 0 };
+    const minFrame = small ? 32 : 15;
     const button = host.querySelector('[data-scene-toggle]');
     function syncButton() {
       host.closest('.is-ranking')?.classList.toggle('ranking-motion-paused', paused);
       host.dispatchEvent(new CustomEvent('sg:ranking-motion', { bubbles: true, detail: { paused } }));
       if (button) { button.textContent = paused ? 'Reproduzir animação' : 'Pausar animação'; button.setAttribute('aria-pressed', String(paused)); }
     }
+    function pose(time, dt) {
+      const reveal = paused ? 1 : Math.min(1, time / 1.2);
+      timeUniforms.forEach(u => { u.value = time; });
+      anchors.forEach((anchor, i) => {
+        anchor.position.y = heights[i] + 1.12 + (paused ? 0 : Math.sin(time * 1.3 + i * 1.7) * .12);
+        gemGlows[i].position.y = anchor.position.y;
+        gemGlows[i].material.opacity = (.24 + (1 + Math.sin(time * 1.6 + i)) * .05) * reveal;
+      });
+      pointer.x += (pointer.tx - pointer.x) * Math.min(1, dt * 2.5); pointer.y += (pointer.ty - pointer.y) * Math.min(1, dt * 2.5);
+      camera.position.set(camBase.x + Math.sin(time * .11) * .45 + pointer.x * .5, camBase.y + Math.sin(time * .17) * .16 - pointer.y * .25, camBase.z * camZoom);
+      camera.lookAt(lookAt);
+      planet.rotation.y = time * .12; planet.position.y = 4.35 + Math.sin(time * .35) * .1;
+      stars.rotation.y = time * .006;
+      group.rotation.y = Math.sin(time * .18) * .05;
+      coreGlow[0].material.opacity = (.78 + Math.sin(time * .6) * .07) * reveal;
+      if (!paused) {
+        if (streakStart < 0 && time > nextStreak) {
+          streakStart = time; streak.visible = true;
+          streak.position.set(-3 + rand() * 6, 6.2 + rand() * 1.4, -6); streak.rotation.z = -.35 - rand() * .3;
+        }
+        if (streakStart >= 0) {
+          const life = (time - streakStart) / 1.1;
+          streakUniforms.uLife.value = Math.min(1, life);
+          streak.position.x += dt * 4.2; streak.position.y -= dt * 1.6;
+          if (life >= 1) { streak.visible = false; streakStart = -1; nextStreak = time + 8 + rand() * 7; }
+        }
+      }
+      placeGems();
+    }
     function draw(t) {
-      if (stopped || contextLost) return;
       frame = 0;
-      if (!visible || document.hidden || paused) return;
-      if (t - last >= 32) {
-        animationTime += Math.min(.1, Math.max(0, (t - last) * .001));
-        const time = animationTime;
-        crystals.forEach((gem, i) => {
-          const reveal = media.matches ? 1 : Math.min(1, time / .85);
-          const pulse = (.15 + .85 * (1 - Math.pow(1 - reveal, 3))) * (1 + Math.sin(time * 2.2 + i) * .065);
-          gem.rotation.y = time * .65 + i; gem.rotation.z = Math.sin(time * .8 + i) * .08;
-          gem.position.y = heights[i] + 1.12 + Math.sin(time * 1.7 + i) * .2;
-          gem.scale.set(pulse, 1.22 * pulse, pulse); gem.material.emissiveIntensity = .2 + (1 + Math.sin(time * 2.2 + i)) * .08;
-          glows[i].position.y = gem.position.y; glows[i].material.opacity = .3 + (1 + Math.sin(time * 2.2 + i)) * .06;
-          const angle = time * .8 + i * 2; const radius = i === 0 ? .91 : .72;
-          satellites[i].position.set(Math.cos(angle) * radius, gem.position.y + Math.sin(angle) * .34, Math.sin(angle) * radius);
-        });
-        rings.forEach((r, i) => { r.rotation.y = time * .4 + i; r.rotation.z = time * .22 + i; r.position.y = crystals[i].position.y; });
-        for (let i = 0; i < 800; i++) { positions[i * 3 + 1] = starBase[i * 3 + 1] + Math.sin(time * .3 + i) * .24; }
-        starGeometry.attributes.position.needsUpdate = true;
-        galaxy.rotation.y = time * .16; galaxy.rotation.z = -.22 + Math.sin(time * .16) * .14;
-        nebula.rotation.z = -.28 + time * .055;
-        cosmicOrbits.forEach((orbit, i) => { orbit.rotation.z = time * (.12 + i * .025) * (i === 1 ? -1 : 1) + i; });
-        cosmos.rotation.y = time * .08; energy.rotation.y = time * .28;
-        nucleus.material.opacity = .38 + Math.sin(time * .7) * .09;
-        planet.rotation.y = time * .2; planet.position.y = 4.7 + Math.sin(time * .4) * .12;
-        stars.rotation.y = time * .018; stars.rotation.z = time * .008;
-        group.rotation.y = Math.sin(time * .25) * .09; group.position.y = Math.sin(time * .9) * .09;
-        neon.material.opacity = .55 + (1 + Math.sin(time * 1.5)) * .18;
+      if (stopped || contextLost || !visible || document.hidden || paused) return;
+      if (t - last >= minFrame) {
+        const dt = Math.min(.1, Math.max(0, (t - last) * .001));
+        animationTime += dt;
+        pose(animationTime, dt);
         renderer.render(scene, camera); last = t;
       }
       frame = requestAnimationFrame(draw);
     }
     function resume() { if (!stopped && !contextLost && !frame && visible && !document.hidden && !paused) { last = performance.now(); frame = requestAnimationFrame(draw); } }
+    let camZoom = 1;
     function resize() {
       if (contextLost) return;
-      const { width, height } = host.getBoundingClientRect(); if (!width || !height) return;
+      const rect = host.getBoundingClientRect(); if (!rect.width || !rect.height) return;
+      width = rect.width; height = rect.height;
       renderer.setSize(width, height, false); camera.aspect = width / height;
-      camera.position.z = 10.8 / Math.min(1, Math.max(.8, camera.aspect));
-      camera.lookAt(0, 1.5, 0); camera.updateProjectionMatrix(); renderer.render(scene, camera);
+      camZoom = 1 / Math.min(1, Math.max(.78, camera.aspect));
+      camera.updateProjectionMatrix();
+      // Nebula plane fills the frustum at its depth.
+      const hNear = 2 * Math.tan(camera.fov * Math.PI / 360) * 90;
+      nebula.scale.set(hNear * camera.aspect * 1.05, hNear * 1.05, 1);
+      const scale = height * pixelRatio * .5 / Math.tan(camera.fov * Math.PI / 360);
+      scaleUniforms.forEach(u => { u.value = scale; });
+      pose(animationTime, 0); renderer.render(scene, camera);
     }
-    function toggle() { paused = !paused; syncButton(); if (paused) { cancelAnimationFrame(frame); frame = 0; } else resume(); }
+    function toggle() { paused = !paused; syncButton(); if (paused) { cancelAnimationFrame(frame); frame = 0; pose(animationTime, 0); renderer.render(scene, camera); } else resume(); }
     function motion(e) { paused = e.matches; syncButton(); cancelAnimationFrame(frame); frame = 0; resize(); resume(); }
     function visibility() { if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else resume(); }
     function lost(e) { e.preventDefault(); contextLost = true; cancelAnimationFrame(frame); frame = 0; host.classList.remove('has-webgl'); }
+    function move(e) {
+      if (!fineHover.matches || paused) return;
+      const r = host.getBoundingClientRect();
+      pointer.tx = ((e.clientX - r.left) / r.width - .5) * 2; pointer.ty = ((e.clientY - r.top) / r.height - .5) * 2;
+    }
+    function leave() { pointer.tx = 0; pointer.ty = 0; }
     const observer = new ResizeObserver(resize); observer.observe(host);
     const intersection = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; if (!visible) { cancelAnimationFrame(frame); frame = 0; } else resume(); }); intersection.observe(host);
     canvas.addEventListener('webglcontextlost', lost); document.addEventListener('visibilitychange', visibility); media.addEventListener('change', motion);
+    host.addEventListener('pointermove', move); host.addEventListener('pointerleave', leave);
     if (button) button.addEventListener('click', toggle);
     host.classList.add('has-webgl'); syncButton(); resize(); resume();
     cleanup = () => {
       cancelAnimationFrame(frame); observer.disconnect(); intersection.disconnect(); document.removeEventListener('visibilitychange', visibility); media.removeEventListener('change', motion); canvas.removeEventListener('webglcontextlost', lost);
+      host.removeEventListener('pointermove', move); host.removeEventListener('pointerleave', leave);
       if (button) button.removeEventListener('click', toggle);
       const geometries = new Set(), materials = new Set();
       scene.traverse(object => { if (object.geometry) geometries.add(object.geometry); if (object.material) (Array.isArray(object.material) ? object.material : [object.material]).forEach(m => materials.add(m)); });

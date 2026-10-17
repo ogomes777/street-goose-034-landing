@@ -106,19 +106,7 @@
   height: 120px;
   justify-self: end;
 }
-#top .sg-rank-stone .sg-level-gem { width: 52px; height: 52px; transition: opacity .4s ease; }
-#top .sg-ranking-crystal-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity .5s ease;
-}
-#top .sg-ranking-preview-list.has-crystal .sg-ranking-crystal-canvas { opacity: 1; }
-#top .sg-ranking-preview-list.has-crystal .sg-rank-stone .sg-level-gem { opacity: 0; }
+#top .sg-rank-stone .sg-level-gem.sg-level-gem { width: 100%; height: 100%; }
 
 @media (hover:hover) and (pointer:fine) {
   #top .sg-ranking-preview-card:hover {
@@ -166,11 +154,6 @@
   #top .sg-rank-id b { font-size: 17px; }
 }
 @media (prefers-reduced-motion:reduce) {
-  #top .sg-ranking-preview-card,
-  #top .sg-ranking-crystal-canvas,
-  #top .sg-rank-stone .sg-level-gem { transition: none; }
+  #top .sg-ranking-preview-card { transition: none; }
   #top .sg-ranking-preview-card:hover { translate: none; }
 }
-#top .sg-ranking-preview-list.has-crystal .sg-rank-stone .sg-level-gem :is(svg),
-#top .sg-ranking-preview-list.has-crystal .sg-rank-stone .sg-level-gem::before,
-#top .sg-ranking-preview-list.has-crystal .sg-rank-stone .sg-level-gem::after { animation: none; }
