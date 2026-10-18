@@ -1,4 +1,5 @@
 import { levelGem, PODIUM_GEM_LEVELS } from './level-gems.js';
+import { QualityGovernor } from '../src/components/ranking-crystal/crystal-quality.ts';
 
 /* Decorative only: names, places and XP remain accessible HTML from real data.
    The three podium stones are the shared refractive crystals (gem-field),
@@ -95,6 +96,13 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }`;
 
+// Shows the nebula texture as is (no encoding, no tone mapping), exactly as
+// the nebula shader would have written it straight to the screen.
+const NEBULA_SHOW_FRAG = `
+uniform sampler2D tMap;
+varying vec2 vUv;
+void main() { gl_FragColor = texture2D(tMap, vUv); }`;
+
 const BEAM_VERT = `
 varying vec2 vUv;
 varying float vFacing;
@@ -177,6 +185,16 @@ export async function mountRankingScene(host) {
     catch (_) { return; }
     const pixelRatio = calm ? 1 : Math.min(devicePixelRatio || 1, small ? 1.25 : 1.6);
     renderer.setPixelRatio(pixelRatio);
+    // Same governor as the crystals: if this device can't hold the frame
+    // rate, the resolution steps down (never below 60 %) instead of the
+    // animation stuttering, and climbs back once there is headroom. Phones
+    // draw at 30 fps, so "slow" there means under ~22 fps.
+    const governor = new QualityGovernor(calm || small
+      ? { levels: [1, .85, .72, .6], downMs: 45, upMs: 36, downFrames: 20, upFrames: 180, cooldownFrames: 45, ignoreMs: 400 }
+      : { levels: [1, .85, .72, .6], downFrames: 30, cooldownFrames: 60, ignoreMs: 400 });
+    // Reading shader logs forces each compile to finish on the spot (a long
+    // freeze when the page opens); the shaders are fixed, so only dev checks.
+    renderer.debug.checkShaderErrors = !!import.meta.env.DEV;
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1;
@@ -205,9 +223,23 @@ export async function mountRankingScene(host) {
     };
 
     // 1 · Nebula: a screen-filling backdrop that always covers the view.
-    const nebulaUniforms = { uTime: { value: 0 }, uOctaves: { value: calm ? 3 : small ? 4 : 6 } }; timeUniforms.push(nebulaUniforms.uTime);
-    const nebula = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ vertexShader: NEBULA_VERT, fragmentShader: NEBULA_FRAG, uniforms: nebulaUniforms, depthWrite: false, depthTest: false, toneMapped: false }));
+    // Domain-warped noise is the costliest pixel of the scene, yet it drifts
+    // about 1 % per second: it is painted at half resolution into its own
+    // texture, refreshed four times a second, and shown stretched (soft
+    // clouds look the same), instead of being recomputed on every frame.
+    const nebulaUniforms = { uTime: { value: 0 }, uOctaves: { value: calm ? 3 : small ? 4 : 6 } };
+    const nebulaTarget = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false, stencilBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false });
+    const nebulaScene = new THREE.Scene(), nebulaCam = new THREE.OrthographicCamera(-.5, .5, .5, -.5, 0, 1);
+    const nebulaPaint = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ vertexShader: NEBULA_VERT, fragmentShader: NEBULA_FRAG, uniforms: nebulaUniforms, depthWrite: false, depthTest: false, toneMapped: false }));
+    nebulaPaint.position.z = -.5; nebulaScene.add(nebulaPaint);
+    const nebula = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ vertexShader: NEBULA_VERT, fragmentShader: NEBULA_SHOW_FRAG, uniforms: { tMap: { value: nebulaTarget.texture } }, depthWrite: false, depthTest: false, toneMapped: false }));
     nebula.position.z = -90; nebula.renderOrder = -10; camera.add(nebula);
+    let nebulaAt = -1;
+    function paintNebula(time, force) {
+      if (!force && nebulaAt >= 0 && Math.abs(time - nebulaAt) < .25) return;
+      nebulaAt = time; nebulaUniforms.uTime.value = time;
+      renderer.setRenderTarget(nebulaTarget); renderer.render(nebulaScene, nebulaCam); renderer.setRenderTarget(null);
+    }
 
     // 2 · Background stars with individual twinkle.
     const STARS = calm ? 700 : small ? 1600 : 3600;
@@ -337,11 +369,14 @@ export async function mountRankingScene(host) {
       host.dispatchEvent(new CustomEvent('sg:ranking-motion', { bubbles: true, detail: { paused } }));
       if (button) { button.textContent = paused ? 'Reproduzir animação' : 'Pausar animação'; button.setAttribute('aria-pressed', String(paused)); }
     }
+    function floatGems(time) {
+      anchors.forEach((anchor, i) => { anchor.position.y = heights[i] + 1.12 + (paused ? 0 : Math.sin(time * 1.3 + i * 1.7) * .12); });
+    }
     function pose(time, dt) {
       const reveal = paused ? 1 : Math.min(1, time / 1.2);
       timeUniforms.forEach(u => { u.value = time; });
+      floatGems(time);
       anchors.forEach((anchor, i) => {
-        anchor.position.y = heights[i] + 1.12 + (paused ? 0 : Math.sin(time * 1.3 + i * 1.7) * .12);
         gemGlows[i].position.y = anchor.position.y;
         gemGlows[i].material.opacity = (.24 + (1 + Math.sin(time * 1.6 + i)) * .05) * reveal;
       });
@@ -366,34 +401,43 @@ export async function mountRankingScene(host) {
       }
       placeGems();
     }
+    // Time and the floating stones advance on every display frame, so the
+    // crystals glide even where the galaxy itself is drawn at 30 fps.
+    let lastTick = 0;
     function draw(t) {
       frame = 0;
       if (stopped || contextLost || !visible || document.hidden || paused) return;
+      animationTime += Math.min(.1, Math.max(0, (t - lastTick) * .001)); lastTick = t;
       if (t - last >= minFrame) {
-        const dt = Math.min(.1, Math.max(0, (t - last) * .001));
-        animationTime += dt;
-        pose(animationTime, dt);
+        if (governor.sample(t - last)) resize();
+        pose(animationTime, Math.min(.1, Math.max(0, (t - last) * .001)));
+        paintNebula(animationTime);
         renderer.render(scene, camera); last = t;
+      } else {
+        floatGems(animationTime); placeGems();
       }
       frame = requestAnimationFrame(draw);
     }
-    function resume() { if (!stopped && !contextLost && !frame && visible && !document.hidden && !paused) { last = performance.now(); frame = requestAnimationFrame(draw); } }
+    function resume() { if (!stopped && !contextLost && !frame && visible && !document.hidden && !paused) { governor.reset(); last = lastTick = performance.now(); frame = requestAnimationFrame(draw); } }
     let camZoom = 1;
     function resize() {
       if (contextLost) return;
       const rect = host.getBoundingClientRect(); if (!rect.width || !rect.height) return;
       width = rect.width; height = rect.height;
+      const ratio = pixelRatio * governor.scale;
+      renderer.setPixelRatio(ratio);
       renderer.setSize(width, height, false); camera.aspect = width / height;
+      nebulaTarget.setSize(Math.max(1, Math.ceil(width * ratio * 1.05 * .5)), Math.max(1, Math.ceil(height * ratio * 1.05 * .5)));
       camZoom = 1 / Math.min(1, Math.max(.78, camera.aspect));
       camera.updateProjectionMatrix();
       // Nebula plane fills the frustum at its depth.
       const hNear = 2 * Math.tan(camera.fov * Math.PI / 360) * 90;
       nebula.scale.set(hNear * camera.aspect * 1.05, hNear * 1.05, 1);
-      const scale = height * pixelRatio * .5 / Math.tan(camera.fov * Math.PI / 360);
+      const scale = height * ratio * .5 / Math.tan(camera.fov * Math.PI / 360);
       scaleUniforms.forEach(u => { u.value = scale; });
-      pose(animationTime, 0); renderer.render(scene, camera);
+      pose(animationTime, 0); paintNebula(animationTime, true); renderer.render(scene, camera);
     }
-    function toggle() { paused = !paused; syncButton(); if (paused) { cancelAnimationFrame(frame); frame = 0; pose(animationTime, 0); renderer.render(scene, camera); } else resume(); }
+    function toggle() { paused = !paused; syncButton(); if (paused) { cancelAnimationFrame(frame); frame = 0; pose(animationTime, 0); paintNebula(animationTime, true); renderer.render(scene, camera); } else resume(); }
     function motion(e) { paused = e.matches; syncButton(); cancelAnimationFrame(frame); frame = 0; resize(); resume(); }
     function visibility() { if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else resume(); }
     function lost(e) { e.preventDefault(); contextLost = true; cancelAnimationFrame(frame); frame = 0; host.classList.remove('has-webgl'); }
@@ -417,6 +461,7 @@ export async function mountRankingScene(host) {
       if (button) button.removeEventListener('click', toggle);
       const geometries = new Set(), materials = new Set();
       scene.traverse(object => { if (object.geometry) geometries.add(object.geometry); if (object.material) (Array.isArray(object.material) ? object.material : [object.material]).forEach(m => materials.add(m)); });
+      nebulaPaint.geometry.dispose(); nebulaPaint.material.dispose(); nebulaTarget.dispose();
       geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); textures.forEach(texture => texture.dispose()); renderer.dispose(); host.classList.remove('has-webgl');
     };
   })().catch(() => {});
