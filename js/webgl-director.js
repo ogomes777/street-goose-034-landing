@@ -1,3 +1,4 @@
+import { QualityGovernor } from "../src/components/ranking-crystal/crystal-quality.ts";
 /* Street Goose 034 — director WebGL compartilhado (Payment Terminal, final-act
    e newsletter). Um único WebGLRenderer, um único canvas, um único
    requestAnimationFrame pras três cenas novas desta rodada — nunca três
@@ -22,7 +23,13 @@
     return;
   }
   var isDesktop = window.innerWidth > 900;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isDesktop ? 1.5 : 1.25));
+  var basePixelRatio = Math.min(window.devicePixelRatio || 1, isDesktop ? 1.5 : 1.25);
+  renderer.setPixelRatio(basePixelRatio);
+  // A device that can't hold the frame rate gets a lower resolution (down
+  // to 55 %), never a scene that stops; it climbs back with headroom.
+  // "Slow" is under ~25 fps: iOS Low Power Mode caps every page at 30 fps,
+  // and that cap is not a reason to blur the scene.
+  var governor = new QualityGovernor({ downMs: 40, upMs: 24, ignoreMs: 400 });
   if ("outputEncoding" in renderer) renderer.outputEncoding = THREE.sRGBEncoding;
 
   var scenes = {};
@@ -30,7 +37,9 @@
   var contextLost = false;
 
   canvas.addEventListener("webglcontextlost", function (e) { e.preventDefault(); contextLost = true; }, false);
-  canvas.addEventListener("webglcontextrestored", function () { contextLost = false; sizedFor = null; resize(); }, false);
+  // iOS drops WebGL contexts after long sessions or under memory pressure:
+  // once restored, the active scene must start drawing again by itself.
+  canvas.addEventListener("webglcontextrestored", function () { contextLost = false; sizedFor = null; resize(); run(); }, false);
 
   function registerScene(id, def) { scenes[id] = def; }
 
@@ -55,7 +64,7 @@
   }
 
   function activate(id, container) {
-    if (!scenes[id] || retired) return;
+    if (!scenes[id]) return;
     var wasActive = activeId === id && canvas.parentElement === container;
     activeId = id;
     if (canvas.parentElement !== container) container.appendChild(canvas);
@@ -86,10 +95,6 @@
   var MIN_VISIBLE_RATIO = 0.04;
   function reportVisibility(id, ratio, container) {
     visibility[id] = { ratio: ratio, container: container };
-    if (retired) {
-      if (id === activeId && ratio <= MIN_VISIBLE_RATIO) { activeId = null; canvas.style.display = "none"; }
-      return;
-    }
     var bestId = null, bestRatio = MIN_VISIBLE_RATIO;
     Object.keys(visibility).forEach(function (key) {
       var v = visibility[key];
@@ -109,31 +114,28 @@
   var overlayOpen = document.body.classList.contains("category-page-open");
   window.addEventListener("sg:overlay", function (e) { overlayOpen = !!(e.detail && e.detail.open); });
 
-  // The loop only exists while a scene is active (and stops for good if the
-  // runtime guard drops the device to the calm tier).
+  // The loop only exists while a scene is active.
   var clock = new THREE.Clock();
-  var raf = 0, retired = false;
+  var raf = 0;
   function tick() {
     raf = 0;
-    if (!activeId || contextLost || retired) return;
+    if (!activeId || contextLost) return;
     raf = requestAnimationFrame(tick);
     if (overlayOpen) return;
     var s = scenes[activeId];
     if (!s) return;
-    var dt = Math.min(clock.getDelta(), 0.05);
+    var raw = clock.getDelta();
+    if (governor.sample(raw * 1000)) {
+      renderer.setPixelRatio(basePixelRatio * governor.scale);
+      sizedFor = null;
+      resize();
+    }
+    var dt = Math.min(raw, 0.05);
     if (s.onFrame) s.onFrame(dt);
     renderer.render(s.scene, s.camera);
   }
-  function run() { if (!raf && activeId && !retired) { clock.getDelta(); raf = requestAnimationFrame(tick); } }
+  function run() { if (!raf && activeId) { clock.getDelta(); governor.reset(); raf = requestAnimationFrame(tick); } }
   clock.start();
-  // Calm tier: stop rendering at once. The last frame stays on screen (no
-  // scene vanishing under the visitor's eyes); the canvas is hidden once its
-  // section has left the viewport.
-  window.addEventListener("sg:perf-low", function () {
-    retired = true;
-    if (raf) cancelAnimationFrame(raf); raf = 0;
-    if (!activeId) canvas.style.display = "none";
-  });
 
   var resizeTimer;
   addEventListener("resize", function () {

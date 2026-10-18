@@ -175,6 +175,10 @@ export async function mountRankingScene(host) {
   const dispose = () => { stopped = true; cleanup(); };
   const ready = (async () => {
     const THREE = await import('three');
+    // Let the page paint first (names, podium, copy): building the scene
+    // compiles shaders, and doing it before that first paint is what makes
+    // the tap into the constellation feel frozen.
+    await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
     if (stopped || !host.isConnected) return;
     const canvas = host.querySelector('canvas');
     const small = matchMedia('(max-width: 720px), (pointer: coarse)').matches;
@@ -451,13 +455,11 @@ export async function mountRankingScene(host) {
     const intersection = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; if (!visible) { cancelAnimationFrame(frame); frame = 0; } else resume(); }); intersection.observe(host);
     canvas.addEventListener('webglcontextlost', lost); document.addEventListener('visibilitychange', visibility); media.addEventListener('change', motion);
     host.addEventListener('pointermove', move); host.addEventListener('pointerleave', leave);
-    const retire = () => { if (!paused) toggle(); };
-    window.addEventListener('sg:perf-low', retire);
     if (button) button.addEventListener('click', toggle);
     host.classList.add('has-webgl'); syncButton(); resize(); resume();
     cleanup = () => {
       cancelAnimationFrame(frame); observer.disconnect(); intersection.disconnect(); document.removeEventListener('visibilitychange', visibility); media.removeEventListener('change', motion); canvas.removeEventListener('webglcontextlost', lost);
-      host.removeEventListener('pointermove', move); host.removeEventListener('pointerleave', leave); window.removeEventListener('sg:perf-low', retire);
+      host.removeEventListener('pointermove', move); host.removeEventListener('pointerleave', leave);
       if (button) button.removeEventListener('click', toggle);
       const geometries = new Set(), materials = new Set();
       scene.traverse(object => { if (object.geometry) geometries.add(object.geometry); if (object.material) (Array.isArray(object.material) ? object.material : [object.material]).forEach(m => materials.add(m)); });

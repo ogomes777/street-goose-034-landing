@@ -13,9 +13,10 @@
      - medium: scenes run with less density and resolution;
      - high:   everything.
      A modern phone lands in medium/high; old phones, low-memory devices,
-     data saver and 2G land in low (weak GPUs are caught in idle time). "?perf=low|medium|high" forces
-     a tier for testing. js/perf-guard.js can still drop to low at runtime if
-     the device stutters for real. */
+     data saver and 2G land in low. "?perf=low|medium|high" forces
+     a tier for testing. The tier is decided once, before anything animates:
+     a scene never switches off mid-visit. Live scenes adapt their resolution
+     instead (QualityGovernor) when a device can't keep up. */
   window.SG.perfTier = (function () {
     var forced = /[?&]perf=(low|medium|high)\b/.exec(location.search);
     if (forced) return forced[1];
@@ -30,8 +31,8 @@
     if (cores <= 2) return "low";
     var ios = /OS (\d+)_\d+(?:_\d+)? like Mac OS X/.exec(ua);
     if (ios && Number(ios[1]) < 15) return "low";
-    // The GPU is read later, in idle time (js/perf-guard.js): creating a
-    // context here would block the first paint on exactly the weak devices.
+    // No WebGL probe here: creating a context would block the first paint on
+    // exactly the weak devices; each scene adapts its resolution instead.
     // ~2–4 ms on a current phone, 15+ ms on an entry-level one. Best of three
     // short runs (one GC pause must not condemn a good phone), and no property
     // lookups inside the timed loop: the production obfuscator rewrites

@@ -31,6 +31,9 @@
 
   var scrollY = 0;
   var currentTeardown = null;
+  // Bumped on every open/close: a page whose code is still downloading when
+  // the visitor has already moved on must not open afterwards.
+  var routeToken = 0;
   var categoryModule = null;
   var appModules = {};
 
@@ -77,15 +80,25 @@
   }
 
   async function openCategory(slug) {
-    if (!categoryModule) categoryModule = await import("./category-page.js");
-    setPortalPreviewsPaused(true);
-    lockScroll();
+    var token = ++routeToken;
+    try {
+      if (!categoryModule) categoryModule = await import("./category-page.js");
+    } catch (err) { return; }
+    if (token !== routeToken) return;
+    // Category to category: close the previous one, keep the saved scroll.
+    if (currentTeardown) { currentTeardown(); currentTeardown = null; }
+    var alreadyOpen = !catOverlay.hidden;
+    if (!alreadyOpen) {
+      setPortalPreviewsPaused(true);
+      lockScroll();
+    }
     catOverlay.hidden = false;
-    setOverlayOpen(true);
+    if (!alreadyOpen) setOverlayOpen(true);
     currentTeardown = categoryModule.mountCategoryPage(catOverlay, slug, requestClose);
   }
 
   function closeCategory() {
+    routeToken++;
     if (currentTeardown) { currentTeardown(); currentTeardown = null; }
     catOverlay.hidden = true;
     catOverlay.innerHTML = "";
@@ -97,16 +110,28 @@
   async function openAppRoute(path, params) {
     var loader = APP_LOADERS[path];
     if (!loader) return;
-    if (!appModules[path]) appModules[path] = await loader();
-    setPortalPreviewsPaused(true);
-    lockScroll();
+    var token = ++routeToken;
+    try {
+      if (!appModules[path]) appModules[path] = await loader();
+    } catch (err) { return; }
+    if (token !== routeToken) return;
+    // Page to page (ranking -> benefits): close the previous page first, so
+    // its scene and listeners never keep running hidden, and keep the home
+    // scroll position saved when the first page opened.
+    if (currentTeardown) { currentTeardown(); currentTeardown = null; }
+    var alreadyOpen = !appOverlay.hidden;
+    if (!alreadyOpen) {
+      setPortalPreviewsPaused(true);
+      lockScroll();
+    }
     appOverlay.hidden = false;
     appOverlay.setAttribute("data-active-route", path);
-    setOverlayOpen(true);
+    if (!alreadyOpen) setOverlayOpen(true);
     currentTeardown = appModules[path](appOverlay, params, requestClose);
   }
 
   function closeAppRoute() {
+    routeToken++;
     if (currentTeardown) { currentTeardown(); currentTeardown = null; }
     appOverlay.hidden = true;
     appOverlay.innerHTML = "";
@@ -144,6 +169,7 @@
       return;
     }
     if (!appOverlay.hidden) closeAppRoute();
+    else routeToken++; // back home while a page was still downloading
   }
 
   function navigate(path) {

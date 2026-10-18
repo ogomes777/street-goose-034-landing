@@ -5,11 +5,14 @@
    previous seek lands ("seeked"), and moves under ~1 frame are skipped.
    A seek that never reports back (iOS drops "seeked" when a load is
    interrupted or memory is tight) must not freeze the film: a watchdog frees
-   the slot, and a reload/abort resets it, so the last target always lands. */
+   the slot, and a reload/abort resets it, so the last target always lands.
+   After a long visit iOS may also evict the decoded video entirely
+   (readyState back to 0): the next seek reloads it once and lands the
+   target as soon as the frames are back. */
 export function createVideoScrubber(video, minStep) {
   if (!video) return function () {};
   var step = minStep || 1 / 30;
-  var pending = null, busy = false, last = -1, watchdog = 0;
+  var pending = null, busy = false, last = -1, watchdog = 0, reloading = false;
   function release() {
     busy = false;
     clearTimeout(watchdog);
@@ -27,8 +30,19 @@ export function createVideoScrubber(video, minStep) {
   ["emptied", "abort"].forEach(function (type) {
     video.addEventListener(type, function () { last = -1; release(); });
   });
+  video.addEventListener("loadeddata", function () {
+    if (!reloading) return;
+    reloading = false; last = -1;
+    if (pending !== null && !busy) { var t = pending; pending = null; apply(t); }
+  });
   return function seek(t) {
     if (!isFinite(t)) return;
+    // Frames evicted after the film had loaded: reload once, keep the target.
+    if (video.readyState === 0 && video.getAttribute("preload") === "auto") {
+      pending = t;
+      if (!reloading) { reloading = true; try { video.load(); } catch (e) { reloading = false; } }
+      return;
+    }
     if (busy) pending = t; else apply(t);
   };
 }
