@@ -20,3 +20,9 @@ it('rejects saving stale profile data after an account switch',async()=>{
  expect(await CustomerService.saveMine({full_name:'Old account'},'expected-account')).toBe(false);
  expect(mocks.from).not.toHaveBeenCalled();
 });
+
+import {validPhone} from './CustomerService';
+describe('phone validation (onboarding requires it)',()=>{
+ it('accepts mobiles and landlines with DDD, with or without +55 and formatting',()=>{for(const phone of ['(34) 99999-1234','34999991234','+55 34 99999-1234','5534999991234','(34) 3333-1234','3433331234']) expect(validPhone(phone)).toBe(true);});
+ it('rejects missing DDD, short numbers, 11-digit numbers not starting with 9 and empty input',()=>{for(const phone of ['','99999-1234','3499999','34899991234','(04) 99999-1234']) expect(validPhone(phone)).toBe(false);});
+});

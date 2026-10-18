@@ -12,6 +12,14 @@ export function validCpf(value: string): boolean {
  }
  return true;
 }
+/* Brazilian phone: DDD + number (10 digits landline, 11 mobile starting
+   with 9), with or without +55 and any formatting. */
+export function validPhone(value: string): boolean {
+ let digits = value.replace(/\D/g, "");
+ if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) digits = digits.slice(2);
+ if (!/^[1-9][1-9]\d{8,9}$/.test(digits)) return false;
+ return digits.length === 10 || digits[2] === "9";
+}
 export const CustomerService = {
  async getMine(): Promise<CustomerDetails> {
   if (!supabase) return {};
