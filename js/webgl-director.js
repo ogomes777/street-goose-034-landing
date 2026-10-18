@@ -30,15 +30,21 @@
   var contextLost = false;
 
   canvas.addEventListener("webglcontextlost", function (e) { e.preventDefault(); contextLost = true; }, false);
-  canvas.addEventListener("webglcontextrestored", function () { contextLost = false; resize(); }, false);
+  canvas.addEventListener("webglcontextrestored", function () { contextLost = false; sizedFor = null; resize(); }, false);
 
   function registerScene(id, def) { scenes[id] = def; }
 
+  // activate() runs on every visibility threshold while scrolling. setSize
+  // reallocates (and clears) the drawing buffer even for the same size, so it
+  // only runs when the box really changed or another scene took the canvas.
+  var sizedW = 0, sizedH = 0, sizedFor = null;
   function resize() {
     if (!activeId || !canvas.parentElement) return;
     var parent = canvas.parentElement;
     var w = parent.clientWidth, h = parent.clientHeight;
     if (!w || !h) return;
+    if (w === sizedW && h === sizedH && sizedFor === activeId) return;
+    sizedW = w; sizedH = h; sizedFor = activeId;
     renderer.setSize(w, h, false);
     var s = scenes[activeId];
     if (s && s.camera && s.camera.isPerspectiveCamera) {
@@ -80,6 +86,10 @@
   var MIN_VISIBLE_RATIO = 0.04;
   function reportVisibility(id, ratio, container) {
     visibility[id] = { ratio: ratio, container: container };
+    if (retired) {
+      if (id === activeId && ratio <= MIN_VISIBLE_RATIO) { activeId = null; canvas.style.display = "none"; }
+      return;
+    }
     var bestId = null, bestRatio = MIN_VISIBLE_RATIO;
     Object.keys(visibility).forEach(function (key) {
       var v = visibility[key];
@@ -116,10 +126,13 @@
   }
   function run() { if (!raf && activeId && !retired) { clock.getDelta(); raf = requestAnimationFrame(tick); } }
   clock.start();
+  // Calm tier: stop rendering at once. The last frame stays on screen (no
+  // scene vanishing under the visitor's eyes); the canvas is hidden once its
+  // section has left the viewport.
   window.addEventListener("sg:perf-low", function () {
-    retired = true; activeId = null;
+    retired = true;
     if (raf) cancelAnimationFrame(raf); raf = 0;
-    canvas.style.display = "none";
+    if (!activeId) canvas.style.display = "none";
   });
 
   var resizeTimer;

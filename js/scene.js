@@ -44,24 +44,30 @@
       sync();
     });
 
+    // Calm tier: stop at once but keep the last frame on screen; the canvas
+    // is hidden only after it leaves the viewport (nothing vanishes mid-view).
     var retired = false;
     window.addEventListener("sg:perf-low", function () {
       retired = true; stop();
-      canvas.style.display = "none";
+      if (!visible) canvas.style.display = "none";
     });
 
     function sync() {
+      if (retired && !visible) canvas.style.display = "none";
       var shouldRun = visible && !document.hidden && !overlayOpen && !retired;
       if (shouldRun && !running) start();
       if (!shouldRun && running) stop();
     }
 
+    function ensureCtx() {
+      if (ctx || retired) return;
+      // A renderer that can't be created (no WebGL, context limit) must
+      // never break the page: the static fallback simply stays.
+      try { ctx = setup(); } catch (e) { ctx = null; retired = true; }
+    }
+
     function start() {
-      if (!ctx) {
-        // A renderer that can't be created (no WebGL, context limit) must
-        // never break the page: the static fallback simply stays.
-        try { ctx = setup(); } catch (e) { ctx = null; retired = true; }
-      }
+      ensureCtx();
       if (!ctx) return;
       running = true;
       ctx.raf = requestAnimationFrame(loop);
@@ -72,11 +78,58 @@
     }
     function loop(t) {
       if (!running || !ctx) return;
-      ctx.tick(t);
+      // The section fades the canvas out while its video plays: an invisible
+      // canvas is not drawn, so the GPU stays free for the video decoder.
+      if (canvas.style.opacity !== "0") ctx.tick(t);
       ctx.raf = requestAnimationFrame(loop);
     }
 
-    window.addEventListener("resize", function () { if (ctx && ctx.resize) ctx.resize(); }, { passive: true });
+    // Build the renderer (shader compile included) ahead of time while the
+    // section is still about a screen away, but only when the page is truly
+    // at rest: no scroll for 400 ms, then 300 ms of smooth frames (>= 40 fps)
+    // with still no scroll. During a fast scroll, or on a device that is
+    // already struggling, it waits; if the visitor never pauses, the
+    // renderer is built on first sight exactly as before.
+    if ("IntersectionObserver" in window) {
+      var warmIo = new IntersectionObserver(function (entries) {
+        if (!entries[0].isIntersecting) return;
+        warmIo.disconnect();
+        var quietTimer = 0, scrolledAt = 0, done = false;
+        var onScroll = function () {
+          scrolledAt = performance.now();
+          clearTimeout(quietTimer);
+          quietTimer = setTimeout(checkSmooth, 400);
+        };
+        var checkSmooth = function () {
+          if (done || ctx || retired) return finish();
+          var start = performance.now(), frames = 0;
+          requestAnimationFrame(function count(now) {
+            if (scrolledAt > start) return; // scrolling again: onScroll re-arms
+            frames++;
+            if (now - start < 300) { requestAnimationFrame(count); return; }
+            if (frames >= 12 && !document.hidden) { finish(); ensureCtx(); }
+            else quietTimer = setTimeout(checkSmooth, 400);
+          });
+        };
+        var finish = function () {
+          done = true;
+          clearTimeout(quietTimer);
+          window.removeEventListener("scroll", onScroll);
+        };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+      }, { rootMargin: "120% 0px 120% 0px" });
+      warmIo.observe(canvas);
+    }
+
+    // Mobile browsers fire resize while the address bar slides during a
+    // scroll; reallocating the WebGL buffer on each one stalls frames. Wait
+    // for the bar to settle, and only resize when the box really changed.
+    var resizeTimer = 0;
+    window.addEventListener("resize", function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () { if (ctx && ctx.resize) ctx.resize(); }, 150);
+    }, { passive: true });
 
     // start check immediately for browsers without IO (visible=true)
     sync();
@@ -120,8 +173,11 @@
     var points = new THREE.Points(geo, mat);
     scene.add(points);
 
+    var sizedW = 0, sizedH = 0;
     function resize() {
       var w = heroEl.clientWidth, h = heroEl.clientHeight;
+      if (!w || !h || (w === sizedW && h === sizedH)) return;
+      sizedW = w; sizedH = h;
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
@@ -203,13 +259,17 @@
     scene.add(fill);
     scene.add(new THREE.AmbientLight(0x141a1e, 1));
 
+    var sizedW = 0, sizedH = 0;
     function resize() {
       var w = wrap.clientWidth, h = wrap.clientHeight;
+      if (!w || !h || (w === sizedW && h === sizedH)) return;
+      sizedW = w; sizedH = h;
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
     }
     resize();
+    renderer.compile(scene, camera);
 
     var mouseX = 0, mouseY = 0;
     wrap.addEventListener("pointermove", function (e) {

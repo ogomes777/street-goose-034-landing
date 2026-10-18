@@ -20,7 +20,7 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
         if (!entries.some(function (e) { return e.isIntersecting; })) return;
         video.poster = filmPoster;
         posterObserver.disconnect();
-      }, { rootMargin: "1500px 0px" });
+      }, { rootMargin: "250% 0px" });
       posterObserver.observe(section);
     } else {
       video.poster = filmPoster;
@@ -31,6 +31,14 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
   var canvas = section.querySelector("[data-film-canvas]");
   var productWrap = section.querySelector("[data-film-product-wrap]");
   var productImg = section.querySelector("[data-film-product]");
+  // WebP lens (same pixels as the PNG, a fifth of the weight); browsers
+  // without WebP (iOS < 14) get the original file.
+  if (productImg) {
+    var productFallback = new URL("../assets/lupa-animacao-png.png", import.meta.url).href;
+    var useFallback = function () { if (productImg.src !== productFallback) productImg.src = productFallback; };
+    productImg.addEventListener("error", useFallback, { once: true });
+    if (productImg.complete && productImg.naturalWidth === 0 && productImg.currentSrc) useFallback();
+  }
   var copyEl = section.querySelector("[data-film-copy]");
   var chapterEl = section.querySelector("[data-film-chapter]");
   var headingEl = section.querySelector("h2", copyEl);
@@ -78,6 +86,9 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
   var filmST = null;
   var duration = 0;
   function startPreload() {
+    // Decode the lens ahead of time: a 1254px image decoded on the frame it
+    // first appears is a visible hitch in a fast scroll.
+    if (productImg && productImg.decode) productImg.decode().catch(function () {});
     if (!video || video.getAttribute("preload") === "auto") return;
     video.setAttribute("preload", "auto");
     video.load();
@@ -92,7 +103,7 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
   if ("IntersectionObserver" in window) {
     var preloadIo = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) { if (e.isIntersecting) { startPreload(); preloadIo.disconnect(); } });
-    }, { rootMargin: "150% 0px 150% 0px" });
+    }, { rootMargin: "250% 0px 250% 0px" });
     preloadIo.observe(section);
   } else {
     startPreload();
