@@ -70,3 +70,29 @@ describe("createVideoScrubber", () => {
     expect(video.seeks).toEqual([1]);
   });
 });
+
+describe("createVideoScrubber after the browser evicts the video", () => {
+  it("reloads once and lands the latest target when frames are back", () => {
+    let readyState = 4;
+    let loads = 0;
+    const listeners: Record<string, (() => void)[]> = {};
+    const seeks: number[] = [];
+    const video = {
+      get readyState() { return readyState; },
+      getAttribute: (name: string) => (name === "preload" ? "auto" : null),
+      load() { loads++; },
+      addEventListener(type: string, fn: () => void) { (listeners[type] ||= []).push(fn); },
+      currentTime: 0,
+    };
+    Object.defineProperty(video, "currentTime", { get: () => 0, set: (t: number) => { seeks.push(t); } });
+    const seek = createVideoScrubber(video);
+    readyState = 0;
+    seek(1);
+    seek(2);
+    expect(loads).toBe(1);
+    expect(seeks).toEqual([]);
+    readyState = 4;
+    (listeners.loadeddata || []).forEach((fn) => fn());
+    expect(seeks).toEqual([2]);
+  });
+});

@@ -1,3 +1,4 @@
+import { QualityGovernor } from "../src/components/ranking-crystal/crystal-quality.ts";
 /* Street Goose 034 — Three.js: atmosfera, não decoração aleatória.
    Hero: poeira óptica direcional. Orbit: anéis metálicos + luz.
    Perf-tiered, pausa fora da viewport, cleanup, fallback sempre visível por padrão. */
@@ -44,16 +45,15 @@
       sync();
     });
 
-    // Calm tier: stop at once but keep the last frame on screen; the canvas
-    // is hidden only after it leaves the viewport (nothing vanishes mid-view).
+    // Set only when the renderer can't be created: the static fallback stays.
     var retired = false;
-    window.addEventListener("sg:perf-low", function () {
-      retired = true; stop();
-      if (!visible) canvas.style.display = "none";
-    });
+    // A device that can't hold the frame rate gets a lower resolution (down
+    // to 55 %), never a scene that stops. "Slow" is under ~25 fps, so the
+    // 30 fps cap of iOS Low Power Mode doesn't blur anything.
+    var governor = new QualityGovernor({ downMs: 40, upMs: 24, ignoreMs: 400 });
+    var lastFrame = 0;
 
     function sync() {
-      if (retired && !visible) canvas.style.display = "none";
       var shouldRun = visible && !document.hidden && !overlayOpen && !retired;
       if (shouldRun && !running) start();
       if (!shouldRun && running) stop();
@@ -70,6 +70,7 @@
       ensureCtx();
       if (!ctx) return;
       running = true;
+      governor.reset(); lastFrame = 0;
       ctx.raf = requestAnimationFrame(loop);
     }
     function stop() {
@@ -80,7 +81,11 @@
       if (!running || !ctx) return;
       // The section fades the canvas out while its video plays: an invisible
       // canvas is not drawn, so the GPU stays free for the video decoder.
-      if (canvas.style.opacity !== "0") ctx.tick(t);
+      if (canvas.style.opacity !== "0") {
+        if (lastFrame && governor.sample(t - lastFrame) && ctx.setScale) ctx.setScale(governor.scale);
+        lastFrame = t;
+        ctx.tick(t);
+      } else lastFrame = 0;
       ctx.raf = requestAnimationFrame(loop);
     }
 
@@ -146,7 +151,8 @@
     if (!canvas || !heroEl || !THREE_OK) return;
 
     var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: false, powerPreference: "low-power" });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth > 900 ? 1.5 : 1.25));
+    var basePixelRatio = Math.min(window.devicePixelRatio || 1, window.innerWidth > 900 ? 1.5 : 1.25);
+    renderer.setPixelRatio(basePixelRatio);
 
     var scene = new THREE.Scene();
     var camera = new THREE.PerspectiveCamera(50, 1, 0.1, 50);
@@ -196,6 +202,7 @@
     var pos = geo.attributes.position;
     return {
       resize: resize,
+      setScale: function (scale) { renderer.setPixelRatio(basePixelRatio * scale); sizedW = 0; resize(); },
       tick: function (t) {
         for (var i = 0; i < COUNT; i++) {
           var idx = i * 3;
@@ -215,7 +222,8 @@
     if (!canvas || !wrap || !THREE_OK) return;
 
     var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true, powerPreference: "low-power" });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth > 900 ? 1.75 : 1.25));
+    var basePixelRatio = Math.min(window.devicePixelRatio || 1, window.innerWidth > 900 ? 1.75 : 1.25);
+    renderer.setPixelRatio(basePixelRatio);
 
     var scene = new THREE.Scene();
     var camera = new THREE.PerspectiveCamera(40, 1, 0.1, 60);
@@ -280,6 +288,7 @@
 
     return {
       resize: resize,
+      setScale: function (scale) { renderer.setPixelRatio(basePixelRatio * scale); sizedW = 0; resize(); },
       tick: function (t) {
         var s = t * 0.00009;
         group.rotation.y = s + mouseX * 0.35;

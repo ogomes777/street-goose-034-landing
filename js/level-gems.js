@@ -72,15 +72,16 @@ export function liveGems(root, options) {
   let field = null, dead = false, paused = false;
   // Calm tier: the posters are the same render, frozen; no WebGL at all.
   if (window.SG && window.SG.perfTier === 'low') return { refresh() {}, setPaused() {}, destroy() {} };
-  const retire = () => { field?.destroy(); field = null; dead = true; };
-  window.addEventListener('sg:perf-low', retire, { once: true });
   if (getComputedStyle(root).position === 'static') root.style.position = 'relative';
   import('../src/components/ranking-crystal/gem-field.ts')
+    // Two frames later: the page (and the posters) paint before the crystal
+    // shader compiles, and it never lands in the same task as another scene.
+    .then(mod => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => resolve(mod), 0)))))
     .then(mod => { if (dead || !root.isConnected) return; field = mod.mountGemField(root, options); if (paused) field.setPaused(true); })
     .catch(error => console.warn('[SG034] Crystal module failed to load, keeping gem posters.', error));
   return {
     refresh() { field?.refresh(); },
     setPaused(value) { paused = value; field?.setPaused(value); },
-    destroy() { dead = true; window.removeEventListener('sg:perf-low', retire); field?.destroy(); field = null; },
+    destroy() { dead = true; field?.destroy(); field = null; },
   };
 }

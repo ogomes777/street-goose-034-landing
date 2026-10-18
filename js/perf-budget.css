@@ -15,7 +15,7 @@
   .noise, .grain { display: none; }
 }
 
-/* Calm tier (js/motion.js, js/perf-guard.js): no live blur, no idle loops. */
+/* Calm tier (js/motion.js, decided at load): no live blur, no idle loops. */
 .sg-perf-low .noise,
 .sg-perf-low .grain { display: none; }
 .sg-perf-low * {

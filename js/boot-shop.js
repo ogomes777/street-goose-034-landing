@@ -17,4 +17,3 @@ import './community-home.js';
 import './main.js';
 import './final-act-motion.js';
 import './payment-terminal.js';
-import './perf-guard.js';
