@@ -451,7 +451,9 @@
   position: absolute;
   left: max(24px, calc((100vw - var(--max)) / 2));
   bottom: clamp(88px, 12vh, 132px);
-  z-index: 30;
+  /* Above the bottom fade (sticky::after, z 40): the shadow must never eat
+     the headline, on any screen size. */
+  z-index: 45;
   width: min(43vw, 650px);
   opacity: 0;
   transform: translateY(22px);
@@ -704,6 +706,15 @@
 
   .sg-character-hero__sticky {
     min-height: 560px;
+    /* No 3D context on phones: iOS Safari sorts translateZ layers by depth
+       and ignores z-index, which put the front haze and rings over the
+       copy. Touch has no pointer parallax, so depth adds nothing here. */
+    perspective: none;
+  }
+
+  /* The fade only softens the hand-off at the very bottom, below the copy. */
+  .sg-character-hero__sticky::after {
+    height: 10vh;
   }
 
   .sg-character-hero__sticky::before {
@@ -756,7 +767,7 @@
   .sg-character-hero__copy {
     left: 18px;
     right: 18px;
-    bottom: max(70px, calc(env(safe-area-inset-bottom) + 58px));
+    bottom: max(92px, calc(env(safe-area-inset-bottom) + 80px)); /* clears the fixed sound player */
     width: auto;
   }
 
@@ -878,5 +889,13 @@
   .sg-atmosphere--front,
   .sg-lens-reflection__specular {
     display: none;
+  }
+}
+
+/* Touch tablets (iPad) share the Safari depth-sorting issue described in
+   the phone block: keep the copy layer flat and on top. */
+@media (hover: none) and (pointer: coarse) {
+  .sg-character-hero__sticky {
+    perspective: none;
   }
 }
