@@ -1,4 +1,3 @@
-import { createIdentityFireball } from "./identity-fireball.js";
 import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
 /* Street Goose 034 — Hero 3D Identity Film.
    Mascote -> transformação -> personagem -> energia orbital -> assinatura
@@ -23,36 +22,10 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
   var sweep = section.querySelector("[data-hero3d-sweep]");
   var kicker = section.querySelector("[data-hero3d-kicker]");
   var sticky = section.querySelector(".hero3d-sticky");
-  var graffiti = section.querySelector("[data-hero3d-graffiti-art]");
-  var graffitiShell = section.querySelector("[data-hero3d-graffiti]");
-  var graffitiDrawing = section.querySelector("[data-hero3d-graffiti-drawing]");
-  var sparksRoot = section.querySelector("[data-hero3d-graffiti-sparks]");
-
-  // Deterministic spark geometry. Reversible, scrub-driven; no timers or
-  // runaway animation loops on Safari mobile.
-  if (sparksRoot && !sparksRoot.children.length) {
-    var frag = document.createDocumentFragment();
-    for (var si = 0; si < 12; si++) {
-      var seed = (si * 61 + 17) % 101 / 101;
-      var a = si * 2.399963229728653;
-      var radius = 40 + (si % 7) * 8;
-      var spark = document.createElement("i");
-      spark.className = "hero3d-graffiti__spark";
-      spark.style.setProperty("--sg-spark-x", (16 + seed * 68).toFixed(2) + "%");
-      spark.style.setProperty("--sg-spark-y", (39 + Math.sin(a) * 17).toFixed(2) + "%");
-      spark.style.setProperty("--sg-spark-size", (1.5 + seed * 2.1).toFixed(2) + "px");
-      spark.style.setProperty("--sg-spark-opacity", (.36 + seed * .64).toFixed(2));
-      spark.style.setProperty("--sg-spark-dx", (Math.cos(a) * radius).toFixed(1) + "px");
-      spark.style.setProperty("--sg-spark-dy", (Math.sin(a) * radius * .85 - 30).toFixed(1) + "px");
-      frag.appendChild(spark);
-    }
-    sparksRoot.appendChild(frag);
-  }
 
 
   var reduced = window.SG.prefersReducedMotion();
   var canScrub = window.SG.hasGSAP && window.ScrollTrigger && !reduced;
-  var fireball = canScrub && window.SG.perfTier !== "low" ? createIdentityFireball(section.querySelector("[data-hero3d-fireball]"), window.SG.perfTier) : null;
 
   window.SG.hero3dOrbitBoost = 0; // lido pela camada de partículas pra sincronizar com a energia do filme
 
@@ -76,30 +49,12 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
     return;
   }
 
-  /* ---------------- Code-controlled metal -> orange -> cobalt graffiti ---------------- */
-  var graffitiTimeline = null;
-  if (graffitiDrawing && window.gsap && typeof window.gsap.timeline === "function") {
-    try {
-      graffitiTimeline = window.gsap.timeline({ paused: true });
-      graffitiTimeline.fromTo(
-        graffitiDrawing,
-        { autoAlpha: 0, y: 68, z: -220, scale: .78, rotationX: -21, rotationY: 5, rotationZ: -1 },
-        { autoAlpha: 1, y: 0, z: 0, scale: 1, rotationX: 0, rotationY: 0, rotationZ: 0,
-          duration: 1, ease: "none", immediateRender: false }
-      );
-      section.classList.add("hero3d-film--motion");
-    } catch (err) {
-      graffitiTimeline = null;
-      section.classList.remove("hero3d-film--motion");
-    }
-  }
 
   /* ---------------- Preload antecipado do vídeo (1.5 viewport antes) ---------------- */
   var videoReady = false;
   var hero3dST = null;
   var duration = 0;
   function startPreload() {
-    section.classList.add("is-near");
     if (video.getAttribute("preload") === "auto") return;
     video.setAttribute("preload", "auto");
     video.load();
@@ -193,7 +148,7 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
       sweepFired = false;
     }
 
-    // saída — o filme sobe e recolhe enquanto o grafite entra pelo mesmo scroll.
+    // saída — o filme sobe e recolhe antes do universo de produtos.
     if (p >= OUT_START) {
       var outT = smoothstep(OUT_START, OUT_END, p);
       scrollScale = 1 - outT * 0.62;
@@ -203,73 +158,6 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
       scrollScale = 1;
       finaleY = 0;
     }
-    // Every chromatic phase is driven by the SAME film progress.
-    // Brighter silver carries the final logo into warm embers, followed by
-    // a sweeping specular blade and a gradual cobalt light takeover.
-    // Reversible on upward scroll, with no extra RAF or timer.
-    var reveal = smoothstep(.845, .955, p);
-    var orangeEnter = smoothstep(.849, .898, p);
-    var orangeFade = 1 - smoothstep(.921, .971, p);
-    var orangeImpact = smoothstep(.866, .900, p) * (1 - smoothstep(.914, .955, p));
-    var cobalt = smoothstep(.903, .991, p);
-    var blueImpact = smoothstep(.916, .953, p) * (1 - smoothstep(.967, .997, p));
-    var blueWave = smoothstep(.923, .997, p);
-    var specular = smoothstep(.855, .912, p) * (1 - smoothstep(.967, .997, p));
-    var sparks = Math.max(orangeImpact * .84, blueImpact);
-    if (graffitiTimeline) graffitiTimeline.progress(reveal);
-    if (graffitiShell) {
-      // The first hit stays orange and saturated before yielding to cobalt.
-      // The second hit is stronger but temporary, so the final frame stays
-      // legible instead of turning into a permanent white bloom.
-      section.style.setProperty("--sg-graffiti-reveal", reveal.toFixed(3));
-      section.style.setProperty("--sg-graffiti-heat",
-        Math.min(1, (.31 + .85 * orangeEnter) * orangeFade).toFixed(3));
-      section.style.setProperty("--sg-graffiti-blue", cobalt.toFixed(3));
-      section.style.setProperty("--sg-orange-impact", orangeImpact.toFixed(3));
-      section.style.setProperty("--sg-blue-impact", blueImpact.toFixed(3));
-      section.style.setProperty("--sg-blue-wave", blueWave.toFixed(3));
-      // Cinematic pressure: distinct hot ignition, cobalt charge and an
-      // expanding front. Everything scrubs both directions without timers.
-      var heatPulse = smoothstep(.856, .896, p) * (1 - smoothstep(.919, .948, p));
-      var blueCharge = smoothstep(.913, .943, p) * (1 - smoothstep(.968, .998, p));
-      var shockTravel = smoothstep(.926, .991, p);
-      section.style.setProperty("--sg-energy-heat", heatPulse.toFixed(3));
-      section.style.setProperty("--sg-energy-cobalt", blueCharge.toFixed(3));
-      section.style.setProperty("--sg-energy-wave", shockTravel.toFixed(3));
-      section.style.setProperty("--sg-energy-lift",
-        smoothstep(.860, .962, p).toFixed(3));
-      // V7 final detonation. Energy compresses around the real 3D fireball,
-      // a transient ice-white cobalt blast expands, then its floor reflection
-      // survives exactly to the next chapter. No timer and fully reversible.
-      // One deliberate crescendo, one clean shockfront, one quiet exit.
-      // Shorter flash prevents whiteout from washing out the original ink.
-      var finalCompression = smoothstep(.939, .965, p);
-      var finalCharge = finalCompression * (1 - smoothstep(.968, .987, p));
-      var finalBlast = smoothstep(.963, .978, p) *
-        (1 - smoothstep(.988, .999, p));
-      var finalWave = smoothstep(.964, .998, p);
-      var finalWhiteout = smoothstep(.970, .980, p) *
-        (1 - smoothstep(.983, .990, p));
-      var finalFallout = smoothstep(.973, .999, p);
-      section.style.setProperty("--sg-final-compression", finalCompression.toFixed(3));
-      section.style.setProperty("--sg-final-charge", finalCharge.toFixed(3));
-      section.style.setProperty("--sg-final-blast", finalBlast.toFixed(3));
-      section.style.setProperty("--sg-final-wave", finalWave.toFixed(3));
-      section.style.setProperty("--sg-final-whiteout", finalWhiteout.toFixed(3));
-      section.style.setProperty("--sg-final-fallout", finalFallout.toFixed(3));
-      section.style.setProperty("--sg-graffiti-drop", smoothstep(.916, 1, p).toFixed(3));
-      section.style.setProperty("--sg-graffiti-light",
-        Math.min(1, reveal * (.50 + orangeImpact * .4 + blueImpact * .48)).toFixed(3));
-      section.style.setProperty("--sg-graffiti-burst", (sparks * .66).toFixed(3));
-      section.style.setProperty("--sg-graffiti-throw", smoothstep(.892, .997, p).toFixed(3));
-      section.style.setProperty("--sg-graffiti-flare", specular.toFixed(3));
-      section.style.setProperty("--sg-graffiti-sweep-x",
-        (-195 + 392 * smoothstep(.857, .977, p)).toFixed(1) + "%");
-    }
-    if (fireball) fireball.update(p,
-      Math.min(1, orangeImpact + (typeof finalCharge === "number" ? finalCharge : 0) * .27),
-      cobalt,
-      Math.min(1, blueImpact + (typeof finalBlast === "number" ? finalBlast : 0) * .48));
     composeStageTransform();
   }
 

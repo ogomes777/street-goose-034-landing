@@ -114,217 +114,14 @@ const expectContainedWithoutOverflow = async (page: Page) => {
   });
 };
 
-test("original graffiti closes the Identity Film as a scroll-driven 3D reveal", async ({ page }) => {
-  const issues = watchRuntimeIssues(page);
-  await openWithoutIntro(page);
-
-  const section = page.locator("[data-hero3d-film]");
-  const artwork = section.locator("[data-hero3d-graffiti-art]");
-  await expect(artwork).toHaveCount(1);
-  await expect(page.locator("section.sg-identity-graffiti")).toHaveCount(0);
-
-  const placement = await artwork.evaluate((image) => {
-    const wrapper = image.closest("[data-hero3d-graffiti]");
-    return {
-      sameSection:
-        wrapper?.closest("section[data-hero3d-film]") ===
-        document.querySelector("section[data-hero3d-film]"),
-      immediatelyAfterVideo: wrapper?.previousElementSibling?.classList.contains("hero3d-sticky") ?? false,
-      wrapperBlendMode: getComputedStyle(wrapper!).mixBlendMode,
-      artBlendMode: getComputedStyle(image).mixBlendMode,
-      background: getComputedStyle(wrapper!).backgroundColor,
-      src: new URL((image as HTMLImageElement).src).pathname,
-    };
-  });
-  expect(placement).toEqual({
-    sameSection: true,
-    immediatelyAfterVideo: true,
-    wrapperBlendMode: "normal",
-    artBlendMode: "luminosity",
-    background: "rgba(0, 0, 0, 0)",
-    src: "/brand/sg034-idvisual-cutout.webp",
-  });
-
-  await waitForActiveHero3d(page);
-  await scrollHero3dTo(page, 0.82);
-  await waitForHero3dMetadata(page);
-  await expect.poll(() => section.locator("[data-hero3d-graffiti-drawing]").evaluate((el) => Number(getComputedStyle(el).opacity))).toBeLessThan(0.05);
-
-  await scrollHero3dTo(page, 0.995);
-  await expect.poll(() => section.locator("[data-hero3d-graffiti-drawing]").evaluate((el) => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0.95);
-  await expect.poll(() => currentFrameProgress(page)).toBeGreaterThan(0.94);
-  await expect.poll(() => artwork.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-  // The source used to be RGB with an opaque black field; assert real alpha.
-  const alpha = await artwork.evaluate((image: HTMLImageElement) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
-    const ctx = canvas.getContext("2d")!;
-    ctx.drawImage(image, 0, 0);
-    return { corner: ctx.getImageData(0, 0, 1, 1).data[3], ink: ctx.getImageData(400, 400, 1, 1).data[3] };
-  });
-  expect(alpha.corner).toBe(0);
-  expect(alpha.ink).toBeGreaterThan(150);
-  await expect.poll(() => section.locator(".hero3d-stage").evaluate(el => Number(getComputedStyle(el).opacity))).toBeLessThan(0.01);
-  await expectContainedWithoutOverflow(page);
-
-  expect(issues.pageErrors).toEqual([]);
-  expect(issues.consoleErrors).toEqual([]);
-  expect(issues.failedRequests).toEqual([]);
-  expect(issues.badResponses).toEqual([]);
-});
-
-test("cinematic orange and cobalt impacts hand off into the product universe", async ({ page }) => {
-  await openWithoutIntro(page);
-  await waitForActiveHero3d(page);
-  const film = page.locator("[data-hero3d-film]");
-  const filmValues = () => film.evaluate((el) => {
-    const css = getComputedStyle(el);
-    return {
-      heat: Number(css.getPropertyValue("--sg-graffiti-heat")),
-      orangeImpact: Number(css.getPropertyValue("--sg-orange-impact")),
-      cobalt: Number(css.getPropertyValue("--sg-graffiti-blue")),
-      blueImpact: Number(css.getPropertyValue("--sg-blue-impact")),
-    };
-  });
-  await scrollHero3dTo(page, .902);
-  await expect.poll(async () => (await filmValues()).heat).toBeGreaterThan(.85);
-  await expect.poll(async () => (await filmValues()).orangeImpact).toBeGreaterThan(.25);
-
-  await scrollHero3dTo(page, .954);
-  await expect.poll(async () => (await filmValues()).cobalt).toBeGreaterThan(.35);
-  await expect.poll(async () => (await filmValues()).blueImpact).toBeGreaterThan(.75);
-
-  await page.evaluate(() => {
-    const universe = document.querySelector<HTMLElement>("[data-universe-stage]")!;
-    window.scrollTo(0, universe.offsetTop + .02 * (universe.offsetHeight - window.innerHeight));
-  });
-  const bridge = page.locator(".universe-sticky");
-  await expect.poll(async () => Number(await bridge.evaluate((el) => getComputedStyle(el).getPropertyValue("--sg-universe-bridge")))).toBeGreaterThan(.80);
-  await page.evaluate(() => {
-    const universe = document.querySelector<HTMLElement>("[data-universe-stage]")!;
-    window.scrollTo(0, universe.offsetTop + .25 * (universe.offsetHeight - window.innerHeight));
-  });
-  await expect.poll(async () => Number(await bridge.evaluate((el) => getComputedStyle(el).getPropertyValue("--sg-universe-bridge")))).toBeLessThan(.05);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
-});
-
-test("Originkit toon fireball follows Identity Film and powers down after cobalt impact", async ({ page }) => {
-  await openWithoutIntro(page);
-  await waitForActiveHero3d(page);
-  const orb = page.locator("[data-hero3d-fireball]");
-  const canvas = orb.locator("canvas");
-  await expect(orb).toHaveCount(1);
-  await expect(canvas).toHaveCount(1);
-  await scrollHero3dTo(page, .917);
-  await expect.poll(() => orb.evaluate(el =>
-    Number(getComputedStyle(el).getPropertyValue("--sg-fireball-visibility")))).toBeGreaterThan(.30);
-  await expect.poll(() => canvas.evaluate(el =>
-    (el as HTMLCanvasElement).width)).toBeGreaterThan(50);
-  await expect(orb).toHaveCSS("pointer-events", "none");
-  await scrollHero3dTo(page, .999);
-  await expect.poll(() => orb.evaluate(el =>
-    Number(getComputedStyle(el).getPropertyValue("--sg-fireball-visibility")))).toBeLessThan(.03);
-  expect(await page.evaluate(() =>
-    document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
-});
-
-test("V5 impact pulses ignite, expand and extinguish without extra sections", async ({ page }) => {
-  await openWithoutIntro(page);
-  await waitForActiveHero3d(page);
-  const film = page.locator("[data-hero3d-film]");
-  const orb = page.locator("[data-hero3d-fireball]");
-  const value = (key: string) => film.evaluate((el, key) =>
-    Number(getComputedStyle(el).getPropertyValue(key)), key);
-  await expect(page.locator(".hero3d-energy")).toHaveCount(0);
-  await scrollHero3dTo(page,.900);
-  await expect.poll(()=>value("--sg-energy-heat")).toBeGreaterThan(.7);
-  await scrollHero3dTo(page,.950);
-  await expect.poll(()=>orb.evaluate(el =>
-    Number(getComputedStyle(el).getPropertyValue("--sg-fireball-expansion")))).toBeGreaterThan(1.07);
-  await expect.poll(()=>value("--sg-energy-cobalt")).toBeGreaterThan(.7);
-  await expect.poll(()=>value("--sg-energy-wave")).toBeGreaterThan(.2);
-  await expect(orb).toHaveClass(/is-webgl/);
-  await scrollHero3dTo(page,.999);
-  await expect.poll(()=>value("--sg-energy-cobalt")).toBeLessThan(.03);
-  await expect.poll(()=>orb.evaluate(el =>
-    Number(getComputedStyle(el).getPropertyValue("--sg-fireball-visibility")))).toBeLessThan(.03);
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth+1)).toBeTruthy();
-});
-
-test("original Originkit 3D renderer has transparent canvas, real shaders and no CSS orb", async ({ page }) => {
-  const issues=watchRuntimeIssues(page);
-  await openWithoutIntro(page);
-  await waitForActiveHero3d(page);
-  await scrollHero3dTo(page,.938);
-  const host=page.locator("[data-hero3d-fireball]");
-  await expect(host).toHaveAttribute("data-fireball-renderer","originkit");
-  await expect.poll(()=>host.locator("canvas").evaluate(el=>(el as HTMLCanvasElement).width)).toBeGreaterThan(150);
-  const state=await host.evaluate(el=>{
-    const canvas=el.querySelector("canvas")!;
-    const gl=(canvas.getContext("webgl2")||canvas.getContext("webgl")) as WebGLRenderingContext;
-    return {
-      canvasAlpha:gl.getContextAttributes()?.alpha,
-      contextActive:!gl.isContextLost(),
-      hostBackground:getComputedStyle(el).backgroundColor,
-      styleBackground:getComputedStyle(canvas).backgroundColor,
-      originalGeometryPresent:el.querySelectorAll("canvas").length===1,
-      noFakeOrb:getComputedStyle(el,"::before").display==="none",
-      noBackdrop:Array.from(document.querySelectorAll(".hero3d-energy"))
-        .every(layer=>getComputedStyle(layer).display==="none")
-    };
-  });
-  expect(state).toEqual({
-    canvasAlpha:true,contextActive:true,hostBackground:"rgba(0, 0, 0, 0)",
-    styleBackground:"rgba(0, 0, 0, 0)",
-    originalGeometryPresent:true,noFakeOrb:true,noBackdrop:true
-  });
-  expect(issues.pageErrors).toEqual([]);
-  expect(issues.consoleErrors).toEqual([]);
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
-});
-
-test("final film background detonates, reverses and carries blue into the Universe", async ({ page }) => {
+test("identity film ends clean: no graffiti, fireball or detonation layers", async ({ page }) => {
   const issues = watchRuntimeIssues(page);
   await openWithoutIntro(page);
   await waitForActiveHero3d(page);
   const section = page.locator("[data-hero3d-film]");
-  const finale = section.locator("[data-hero3d-finale]");
-  await expect(finale).toHaveCount(1);
-  await expect(finale.locator(".sg-finale__ring")).toHaveCount(1);
-  await expect(finale).toHaveCSS("pointer-events", "none");
-  await expect(page.locator(".sg-finale__rays, .sg-finale__ring--echo")).toHaveCount(0);
-  await expect.poll(()=>finale.locator(".sg-finale__ring").evaluate(
-    el=>parseFloat(getComputedStyle(el).borderTopWidth))).toBeLessThanOrEqual(1);
-  const redundantGlow = await page.locator("[data-hero3d-graffiti]").evaluate(el=>({
-    oldFilmFlash:getComputedStyle(el,"::after").content,
-    oldParticleShock:getComputedStyle(el.querySelector(".hero3d-graffiti__sparks")!,"::after").content
-  }));
-  expect(redundantGlow.oldFilmFlash).toBe("none");
-  expect(redundantGlow.oldParticleShock).toBe("none");
-  const amount = (name: string) => section.evaluate((el,key)=>
-    Number(getComputedStyle(el).getPropertyValue(key)), name);
-  await scrollHero3dTo(page, .950);
-  await expect.poll(()=>amount("--sg-final-charge")).toBeGreaterThan(.25);
-  await scrollHero3dTo(page, .980);
-  await expect.poll(()=>amount("--sg-final-blast")).toBeGreaterThan(.80);
-  await expect.poll(()=>amount("--sg-final-whiteout")).toBeGreaterThan(.15);
-  await expect.poll(()=>amount("--sg-final-wave")).toBeGreaterThan(.20);
-  await expect.poll(()=>finale.locator(".sg-finale__flash").evaluate(
-    el=>Number(getComputedStyle(el).opacity))).toBeGreaterThan(.15);
+  await expect(section.locator("[data-hero3d-graffiti], [data-hero3d-fireball], [data-hero3d-finale]")).toHaveCount(0);
   await scrollHero3dTo(page, .999);
-  await expect.poll(()=>amount("--sg-final-whiteout")).toBeLessThan(.02);
-  await expect.poll(()=>amount("--sg-final-blast")).toBeLessThan(.06);
-  await expect.poll(()=>amount("--sg-final-fallout")).toBeGreaterThan(.99);
-  await page.evaluate(()=>{
-    const universe=document.querySelector<HTMLElement>("[data-universe-stage]")!;
-    window.scrollTo(0,universe.offsetTop+.018*(universe.offsetHeight-innerHeight));
-  });
-  await expect.poll(()=>page.locator(".universe-sticky").evaluate(el=>
-    Number(getComputedStyle(el).getPropertyValue("--sg-universe-bridge")))).toBeGreaterThan(.75);
-  await scrollHero3dTo(page, .930);
-  await expect.poll(()=>amount("--sg-final-blast")).toBeLessThan(.02);
-  await expect.poll(()=>amount("--sg-final-fallout")).toBeLessThan(.02);
+  await expect(section.locator("canvas")).toHaveCount(1);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
   expect(issues.pageErrors).toEqual([]);
   expect(issues.consoleErrors).toEqual([]);
@@ -387,14 +184,8 @@ test("hero3d selects the mobile film without viewport overflow", async ({ browse
   const source = await page.locator(hero3dVideo).evaluate((video: HTMLVideoElement) => video.currentSrc);
   expect(new URL(source).pathname).toBe("/assets/heroes/web/hero-3d-mobile.mp4");
   await expectContainedWithoutOverflow(page);
-  const artwork = page.locator("[data-hero3d-graffiti-art]");
-  const artworkFrame = page.locator("[data-hero3d-graffiti]");
-  const section = page.locator("[data-hero3d-film]");
   await scrollHero3dTo(page, 0.995);
-  await expect.poll(() => section.locator("[data-hero3d-graffiti-drawing]").evaluate((el) => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0.95);
   await expect.poll(() => currentFrameProgress(page)).toBeGreaterThan(0.94);
-  await expect.poll(() => artwork.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-  await expect(artworkFrame).toHaveCSS("touch-action", "pan-y");
   await expectContainedWithoutOverflow(page);
 
   expect(issues.pageErrors).toEqual([]);
@@ -432,14 +223,9 @@ test("hero3d uses a static poster frame when reduced motion is requested", async
         ),
         compactFallback:
           target.querySelector<HTMLElement>(".hero3d-sticky")!.offsetHeight <= window.innerHeight * 1.05,
-        graffitiVisible: (() => {
-          const art = target.querySelector<HTMLElement>("[data-hero3d-graffiti-art]");
-          const drawing = target.querySelector<HTMLElement>("[data-hero3d-graffiti-drawing]");
-          return Boolean(art && drawing && getComputedStyle(art).visibility === "visible" && Number(getComputedStyle(drawing).opacity) > 0.95);
-        })(),
       };
     }),
-  ).toEqual({ orbitBoost: 0, hasScrubTrigger: false, compactFallback: true, graffitiVisible: true });
+  ).toEqual({ orbitBoost: 0, hasScrubTrigger: false, compactFallback: true });
 
   await section.scrollIntoViewIfNeeded();
   await waitForHero3dMetadata(page);
