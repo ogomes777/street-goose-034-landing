@@ -221,11 +221,17 @@
 
   // The WebGL rig (context, shaders, pose atlas) is only built when the popup
   // actually opens; most visits never pay for it.
+  // The pose atlas starts downloading once the page itself has loaded (during
+  // the intro), so the drop never opens on empty sprites.
   function warmDrop() { document.documentElement.classList.add('sg-drop-warm'); }
   document.addEventListener('sg:intro-complete', warmDrop, { once: true });
+  if (document.readyState === 'complete') warmDrop();
+  else window.addEventListener('load', warmDrop, { once: true });
   function ensureRig() {
     if (rig || !film || !window.SGDropRig || (window.SG && window.SG.perfTier === 'low')) return rig;
-    rig = window.SGDropRig(film.querySelector('[data-drop-pose]'), lite);
+    // A rig that can't be built (WebGL refused, context limit) must never
+    // keep the popup from opening: the drop simply plays without it.
+    try { rig = window.SGDropRig(film.querySelector('[data-drop-pose]'), lite); } catch (_) { rig = null; }
     if (rig) window.addEventListener('resize', function(){if(popupEl.classList.contains('is-open')) settleFilm(true);rig.resize();}, {passive:true});
     return rig;
   }
@@ -317,7 +323,8 @@
     if (el === popupEl) {
       markPopupSeen();
       window.SG.entryPopupSettled = false;
-      startFilm();
+      // The film is decoration: whatever happens inside it, the popup opens.
+      try { startFilm(); } catch (_) {}
       document.body.classList.add('sg-entry-popup-open');
     }
     lastFocused = document.activeElement;
@@ -533,6 +540,9 @@
       introReady = true;
       clearTimeout(timeTrigger);
       timeTrigger = setTimeout(maybeTrigger, 350);
+      // Build the drop rig now, in the gap before the popup opens, instead of
+      // on the popup's first frame.
+      if (!triggered) setTimeout(function () { try { ensureRig(); } catch (_) {} }, 0);
     }, { once: true });
   }
 })();
