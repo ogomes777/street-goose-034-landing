@@ -154,6 +154,25 @@
   window.addEventListener("popstate", render);
   render();
 
+  // The ranking stage is the heaviest page (its own 3D scene): start fetching
+  // its code the moment a finger or pointer reaches a link to it, so the tap
+  // opens a page that is already downloaded.
+  var rankingPrefetched = false;
+  function prefetchOnIntent(e) {
+    if (rankingPrefetched) return;
+    var link = e.target && e.target.closest && e.target.closest("a[href]");
+    if (!link) return;
+    var url;
+    try { url = new URL(link.getAttribute("href"), location.href); } catch (err) { return; }
+    if (url.origin !== location.origin || url.pathname.replace(/\/$/, "") !== "/ranking") return;
+    rankingPrefetched = true;
+    APP_LOADERS["/ranking"]().catch(function () { rankingPrefetched = false; });
+    import("three").catch(function () {});
+  }
+  document.addEventListener("pointerover", prefetchOnIntent, { passive: true });
+  document.addEventListener("touchstart", prefetchOnIntent, { passive: true });
+  document.addEventListener("focusin", prefetchOnIntent);
+
   window.SG_ROUTER = { navigate: navigate, close: function () { navigate("/"); } };
 })();
 
