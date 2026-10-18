@@ -26,6 +26,30 @@ import { preferLightSource } from "./video-scrub.js";
   });
   window.addEventListener("pagehide", function () { campaignImagePreloads.length = 0; }, { once: true });
 
+  // Resolves once a slide's banner is downloaded and decoded (or after `cap`
+  // ms, so a stalled network never freezes the carousel). Autoplay waits on
+  // it instead of switching to a black frame while the image is still on
+  // its way.
+  function whenSlideReady(slide, cap) {
+    if (!slide || slide.type !== "image" || !slide.image) return Promise.resolve();
+    var href = new URL(slide.image, window.location.href).href;
+    var image = null;
+    for (var i = 0; i < campaignImagePreloads.length; i++) {
+      if (campaignImagePreloads[i].src === href) { image = campaignImagePreloads[i]; break; }
+    }
+    if (!image) { image = new Image(); image.src = slide.image; }
+    var loaded = image.complete && image.naturalWidth > 0
+      ? Promise.resolve()
+      : new Promise(function (resolve) {
+        image.addEventListener("load", resolve, { once: true });
+        image.addEventListener("error", resolve, { once: true });
+      });
+    var decoded = loaded.then(function () {
+      return image.decode ? image.decode().catch(function () {}) : null;
+    });
+    return Promise.race([decoded, new Promise(function (resolve) { setTimeout(resolve, cap); })]);
+  }
+
   var track = heroEl.querySelector("[data-hero-track]");
   var video = heroEl.querySelector("[data-hero-video]");
   var fallbackImg = heroEl.querySelector("[data-hero-image]");
@@ -46,6 +70,7 @@ import { preferLightSource } from "./video-scrub.js";
 
   var index = -1;
   var timer = null;
+  var autoplayToken = 0;
   var progressTween = null;
   var contentTimeline = null;
   var contentAnimation = null;
@@ -120,6 +145,7 @@ import { preferLightSource } from "./video-scrub.js";
   function syncHeroActivity() {
     if (!introComplete || !heroVisible || document.hidden) {
       clearTimeout(timer);
+      autoplayToken++;
       if (progressTween && progressTween.pause) progressTween.pause();
       pauseVideoOffscreen();
       return;
@@ -279,8 +305,15 @@ import { preferLightSource } from "./video-scrub.js";
 
   function restartAutoplay() {
     clearTimeout(timer);
+    var token = ++autoplayToken;
     if (!introComplete || !heroVisible || document.hidden) return;
-    timer = setTimeout(next, SLIDE_MS);
+    // Decode the upcoming banner during the current slide's 7 s.
+    whenSlideReady(slides[(index + 1) % slides.length], SLIDE_MS);
+    timer = setTimeout(function () {
+      whenSlideReady(slides[(index + 1) % slides.length], 4000).then(function () {
+        if (token === autoplayToken) next();
+      });
+    }, SLIDE_MS);
   }
 
   prevBtn && prevBtn.addEventListener("click", prev);
