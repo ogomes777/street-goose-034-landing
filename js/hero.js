@@ -164,6 +164,13 @@ import { preferLightSource } from "./video-scrub.js";
       var mobile = window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
       fallbackImg.style.objectPosition = (mobile && slide.mobileFocus) || slide.focus || "center";
       var nextImage = slide.image;
+      // The responsive poster srcset (index.html) would win over any src we
+      // set, pinning every campaign slide to the poster. Drop it on the
+      // first switch to a campaign image; the poster stays on src.
+      if (fallbackImg.hasAttribute("srcset")) {
+        fallbackImg.removeAttribute("srcset");
+        fallbackImg.removeAttribute("sizes");
+      }
       if (fallbackImg.src !== new URL(nextImage, window.location.href).href) {
         var transitionToken = mediaTransitionToken;
         fallbackImg.style.opacity = "0";
