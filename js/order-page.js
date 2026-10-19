@@ -16,7 +16,11 @@ export function mountOrderPage(root, params, onClose) {
       bodyEl.innerHTML = '<div class="app-page-empty"><h2>' + t("auth.notConfigured") + "</h2></div>";
       return;
     }
-    var { data: order, error: orderError } = await client.from("orders").select("*").eq("id", params.orderId).single();
+    // a malformed link never reaches the database (it would answer 400)
+    var validId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.orderId || "");
+    var { data: order, error: orderError } = validId
+      ? await client.from("orders").select("*").eq("id", params.orderId).single()
+      : { data: null, error: true };
     if (orderError || !order) {
       bodyEl.innerHTML = '<div class="app-page-empty"><h2>Pedido não encontrado.</h2></div>';
       return;
