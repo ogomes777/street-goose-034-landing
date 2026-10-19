@@ -33,11 +33,11 @@ export function InteractiveCharacterHero() {
             <i />
             PRESENCE SYSTEM
           </p>
-          <h1 id="sg-character-title">
+          <h2 id="sg-character-title">
             Visão em
             <br />
             movimento.
-          </h1>
+          </h2>
           <p className="sg-character-hero__lead">
             A lente percebe. A presença responde.
           </p>

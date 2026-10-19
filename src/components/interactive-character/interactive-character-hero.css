@@ -486,7 +486,7 @@
   background: rgba(220, 222, 221, 0.28);
 }
 
-.sg-character-hero__copy h1 {
+.sg-character-hero__copy h2 {
   margin: 0;
   color: #f2f2ef;
   font-size: clamp(56px, 6.9vw, 118px);
@@ -771,7 +771,7 @@
     width: auto;
   }
 
-  .sg-character-hero__copy h1 {
+  .sg-character-hero__copy h2 {
     max-width: 470px;
     font-size: clamp(45px, 13vw, 72px);
     line-height: 0.84;
@@ -849,7 +849,7 @@
     min-height: 500px;
   }
 
-  .sg-character-hero__copy h1 {
+  .sg-character-hero__copy h2 {
     font-size: clamp(40px, 11.8vw, 58px);
   }
 

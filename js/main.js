@@ -121,6 +121,7 @@
             return;
           }
           btn.textContent = "Você está na lista ✓";
+          if (window.SG.track) window.SG.track("newsletter_submit");
           form.reset();
           if (newsletterMsg) newsletterMsg.hidden = true;
           setTimeout(function () { btn.textContent = original; }, 3200);

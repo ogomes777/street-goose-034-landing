@@ -11,16 +11,33 @@
       document.documentElement.style.colorScheme = "dark";
     })();
   </script>
-  <title>Street Goose 034. Visão que marca presença</title>
- <meta name="description" content="Street Goose 034. Curadoria de óculos e lupas com presença de rua, performance e acabamento premium." />
+  <!-- title/description/canonical/og: valores da home; o build grava os de
+       cada rota pública a partir de js/route-meta.js -->
+  <title>Street Goose 034 | Lupas, relógios, perfumes e streetwear</title>
+ <meta name="description" content="Curadoria Street Goose 034: lupas, relógios, perfumes, trajes e acessórios com presença de rua. Escolha a peça e feche o pedido direto com a loja pelo WhatsApp." />
+ <meta name="robots" content="index, follow, max-image-preview:large" />
+ <link rel="canonical" href="https://www.streetgoose034.com.br/" />
 
- <meta property="og:title" content="Street Goose 034" />
- <meta property="og:description" content="Curadoria de óculos e lupas com presença de rua, performance e acabamento premium." />
+ <meta property="og:site_name" content="Street Goose 034" />
+ <meta property="og:locale" content="pt_BR" />
  <meta property="og:type" content="website" />
+ <meta property="og:url" content="https://www.streetgoose034.com.br/" />
+ <meta property="og:title" content="Street Goose 034 | Lupas, relógios, perfumes e streetwear" />
+ <meta property="og:description" content="Curadoria Street Goose 034: lupas, relógios, perfumes, trajes e acessórios com presença de rua. Escolha a peça e feche o pedido direto com a loja pelo WhatsApp." />
  <meta property="og:image" content="assets/heroes/web/hero-poster.jpg" />
+ <meta property="og:image:alt" content="Street Goose 034" />
+ <meta name="twitter:card" content="summary_large_image" />
 
+ <link rel="icon" href="/favicon.ico" sizes="48x48" />
  <link rel="icon" type="image/png" href="assets/logos/web/favicon.png" />
- <link rel="apple-touch-icon" href="assets/logos/web/favicon.png" />
+ <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+ <script type="application/ld+json">
+ {"@context":"https://schema.org","@graph":[
+  {"@type":"Organization","@id":"https://www.streetgoose034.com.br/#org","name":"Street Goose 034","url":"https://www.streetgoose034.com.br/","logo":"https://www.streetgoose034.com.br/brand/street-goose-email.png","contactPoint":{"@type":"ContactPoint","telephone":"+55-34-9728-1423","contactType":"customer service","availableLanguage":"Portuguese"}},
+  {"@type":"WebSite","@id":"https://www.streetgoose034.com.br/#site","name":"Street Goose 034","url":"https://www.streetgoose034.com.br/","inLanguage":"pt-BR","publisher":{"@id":"https://www.streetgoose034.com.br/#org"}}
+ ]}
+ </script>
 
  <link rel="preload" as="image" href="assets/heroes/web/hero-poster-960.jpg" fetchpriority="high" />
 
@@ -29,12 +46,10 @@
  <link rel="stylesheet" href="/js/drop-film.css" />
   <link rel="stylesheet" href="/js/drop-film-finale.css?v=20261015-lens-idle-2" />
 <link rel="manifest" href="/manifest.webmanifest">
- <meta name="theme-color" content="#111111">
- <link rel="apple-touch-icon" href="/icons/street-192.png">
 </head>
 <body>
  <div class="intro-loader" data-intro-loader role="dialog" aria-modal="true" aria-label="Street Goose 034 — abertura">
- <video class="intro-loader-video" data-intro-video autoplay muted playsinline preload="auto" aria-hidden="true">
+ <video class="intro-loader-video" data-intro-video muted playsinline preload="none" aria-hidden="true">
  <source src="assets/INTRO-LOADER-STREET-540.mp4" type="video/mp4" media="(max-width: 900px)" />
  <source src="assets/INTRO-LOADER-STREET-720.mp4" type="video/mp4" />
  </video>
@@ -46,7 +61,7 @@
  <button type="button" data-intro-skip>Pular intro <span aria-hidden="true"></span></button>
  </div>
  <button type="button" data-intro-sound style="position:absolute;right:24px;bottom:24px;z-index:5">Ativar som</button>
- <audio data-intro-audio src="assets/INTRO-LOADER-STREET.MP3" preload="metadata"></audio>
+ <audio data-intro-audio src="assets/INTRO-LOADER-STREET.MP3" preload="none"></audio>
  </div>
   <script>
     (function () {
@@ -56,6 +71,22 @@
       var introAudio = document.querySelector("[data-intro-audio]");
       if (!intro || !skip) return;
       var introShouldShow = window.location.pathname === "/";
+      // The intro ships with preload="none" and no autoplay, so nothing is
+      // fetched before this decides: on the landing, one file sized for the
+      // screen starts right away; a direct link to another page (/termos,
+      // /categoria/...) fetches no intro at all.
+      if (introVideo) {
+        var smallScreen = window.matchMedia("(max-width: 900px)").matches;
+        Array.prototype.slice.call(introVideo.querySelectorAll("source")).forEach(function (s) {
+          if (!introShouldShow || s.hasAttribute("media") !== smallScreen) s.remove();
+          else s.removeAttribute("media");
+        });
+        if (introShouldShow) { introVideo.autoplay = true; introVideo.preload = "auto"; introVideo.load(); }
+      }
+      if (introAudio) {
+        if (introShouldShow) introAudio.preload = "metadata";
+        else introAudio.removeAttribute("src");
+      }
       window.addEventListener('pageshow', function(event){
         if(event.persisted && window.matchMedia('(pointer: coarse)').matches) window.location.reload();
       });
@@ -232,7 +263,7 @@
     <!-- CAPÍTULO 01 — HERO FILM + CAMPAIGN SLIDER -->
     <section class="hero" aria-label="Destaques Street Goose" data-hero style="--accent:#FF5A00">
  <div class="hero-media">
- <video class="hero-video" data-hero-video muted loop playsinline webkit-playsinline="true" x-webkit-airplay="allow" preload="metadata"
+ <video class="hero-video" data-hero-video muted loop playsinline webkit-playsinline="true" x-webkit-airplay="allow" preload="none"
           poster="assets/heroes/web/hero-poster-960.jpg">
  <source data-src-desktop src="assets/heroes/web/hero-film.mp4" type="video/mp4" media="(min-width:901px) and (min-height:521px)" />
  <source data-src-mobile src="assets/heroes/web/hero-film-mobile.mp4" type="video/mp4" />
@@ -242,7 +273,9 @@
  <canvas class="hero-canvas" data-hero-canvas aria-hidden="true"></canvas>
  </div>
 
- <div class="hero-track" data-hero-track></div>
+ <!-- primeiro slide já no HTML (o que buscadores leem sem JS); hero.js
+      troca pelo slide animado ao iniciar, do mesmo jeito de sempre -->
+ <div class="hero-track" data-hero-track><div class="hero-slide-content" data-static-slide><p class="eyebrow">STREET GOOSE 034 / FILM</p><h1>Seu visual<br><em>chega antes.</em></h1><p class="lead">Rua, performance e design no mesmo frame. Curadoria Street Goose 034.</p><div class="hero-cta"><a class="btn btn-primary" href="#colecao" data-hero-cta>Explorar coleção</a><a class="text-link" href="#manifesto">Entender a Street Goose →</a></div></div></div>
 
  <div class="hero-controls">
  <button data-prev aria-label="Campanha anterior">←</button>
@@ -472,6 +505,13 @@
  <a href="#" data-contact-whatsapp>WhatsApp</a>
  <a href="#" data-contact-instagram>Instagram</a>
  </div>
+ <nav class="footer-legal" aria-label="Categorias">
+ <a href="/categoria/lupas">Lupas</a>
+ <a href="/categoria/acessorios">Acessórios</a>
+ <a href="/categoria/relogios">Relógios</a>
+ <a href="/categoria/perfumes">Perfumes</a>
+ <a href="/categoria/trajes">Trajes</a>
+ </nav>
  <nav class="footer-legal" aria-label="Documentos">
  <a href="/termos">Termos de uso</a>
  <a href="/privacidade">Privacidade</a>
@@ -554,7 +594,7 @@
  <div class="quickview-actions">
  <button class="btn btn-primary" data-qv-add>Adicionar à sacola</button>
  <button class="btn btn-ghost" data-qv-buy>Comprar agora</button>
- <a class="btn btn-primary" data-qv-wa target="_blank" rel="noopener" hidden>Consultar no WhatsApp</a>
+ <a class="btn btn-primary" href="https://wa.me/553497281423" data-qv-wa target="_blank" rel="noopener" hidden>Consultar no WhatsApp</a>
  <button class="favorite-btn favorite-btn--lg" data-qv-fav aria-pressed="false" aria-label="Favoritar">
  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-10-9.4C.4 7.6 2 4 5.6 4 8 4 10 5.4 12 8c2-2.6 4-4 6.4-4C22 4 23.6 7.6 22 11.1 19.5 15.9 12 20.5 12 20.5z"/></svg>
  </button>
@@ -613,7 +653,7 @@
 
   <script type="module" src="/js/intro-entry.js"></script>
   <script defer src="/drop-rig.js?v=20261014-joints-1"></script>
-  <script defer src="/entry-popup.js?v=20261019-popup-pages"></script>
+  <script defer src="/entry-popup.js?v=20261019-events"></script>
   <script type="module" src="/src/main.tsx"></script>
 <script type="module" src="/js/install-app.js"></script>
 </body>

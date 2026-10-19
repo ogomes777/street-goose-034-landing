@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from "node:url";
 import react from "@vitejs/plugin-react";
 import JavaScriptObfuscator from "javascript-obfuscator";
 import { defineConfig, type Plugin } from "vite";
+import { seoPages } from "./scripts/vite-seo-pages.ts";
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 
@@ -119,7 +120,7 @@ function obfuscateAppChunks(): Plugin {
 
 export default defineConfig({
   root: projectRoot,
-  plugins: [react(), copyLegacyWebAssets(), verifyCspInlineHashes(), obfuscateAppChunks()],
+  plugins: [react(), copyLegacyWebAssets(), verifyCspInlineHashes(), obfuscateAppChunks(), seoPages()],
   build: {
     target: "es2020",
     // sem source map em produção: não publica o código-fonte original

@@ -11,6 +11,11 @@ export type AuthResult =
   | { ok: true; confirmationRequired?: boolean }
   | { ok: false; reason: "not_configured" | "invalid_credentials" | "email_taken" | "weak_password" | "network_error" | "unknown"; message: string };
 
+// js/analytics.js event layer; absent in tests and before boot
+function trackAuth(event: "login" | "sign_up", method: string) {
+  (window as unknown as { SG?: { track?: (name: string, params?: Record<string, unknown>) => void } }).SG?.track?.(event, { method });
+}
+
 export const AuthService = {
   isConfigured(): boolean {
     return isSupabaseConfigured;
@@ -35,6 +40,7 @@ export const AuthService = {
       error.code === "email_not_confirmed" ? "Confirme seu e-mail pelo link recebido antes de entrar. Se necessário, reenvie a confirmação."
       : error.code === "captcha_failed" ? "Confirme novamente a segurança antes de entrar."
       : "E-mail ou senha não conferem. Confira os dados, confirme seu e-mail ou use o acesso por código." };
+    trackAuth("login", "email");
     return { ok: true };
   },
 
@@ -47,6 +53,7 @@ export const AuthService = {
       const reason = /already registered|already exists/i.test(error.message) ? "email_taken" : "unknown";
       return { ok: false, reason, message: error.message };
     }
+    trackAuth("sign_up", "email");
     return { ok: true, confirmationRequired: !data.session };
   },
 
@@ -81,6 +88,7 @@ export const AuthService = {
     if (!supabase) return { ok: false, reason: "not_configured", message: "Login por e-mail indisponível." };
     const { data, error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
     if (error || !data.session) return { ok: false, reason: "invalid_credentials", message: "Código inválido ou expirado. Solicite outro código." };
+    trackAuth("login", "code");
     return { ok: true };
   },
 

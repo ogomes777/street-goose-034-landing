@@ -8,6 +8,7 @@
    category-portals.js). import.meta.glob evita digitar à mão os ~118 nomes
    de arquivo (com vírgula, acento e parênteses) — Vite resolve o caminho
    real de cada um. */
+import { CATALOG_CATEGORIES, PRODUCT_GROUPS, productName, productAlt } from "./catalog-data.js";
 import heroLupasVideo from "../assets/heroes/loop/hero-lupas.mp4";
 import heroLupasVideoMobile from "../assets/heroes/loop-mobile/hero-lupas.mp4";
 import heroLupasPoster from "../assets/heroes/loop/hero-lupas-poster.jpg";
@@ -29,13 +30,18 @@ import heroTrajesVideoMobile from "../assets/heroes/loop-mobile/hero-trajes.mp4"
 import heroTrajesPoster from "../assets/heroes/loop/hero-trajes-poster.jpg";
 import heroTrajesPreview from "../assets/heroes/previews/hero-trajes.mp4";
 
-var CATEGORY_META = {
-  lupa: { label: "Lupas", slug: "lupas", folder: "products-lupas", heroVideo: heroLupasVideo, heroVideoMobile: heroLupasVideoMobile, heroPoster: heroLupasPoster, heroPreview: heroLupasPreview, a: "#0f6fe0", b: "#020a18", particle: "#8fe0ff" },
-  acessorios: { label: "Acessórios", slug: "acessorios", folder: "products-outros", heroVideo: heroAcessoriosVideo, heroVideoMobile: heroAcessoriosVideoMobile, heroPoster: heroAcessoriosPoster, heroPreview: heroAcessoriosPreview, a: "#2463c9", b: "#050b18", particle: "#7fb2ff" },
-  relogios: { label: "Relógios", slug: "relogios", folder: "products-relogios", heroVideo: heroRelogiosVideo, heroVideoMobile: heroRelogiosVideoMobile, heroPoster: heroRelogiosPoster, heroPreview: heroRelogiosPreview, a: "#3d6fb8", b: "#04101f", particle: "#cfe4ff" },
-  perfumes: { label: "Perfumes", slug: "perfumes", folder: "products-perfumes", heroVideo: heroPerfumesVideo, heroVideoMobile: heroPerfumesVideoMobile, heroPoster: heroPerfumesPoster, heroPreview: heroPerfumesPreview, a: "#d4520f", b: "#150500", particle: "#ffc98f" },
-  trajes: { label: "Trajes", slug: "trajes", folder: "products-moletons", heroVideo: heroTrajesVideo, heroVideoMobile: heroTrajesVideoMobile, heroPoster: heroTrajesPoster, heroPreview: heroTrajesPreview, a: "#c2410f", b: "#120500", particle: "#ff8c42" }
+// label, slug e pasta vêm de catalog-data.js (os mesmos que o build usa)
+var CATEGORY_MEDIA = {
+  lupa: { heroVideo: heroLupasVideo, heroVideoMobile: heroLupasVideoMobile, heroPoster: heroLupasPoster, heroPreview: heroLupasPreview, a: "#0f6fe0", b: "#020a18", particle: "#8fe0ff" },
+  acessorios: { heroVideo: heroAcessoriosVideo, heroVideoMobile: heroAcessoriosVideoMobile, heroPoster: heroAcessoriosPoster, heroPreview: heroAcessoriosPreview, a: "#2463c9", b: "#050b18", particle: "#7fb2ff" },
+  relogios: { heroVideo: heroRelogiosVideo, heroVideoMobile: heroRelogiosVideoMobile, heroPoster: heroRelogiosPoster, heroPreview: heroRelogiosPreview, a: "#3d6fb8", b: "#04101f", particle: "#cfe4ff" },
+  perfumes: { heroVideo: heroPerfumesVideo, heroVideoMobile: heroPerfumesVideoMobile, heroPoster: heroPerfumesPoster, heroPreview: heroPerfumesPreview, a: "#d4520f", b: "#150500", particle: "#ffc98f" },
+  trajes: { heroVideo: heroTrajesVideo, heroVideoMobile: heroTrajesVideoMobile, heroPoster: heroTrajesPoster, heroPreview: heroTrajesPreview, a: "#c2410f", b: "#120500", particle: "#ff8c42" }
 };
+var CATEGORY_META = {};
+CATALOG_CATEGORIES.forEach(function (c) {
+  CATEGORY_META[c.id] = Object.assign({ label: c.label, slug: c.slug, folder: c.folder }, CATEGORY_MEDIA[c.id]);
+});
 
 var globs = {
   lupa: import.meta.glob("../assets/products-lupas/*.{png,jpg,jpeg,webp}", { eager: true, query: "?url", import: "default" }),
@@ -99,18 +105,12 @@ var FILE_PRICE_CENTS = {
   "WhatsApp Image 2026-08-28 at 15.22.15 (2)": 19400 // chapéu preto
 };
 
-// Fotos diferentes do MESMO produto: a primeira (chave) vira o produto e as
-// demais entram como fotos extras dele, em vez de virar peças separadas.
+// Fotos do mesmo produto (PRODUCT_GROUPS) vêm de catalog-data.js.
 // O id continua vindo da posição original do arquivo (estável para sacola,
 // favoritos e public.product_prices); só a numeração exibida é recontada.
 // Categorias em que cada peça tem preço diferente (cliente, 08/10/2026):
 // sem preço fixo no site, o card leva direto pro WhatsApp com a peça.
 var CONSULT_WHATSAPP = { perfumes: true };
-
-var PRODUCT_GROUPS = {
-  // mochila: frente + duas laterais
-  "WhatsApp Image 2026-08-28 at 15.22.09 (1)": ["WhatsApp Image 2026-08-28 at 15.22.06 (1)", "WhatsApp Image 2026-08-28 at 15.22.13 (1)"]
-};
 // rótulo único para "tem preço" / "sem preço" — usado aqui no build e pelo
 // price-sync.js quando o preço do banco chega (mesmos objetos de produto)
 window.SG.priceLabelFor = function (category, cents) {
@@ -159,14 +159,14 @@ window.SG_CATALOG = Object.keys(CATEGORY_META).map(function (categoryId) {
       id: categoryId + "-" + idNum,
       category: categoryId,
       categoryLabel: meta.label,
-      name: meta.label.replace(/s$/, "") + " — Peça " + n,
+      name: productName(meta.label, shown),
       images: [url].concat(extraImages),
       frameColor: meta.label,
       lensColor: "—",
       material: "—",
       tag: "CATÁLOGO",
       desc: "peça " + n + " do catálogo " + meta.label.toLowerCase(),
-      alt: meta.label + " Street Goose 034 — peça " + n,
+      alt: productAlt(meta.label, shown),
       price: priceCents,
       priceLabel: window.SG.priceLabelFor(categoryId, priceCents),
       consultWhatsApp: !priceCents && !!CONSULT_WHATSAPP[categoryId],

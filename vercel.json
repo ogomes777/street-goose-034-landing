@@ -3,66 +3,67 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/categoria/:slug",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/busca",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/favoritos",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/sacola",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/checkout",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/conta",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/conta/pedidos",
-      "destination": "/index.html"
+      "source": "/categoria/:slug(lupas|acessorios|relogios|perfumes|trajes)",
+      "destination": "/categoria/:slug.html"
     },
     {
       "source": "/pedido/:id",
-      "destination": "/index.html"
+      "destination": "/pedido/id.html"
+    },
+    {
+      "source": "/busca",
+      "destination": "/busca.html"
+    },
+    {
+      "source": "/favoritos",
+      "destination": "/favoritos.html"
+    },
+    {
+      "source": "/sacola",
+      "destination": "/sacola.html"
+    },
+    {
+      "source": "/checkout",
+      "destination": "/checkout.html"
+    },
+    {
+      "source": "/conta",
+      "destination": "/conta.html"
+    },
+    {
+      "source": "/conta/pedidos",
+      "destination": "/conta/pedidos.html"
     },
     {
       "source": "/ranking",
-      "destination": "/index.html"
+      "destination": "/ranking.html"
     },
     {
       "source": "/recompensas",
-      "destination": "/index.html"
+      "destination": "/recompensas.html"
     },
     {
       "source": "/comunidade",
-      "destination": "/index.html"
+      "destination": "/comunidade.html"
     },
     {
       "source": "/admin",
-      "destination": "/index.html"
+      "destination": "/admin.html"
     },
     {
       "source": "/termos",
-      "destination": "/index.html"
+      "destination": "/termos.html"
     },
     {
       "source": "/privacidade",
-      "destination": "/index.html"
+      "destination": "/privacidade.html"
     },
     {
       "source": "/trocas",
-      "destination": "/index.html"
+      "destination": "/trocas.html"
     }
   ],
   "headers": [
@@ -71,7 +72,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-EcKJ3DIqDMYZ1tPIjstUsCWnCHA57cmakwQTGLAfrDY=' 'sha256-7wAw+4AOFpD+di4nuY7URdeQQR6K/DL+ias+jbQMxNU=' 'sha256-xacqPRlgHzN+itrJHYzFO+SOC+AgmvK5N6eq5iTeBkY=' https://challenges.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com; font-src 'self' data:; media-src 'self' blob:; connect-src 'self' https://viacep.com.br https://api.pwnedpasswords.com https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://cloudflareinsights.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-EcKJ3DIqDMYZ1tPIjstUsCWnCHA57cmakwQTGLAfrDY=' 'sha256-7wAw+4AOFpD+di4nuY7URdeQQR6K/DL+ias+jbQMxNU=' 'sha256-BYk8/KmUVDBNOOCl+fZGC3RfIijKLLeFt8UCr4yWuqA=' https://challenges.cloudflare.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com; font-src 'self' data:; media-src 'self' blob:; connect-src 'self' https://viacep.com.br https://api.pwnedpasswords.com https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://cloudflareinsights.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
         },
         {
           "key": "X-Frame-Options",
@@ -96,6 +97,15 @@
         {
           "key": "X-Permitted-Cross-Domain-Policies",
           "value": "none"
+        }
+      ]
+    },
+    {
+      "source": "/(busca|favoritos|sacola|checkout|conta|conta/pedidos|admin|pedido/.*|api/.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
         }
       ]
     }

@@ -198,6 +198,8 @@ export function mountCheckoutPage(root, _params, onClose) {
       if (res.ok) {
         orderId = res.orderId;
         orderSummary = await mod.OrderService.getSummary(orderId);
+        // order saved, payment still to be confirmed by the team: not a sale
+        if (window.SG.track) window.SG.track("order_created", { items: rows.length, has_unpriced: hasUnpriced() });
       }
     } catch (_e) { /* segue pelo WhatsApp */ }
   }
@@ -293,6 +295,7 @@ export function mountCheckoutPage(root, _params, onClose) {
           nextBtn.disabled = true;
           await registerOrder();
           var link = window.SG.waLink(buildWhatsAppMessage());
+          if (window.SG.track) window.SG.track("whatsapp_click", { location: "checkout" });
           if (waWin) { try { waWin.opener = null; } catch (_e) {} waWin.location.href = link; }
           else window.location.href = link;
           if (window.SG.cart) window.SG.cart.clear();

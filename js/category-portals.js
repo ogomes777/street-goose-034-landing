@@ -43,10 +43,12 @@
       video.loop = true;
       video.playsInline = true;
       video.setAttribute("playsinline", ""); // alguns iOS antigos só respeitam o atributo
-      video.preload = "metadata";
+      // Nothing downloads until the card is near the screen (see nearIo
+      // below); the poster covers the card until then, as it always did.
+      video.preload = "none";
       video.poster = cat.heroPoster;
       var source = document.createElement("source");
-      source.src = cat.heroPreview;
+      source.setAttribute("data-src", cat.heroPreview);
       source.type = "video/mp4";
       video.appendChild(source);
       // só revela o vídeo depois de ter dado real decodificado — antes disso
@@ -83,9 +85,21 @@
      viewport pausa pra liberar decodificação; ao voltar, retoma sozinho. */
   var isPointerFine = window.SG.perfTier !== "low" && matchMedia("(hover:hover) and (pointer:fine)").matches;
 
+  // attaches the preview file once; safe to call again
+  function loadCard(card) {
+    var video = card.querySelector(".portal-card-video");
+    var source = video && video.querySelector("source[data-src]");
+    if (!source) return;
+    source.src = source.getAttribute("data-src");
+    source.removeAttribute("data-src");
+    video.preload = "metadata";
+    video.load();
+  }
+
   function playCard(card) {
     var video = card.querySelector(".portal-card-video");
     if (!video) return;
+    loadCard(card);
     // autoplay bloqueado (iPhone em economia de bateria, etc.) só rejeita a
     // promise — o poster continua visível por baixo, nunca fica vazio
     var p = video.play();
@@ -105,6 +119,15 @@
       });
     }, { threshold: 0.25 });
     cards.forEach(function (card) { mediaIo.observe(card); });
+    // start fetching a little before the card shows, so it is ready to play
+    var nearIo = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        loadCard(entry.target);
+        nearIo.unobserve(entry.target);
+      });
+    }, { rootMargin: "600px 0px" });
+    cards.forEach(function (card) { nearIo.observe(card); });
 
     // trocar de aba não deve reiniciar os 5 vídeos do zero: só retoma quem
     // já estava visível antes de sumir, pausa todo mundo enquanto oculto
