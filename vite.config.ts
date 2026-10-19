@@ -140,6 +140,15 @@ export default defineConfig({
     },
   },
   preview: {
-    headers: securityHeaders,
+    // A produção é HTTPS e mantém upgrade-insecure-requests.
+    // O preview do Playwright roda em http://127.0.0.1:4174: o WebKit
+    // converte localhost em https://127.0.0.1 e impede baixar TODOS os JS
+    // se essa diretiva for enviada num servidor local que não oferece TLS.
+    // Retirar só no preview, sem reduzir a política da Vercel.
+    headers: {
+      ...securityHeaders,
+      "Content-Security-Policy": (securityHeaders["Content-Security-Policy"] ?? "")
+        .replace("; upgrade-insecure-requests", ""),
+    },
   },
 });

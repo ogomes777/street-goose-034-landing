@@ -6,7 +6,6 @@ import '../js/gem-crystals.css';
 import '../js/community-app.css';
 import '../js/perf-budget.css';
 import { createRoot } from "react-dom/client";
-import { InteractiveCharacterHero } from "./components/interactive-character/InteractiveCharacterHero";
 
 type StreetGooseWindow = Window &
   typeof globalThis & {
@@ -24,18 +23,29 @@ async function bootstrap() {
   const heroRoot = document.getElementById("interactive-character-root");
   let renderCharacter = () => {};
   if (heroRoot) {
-    let rendered = false;
+    let requested = false;
     renderCharacter = () => {
-      if (rendered) return;
-      rendered = true;
+      if (requested) return;
+      requested = true;
       window.removeEventListener("scroll", renderCharacter);
-      createRoot(heroRoot).render(
-        <StrictMode>
-          <InteractiveCharacterHero />
-        </StrictMode>,
-      );
-      // The chapter now has height: scroll-driven sections below must re-measure.
-      requestAnimationFrame(() => requestAnimationFrame(() => (window as StreetGooseWindow).ScrollTrigger?.refresh()));
+      // A cena e seu CSS ficam num chunk carregado apenas quando necessário.
+      // Antes, o import estático incluía tudo no grafo inicial do site, mesmo
+      // que a renderização React só acontecesse após o primeiro scroll/idle.
+      void import("./components/interactive-character/InteractiveCharacterHero")
+        .then(({ InteractiveCharacterHero }) => {
+          createRoot(heroRoot).render(
+            <StrictMode>
+              <InteractiveCharacterHero />
+            </StrictMode>,
+          );
+          // O capítulo passa a ter altura: recalcular os gatilhos de scroll.
+          requestAnimationFrame(() => requestAnimationFrame(() => (window as StreetGooseWindow).ScrollTrigger?.refresh()));
+        })
+        .catch((error) => {
+          console.error("Street Goose interactive character failed", error);
+          requested = false;
+          window.addEventListener("scroll", renderCharacter, { passive: true });
+        });
     };
     window.addEventListener("scroll", renderCharacter, { passive: true });
   }
@@ -53,8 +63,15 @@ async function bootstrap() {
   const { catalogReady } = await import("../js/catalog-sync.js");
   await catalogReady;
   await import("../js/boot-shop.js");
-  if ("requestIdleCallback" in window) requestIdleCallback(renderCharacter, { timeout: 1500 });
-  else setTimeout(renderCharacter, 300);
+  // A intro é um vídeo prioritário. Não competir pelo decoder/rede com
+  // a seção React até que o visitante tenha saído da abertura.
+  const scheduleCharacter = () => {
+    if ("requestIdleCallback" in window) requestIdleCallback(renderCharacter, { timeout: 1500 });
+    else setTimeout(renderCharacter, 300);
+  };
+  const introDone = (window as unknown as { SG?: { introComplete?: boolean } }).SG?.introComplete;
+  if (introDone) scheduleCharacter();
+  else document.addEventListener("sg:intro-complete", scheduleCharacter, { once: true });
 
   // sg-perf-low nasce de navigator.hardwareConcurrency/deviceMemory + innerWidth
   // < 720 — ou seja, praticamente todo celular (Safari nem expõe deviceMemory,
