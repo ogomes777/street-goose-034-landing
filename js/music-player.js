@@ -366,6 +366,7 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
     resumeFromResync: resumeFromResync,
     retryIfBlocked: retryIfBlocked,
     mobilePlayback: mobilePlayback,
+    isOutputRunning: function () { return !mixer || !mixer.ready() || mixer.isRunning(); },
     setIntroVolume: function(value){if(mixer)mixer.setIntroVolume(value);else {var track=document.querySelector('[data-intro-audio]');if(track)track.volume=value;}},
   };
 
