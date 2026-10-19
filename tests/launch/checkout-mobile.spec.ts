@@ -24,7 +24,7 @@ test("Checkout mobile: bloqueia telefone, CEP e UF inválidos", async ({ page })
   await page.locator('[data-checkout-body] input[name="email"]').fill("cliente@example.com");
   await page.locator('[data-checkout-body] input[name="phone"]').fill("123");
   await page.locator('[data-checkout-next]').click();
-  await expect(page.locator('[data-checkout-error]')).toContainText("Telefone com DDD", { timeout: 8000 });
+  await expect(page.locator('[data-checkout-error]')).toContainText(/telefone com DDD/i, { timeout: 8000 });
 
   await page.locator('[data-checkout-body] input[name="phone"]').fill("34999999999");
   await page.locator('[data-checkout-next]').click();
@@ -47,6 +47,7 @@ test("Checkout mobile: bloqueia telefone, CEP e UF inválidos", async ({ page })
 test("Checkout em modal: popup bloqueado mantém sacola e oferece link", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await seedCart(page);
+  await page.locator('[data-sg034-consent="denied"]').click();
   await page.evaluate(() => {
     (window as any).open = () => null;
     (window as any).SG.startCheckout();
