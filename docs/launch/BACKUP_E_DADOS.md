@@ -51,3 +51,8 @@ As tabelas estão protegidas (RLS sem acesso pela API), mas misturam dados de do
 - O alerta de teste por e-mail de 19/10 foi apagado em 20/10.
 - Os testes do painel rodaram dentro de transações desfeitas e não deixaram registros.
 - As 2 peças ocultas (trajes-13, perfumes-36) são decisão de catálogo, não teste.
+
+## Decisões de 19/10/2026
+
+- **"lana-demo": fica fora do escopo.** Por decisão do responsável, as tabelas continuam onde estão, sem mover nem apagar. A loja não as usa.
+- **Senha do banco trocada pelo dono no painel.** O servidor externo que entrava com a senha antiga perdeu o acesso. Site, catálogo e rotinas agendadas foram conferidos depois da troca, sem falhas.
