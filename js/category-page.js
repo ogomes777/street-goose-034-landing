@@ -1,3 +1,6 @@
+import { CATALOG_CATEGORIES } from "./catalog-data.js";
+import { ROUTE_META } from "./route-meta.js";
+
 /* Street Goose 034 — Página de categoria (montada sob demanda pelo router).
    Hero com vídeo em loop infinito tocando sozinho — não depende do scroll.
    Os arquivos de assets/heroes/loop/ já saem do encode com o fim emendado
@@ -22,7 +25,16 @@ export function mountCategoryPage(root, slug, onRequestClose) {
   // com o vídeo tocando, mesmo se a janela for redimensionada depois
   var isMobileHero = window.innerWidth <= 860 && cat.heroVideoMobile;
   var heroVideoSrc = isMobileHero ? cat.heroVideoMobile : cat.heroVideo;
-  var reduced = window.SG.prefersReducedMotion();
+  // Preserva poster para quem ativa economia de dados. O mesmo cuidado
+  // aplicado ao modo de movimento reduzido também evita downloads de vídeo.
+  var saveData = Boolean(navigator.connection && navigator.connection.saveData);
+  var reduced = window.SG.prefersReducedMotion() || saveData;
+  var routeMeta = ROUTE_META["/categoria/" + slug];
+  var description = routeMeta && routeMeta.description ? routeMeta.description : "";
+  var otherCategories = CATALOG_CATEGORIES.filter(function (c) { return c.slug !== slug; });
+  var crosslinksHtml = otherCategories.map(function (c) {
+    return '<a href="/categoria/' + window.SG.esc(c.slug) + '">' + window.SG.esc(c.label) + "</a>";
+  }).join("");
 
   function itemBodyHtml(item) {
     return (
@@ -54,7 +66,7 @@ export function mountCategoryPage(root, slug, onRequestClose) {
       '<img class="cat-hero-bg" src="' + cat.heroPoster + '" alt="" aria-hidden="true" />' +
       '<img class="cat-hero-poster" src="' + cat.heroPoster + '" alt="" />' +
       (reduced ? "" :
-        '<video class="cat-hero-video" data-cat-video muted loop playsinline preload="auto" poster="' + cat.heroPoster + '" aria-hidden="true"><source src="' + heroVideoSrc + '" type="video/mp4" /></video>') +
+        '<video class="cat-hero-video" data-cat-video muted loop playsinline preload="metadata" poster="' + cat.heroPoster + '" aria-hidden="true"><source src="' + heroVideoSrc + '" type="video/mp4" /></video>') +
       '<div class="cat-hero-scrim"></div>' +
       '<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h1 class="cat-hero-title">' + cat.label + "</h1></div>" +
       '<button class="cat-hero-cue" type="button" data-cat-cue>Ver as peças' +
@@ -63,7 +75,9 @@ export function mountCategoryPage(root, slug, onRequestClose) {
     "</section>" +
     '<div class="cat-catalog" data-cat-catalog>' +
       '<div class="cat-catalog-head"><h2>' + cat.label + "</h2><p>" + cat.count + " peças</p></div>" +
+      '<p class="cat-seo-lead">' + window.SG.esc(description) + "</p>" +
       '<div class="cat-catalog-grid" data-cat-grid>' + itemsHtml + "</div>" +
+      '<nav class="cat-seo-links" aria-label="Outras categorias">' + crosslinksHtml + "</nav>" +
     "</div>";
 
   // root é reaproveitado entre categorias (só o innerHTML troca) — sem isso

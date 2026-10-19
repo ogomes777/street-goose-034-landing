@@ -1,0 +1,30 @@
+name: Street Goose - smoke SEO e mobile
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Compilar site para validar HTML SEO
+        run: npm run build
+      - name: Instalar Chromium no ambiente de testes
+        run: npx playwright install --with-deps chromium
+      - name: Executar smoke tests reais
+        run: npx playwright test --config=playwright.launch.config.ts

@@ -151,7 +151,9 @@
         has_unpriced: data.has_unpriced === true,
       });
     } else if (data.event === "newsletter_submit") {
-      window.gtag("event", "generate_lead", { lead_type: "newsletter" });
+      // Inscrição em newsletter não é pedido comercial. Evento separado evita
+      // inflar o indicador de leads ao marcar generate_lead como evento-chave.
+      window.gtag("event", "newsletter_signup", { method: "website" });
     } else {
       window.gtag("event", data.event, params);
     }

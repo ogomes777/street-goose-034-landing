@@ -2,8 +2,7 @@
 
 Implementação: `js/analytics.js`. `window.SG.track(nome, parâmetros)` grava em `window.dataLayer`, o formato que Google Tag Manager e GA4 leem.
 
-**Estado atual: GA4 ligado com consentimento explícito (ver abaixo).** Não há ID de medição real, então nenhum script de terceiro carrega e nenhum dado sai do aparelho. Os eventos ficam só na memória da página até alguém configurar o fornecedor (ver "Para ligar um fornecedor").
-Visitas (pageviews) já são contadas pelo Cloudflare Web Analytics, que é anônimo, sem cookies e já citado na política de privacidade.
+**Estado atual: GA4 de produção configurado com ID `G-XPZWPBGLDN`, carregamento somente após consentimento explícito no aviso de cookies.** Sem consentimento, não carregar a tag do Google. As visitas consentidas são medidas no GA4, além da possível medição própria do Cloudflare quando habilitada. Não enviar dados pessoais nos eventos.
 
 ## Eventos
 
@@ -39,14 +38,16 @@ Regras seguidas:
 | `add_to_cart`, `add_to_wishlist` | mesmos nomes (`items[].item_id`) | |
 | `begin_checkout` | `begin_checkout` (`cta_location`) | |
 | `order_created` | `generate_lead` (`lead_type: pedido_whatsapp`, `item_count`, `has_unpriced`) | pedido gravado no banco |
-| `newsletter_submit` | `generate_lead` (`lead_type: newsletter`) | inscrição aceita pelo servidor |
+| `newsletter_submit` | `newsletter_signup` (`method: website`) | inscrição aceita pelo servidor, **não é lead comercial** |
 | `login`, `sign_up` | mesmos nomes (`method`) | |
 | `page_view` | medição otimizada do GA4 (mudança de histórico) | sem envio manual, para não duplicar |
 | `purchase` | não enviado | venda é confirmada no painel; enviar pelo servidor (Measurement Protocol) quando houver segredo de API |
 
 Recusar no aviso não carrega nada; revogar apaga os cookies `_ga` e recarrega sem GA4.
-Marcar `generate_lead` como evento-chave no GA4 (Admin → Eventos).
+Marcar `generate_lead` como evento-chave no GA4 apenas para **pedido registrado**. `click_whatsapp` é microconversão; `newsletter_signup` não deve ser contabilizado como pedido. Configurar tráfego interno pela interface do GA4 (sem inventar IP), testar primeiro o filtro em modo de teste antes de ativá-lo. A implementação do rastreamento no código não configura automaticamente os eventos-chave na propriedade.
 
 ## Como verificar hoje
 
-No console do navegador, em https://www.streetgoose034.com.br: faça uma ação (abrir uma peça, clicar no WhatsApp) e digite `dataLayer`. Cada ação aparece uma vez.
+Na loja, **aceite cookies de análise** e use o relatório **GA4 → Tempo real/DebugView** para observar `page_view`, `view_item`, `begin_checkout`, `click_whatsapp`, `newsletter_signup` e `generate_lead` após suas respectivas ações. Use dados de teste, sem pedidos reais falsos. Verifique que a recusa de cookies não carrega a tag.
+
+**Pendência administrativa:** marcar `generate_lead` como evento-chave e configurar o filtro de tráfego interno pela interface do Google Analytics (sem acesso direto ao painel neste repositório).
