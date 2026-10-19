@@ -76,6 +76,8 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
   var userPaused = false;
   var buffering = false;
   var mediaError = false;
+  var playWatchdog = null;
+  var playRequestId = 0;
 
   function hideIcon(icon, hidden) {
     if (!icon) return;
@@ -87,8 +89,11 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
     var isPaused = audio.paused;
     hideIcon(iconPlay, !isPaused);
     hideIcon(iconPause, isPaused);
-    var showCta = autoplayBlocked || audio.muted || volume() === 0;
-    var status = showCta ? "Ativar som" : mediaError ? "Tentar novamente" :
+    // HTMLAudioElement.paused=false NÃO garante som se o AudioContext
+    // do iPhone tiver sido suspenso pelo sistema.
+    var mixerSuspended = Boolean(mixer && mixer.ready() && !mixer.isRunning());
+    var showCta = autoplayBlocked || mixerSuspended || audio.muted || volume() === 0;
+    var status = mediaError ? "Tentar novamente" : showCta ? "Ativar som" :
       (playPending || buffering) ? "Carregando…" : isPaused ? "Pausado" : "Tocando";
     if (label) { label.hidden = false; label.textContent = status; }
     root.dataset.musicState = showCta ? "blocked" : mediaError ? "error" :
@@ -107,34 +112,50 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
     if (volumeSlider) volumeSlider.value = String(Math.round(volume() * 100));
   }
 
-  function attemptPlay() {
-    if (playPending) return;
+  function attemptPlay(force) {
+    if (playPending && !force) return;
+    var id = ++playRequestId;
+    if (playWatchdog) clearTimeout(playWatchdog);
     playPending = true;
     mediaError = false;
     syncUI();
-    var p;
-    try { p = audio.play(); } catch (e) { playPending = false; autoplayBlocked = true; syncUI(); return; }
-    if (p && p.then) p.then(function () {
+    // Dispositivos lentos podem deixar play() pendente indefinidamente.
+    // Não prender o CTA numa Promise que nunca resolve.
+    playWatchdog = setTimeout(function () {
+      if (id !== playRequestId) return;
       playPending = false;
-      autoplayBlocked = false;
+      if (audio.paused) autoplayBlocked = true;
+      buffering = !audio.paused && audio.readyState < 3;
       syncUI();
-    }, function () {
+    }, 7000);
+    function settled(accepted) {
+      if (id !== playRequestId) return;
+      clearTimeout(playWatchdog);
+      playWatchdog = null;
       playPending = false;
-      autoplayBlocked = true;
+      autoplayBlocked = !accepted;
+      if (accepted) buffering = audio.readyState < 3;
       syncUI();
-    });
-    else playPending = false;
+    }
+    try {
+      var p = audio.play();
+      if (p && p.then) p.then(function () { settled(true); }, function () { settled(false); });
+      else settled(true);
+    } catch (e) { settled(false); }
   }
 
   function activateSound() {
-    if(mixer){mixer.unlock();mixer.cue();}
+    // Importante: resume() precisa acontecer sincronamente no gesto humano.
+    // Não confiar no estado do <audio> se o Web Audio estiver suspenso.
+    if (mixer) { mixer.unlock(); if (cueTriggered) mixer.cue(); }
     if (audio.error) audio.load();
     userPaused = false;
     userWantsMuted = false;
     audio.muted = false;
     saveMuted(false);
     if (volume() === 0) { setVolume(DEFAULT_VOLUME); saveVolume(volume()); }
-    play();
+    autoplayBlocked = false;
+    attemptPlay(true);
   }
 
   function play() {
@@ -142,8 +163,17 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
     attemptPlay();
   }
 
+  if (mixer && mixer.setOnStateChange) mixer.setOnStateChange(syncUI);
   audio.addEventListener("play", syncUI);
-  audio.addEventListener("playing", function () { buffering = false; autoplayBlocked = false; syncUI(); });
+  audio.addEventListener("playing", function () {
+    buffering = false;
+    playPending = false;
+    if (playWatchdog) clearTimeout(playWatchdog);
+    playWatchdog = null;
+    // Não confundir som suspenso com som desbloqueado.
+    if (!mixer || mixer.isRunning()) autoplayBlocked = false;
+    syncUI();
+  });
   audio.addEventListener("waiting", function () { buffering = true; syncUI(); });
   audio.addEventListener("canplay", function () { buffering = false; syncUI(); });
   audio.addEventListener("error", function () { mediaError = true; playPending = false; buffering = false; syncUI(); });
@@ -151,8 +181,21 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
   audio.addEventListener("volumechange", syncUI);
 
   playBtn && playBtn.addEventListener("click", function () {
-    if (audio.paused || audio.muted || volume() === 0) activateSound();
-    else { userPaused = true; audio.pause(); }
+    // Primeiro toque recupera WebAudio suspenso / buffering travado.
+    // Antes, "paused=false" fazia o clique PAUSAR um áudio silencioso;
+    // só o segundo clique retomava e liberava o som.
+    if (audio.paused || audio.muted || volume() === 0 || autoplayBlocked ||
+        mediaError || buffering || (mixer && mixer.ready() && !mixer.isRunning())) {
+      activateSound();
+    } else {
+      userPaused = true;
+      ++playRequestId;
+      if (playWatchdog) clearTimeout(playWatchdog);
+      playWatchdog = null;
+      playPending = false;
+      audio.pause();
+      syncUI();
+    }
   });
 
   muteBtn && muteBtn.addEventListener("click", function () {
@@ -223,23 +266,33 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
   // Gesto real do usuário aconteceu depois (ex: "Ativar som" da intro) —
   // tenta tocar de novo sem reiniciar a posição.
   function retryIfBlocked() {
-    if (!cueTriggered || !audio.paused || userWantsMuted || userPaused) return;
-    play();
+    if (!cueTriggered || userWantsMuted || userPaused) return;
+    // pointerdown/keydown é gesto válido. Pode reanimar o mixer mesmo quando
+    // o elemento HTML ainda diz "playing" mas o dispositivo está em silêncio.
+    if (mixer && mixer.ready() && !mixer.isRunning()) mixer.unlock();
+    if (audio.paused || autoplayBlocked || mediaError) attemptPlay(true);
+    else syncUI();
   }
 
   // Retry inside a real gesture, including after the intro has closed.
   document.addEventListener("pointerdown", function (event) {
-    if (!root.contains(event.target) && autoplayBlocked) retryIfBlocked();
+    if (!root.contains(event.target) &&
+        (autoplayBlocked || (mixer && mixer.ready() && !mixer.isRunning()))) retryIfBlocked();
   }, true);
   document.addEventListener("keydown", function (event) {
-    if (!root.contains(event.target) && autoplayBlocked) retryIfBlocked();
+    if (!root.contains(event.target) &&
+        (autoplayBlocked || (mixer && mixer.ready() && !mixer.isRunning()))) retryIfBlocked();
   }, true);
 
   // Unlock this audio element during a real intro gesture, keeping it silent
   // until the radio cue. Once play resolves, pause it at zero if still pre-cue.
   function unlockForIntro() {
     if (cueTriggered) { retryIfBlocked(); return; }
-    if (userWantsMuted || playPending) return;
+    if (userWantsMuted) return;
+    // Um gesto de ativação não deve ser ignorado só porque play() anterior
+    // ficou pendente na rede. Reabrir o contexto imediatamente no gesto.
+    if (mixer && mixer.ready() && !mixer.isRunning()) mixer.unlock();
+    if (playPending) return;
     if(mixer&&mixer.unlock()){
       playPending=true;
       var mobilePlay;
@@ -270,6 +323,13 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
     if (volume() === 0) { setVolume(DEFAULT_VOLUME); saveVolume(volume()); }
     unlockForIntro();
   }
+
+  document.addEventListener("visibilitychange", function () {
+    // iOS pode suspender o contexto durante bloqueio de tela/alternância.
+    // Não retomar à força sem gesto: mostrar "Ativar som" e preservar
+    // o desejo de pausa do visitante.
+    if (!document.hidden) syncUI();
+  });
 
   window.SG.music = {
     audio: audio,
