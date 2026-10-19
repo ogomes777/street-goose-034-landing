@@ -3,6 +3,9 @@ import { expect, test, type Page } from "@playwright/test";
 // Usa o catálogo local no navegador, sem criar pedidos no banco nem abrir WhatsApp real.
 async function seedCart(page: Page) {
   await page.goto("/categoria/lupas", { waitUntil: "domcontentloaded" });
+  // Checkout não deve depender de aceitar analytics. Dispensar painel
+  // evita que cubra os controles reais no rodapé da viewport mobile.
+  await page.locator('[data-sg034-consent="denied"]').click();
   await expect.poll(() => page.evaluate(() => Boolean((window as any).SG?.cart && (window as any).SG_ROUTER)), {
     timeout: 25_000,
   }).toBe(true);
@@ -47,7 +50,6 @@ test("Checkout mobile: bloqueia telefone, CEP e UF inválidos", async ({ page })
 test("Checkout em modal: popup bloqueado mantém sacola e oferece link", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await seedCart(page);
-  await page.locator('[data-sg034-consent="denied"]').click();
   await page.evaluate(() => {
     (window as any).open = () => null;
     (window as any).SG.startCheckout();
