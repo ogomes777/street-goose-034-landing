@@ -62,7 +62,7 @@ export function mountCategoryPage(root, slug, onRequestClose) {
       "</button>" +
     "</section>" +
     '<div class="cat-catalog" data-cat-catalog>' +
-      '<div class="cat-catalog-head"><h3>' + cat.label + "</h3><p>" + cat.count + " peças</p></div>" +
+      '<div class="cat-catalog-head"><h2>' + cat.label + "</h2><p>" + cat.count + " peças</p></div>" +
       '<div class="cat-catalog-grid" data-cat-grid>' + itemsHtml + "</div>" +
     "</div>";
 

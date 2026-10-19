@@ -62,11 +62,12 @@ import { preferLightSource } from "./video-scrub.js";
   if (preferLightSource(video)) { try { video.load(); } catch (e) {} }
   // The HTML ships the film with preload="none" so a direct link to another
   // page (/termos, /categoria/...) never fetches it behind that page. On the
-  // landing it starts loading here, as it did from the HTML before.
+  // landing it starts loading here, as it did from the HTML before. Raising
+  // preload is enough to resume the fetch; load() would reset the element
+  // and repaint its poster (a later LCP for the same image).
   function startFilmLoad() {
     if (!video || video.preload !== "none") return;
     video.preload = "metadata";
-    try { video.load(); } catch (e) {}
   }
   // a page (category, terms, bag...) covers the landing
   function landingCovered() {
