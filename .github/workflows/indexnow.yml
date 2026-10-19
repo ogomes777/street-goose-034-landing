@@ -1,0 +1,49 @@
+name: Street Goose 034 - IndexNow
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "public/989f03f4d0umc4d1eb85921719848c87c.txt"
+      - "public/llms.txt"
+      - "js/route-meta.js"
+      - "js/catalog-data.js"
+      - "js/category-page.js"
+      - "scripts/vite-seo-pages.ts"
+      - ".github/workflows/indexnow.yml"
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "URLs a comunicar (usar somente apos mudanca real de conteudo)"
+        type: choice
+        required: true
+        default: categories
+        options:
+          - categories
+          - all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: indexnow-street-goose-034
+  cancel-in-progress: false
+
+jobs:
+  indexnow:
+    name: Notificar URLs modificadas
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Obter codigo
+        uses: actions/checkout@v4
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Esperar publicacao Vercel
+        run: sleep 90
+      - name: Comunicar IndexNow
+        env:
+          INDEXNOW_SCOPE: ${{ inputs.scope || 'all' }}
+        run: node scripts/indexnow-notify.mjs
