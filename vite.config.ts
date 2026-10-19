@@ -34,6 +34,13 @@ function copyLegacyWebAssets(): Plugin {
         const destination = fileURLToPath(new URL(`./dist/assets/heroes/web/${asset}`, import.meta.url));
         if (existsSync(source)) copyFileSync(source, destination);
       }
+
+      // O áudio mobile é criado pelo workflow ffmpeg e selecionado em runtime
+      // no player de som. Como a URL não aparece no HTML, copiar explicitamente
+      // evita que o Vite descarte o arquivo.
+      const mobileTheme = fileURLToPath(new URL("./assets/street-goose-theme-mobile.mp3", import.meta.url));
+      const mobileThemeDist = fileURLToPath(new URL("./dist/assets/street-goose-theme-mobile.mp3", import.meta.url));
+      if (existsSync(mobileTheme)) copyFileSync(mobileTheme, mobileThemeDist);
     },
   };
 }

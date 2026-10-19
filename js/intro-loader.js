@@ -391,8 +391,8 @@
     detachGlobalAudioUnlock();
     if (finished) return;
     if (soundBtn) {
-      soundBtn.textContent = "Som ativado";
-      soundBtn.hidden = window.matchMedia("(max-width: 640px)").matches;
+      soundBtn.textContent = "Ativando som…";
+      soundBtn.hidden = false;
     }
     if (window.SG.music && window.SG.music.activateIntroSound) window.SG.music.activateIntroSound();
     if (introAudio) {
@@ -405,6 +405,23 @@
     var p = video.play();
     if (p && p.catch) p.catch(function () {});
     if (window.SG.music && window.SG.music.retryIfBlocked) window.SG.music.retryIfBlocked();
+    // Safari/iOS pode aceitar audio.play() mas manter WebAudio suspenso.
+    // Não esconder o único botão que permite ao visitante repetir um
+    // gesto legítimo enquanto a saída ainda está bloqueada pelo navegador.
+    setTimeout(function () {
+      if (!soundBtn || finished) return;
+      var musicReady = !window.SG.music || !window.SG.music.isOutputRunning ||
+        window.SG.music.isOutputRunning();
+      var introReady = !introAudio || (!introAudio.paused && !introAudio.muted);
+      if (!musicReady || !introReady) {
+        soundBtn.textContent = "Ativar som";
+        soundBtn.hidden = false;
+        attachGlobalAudioUnlock();
+      } else {
+        soundBtn.textContent = "Som ativado";
+        soundBtn.hidden = window.matchMedia("(max-width: 640px)").matches;
+      }
+    }, 250);
   }
 
   if (soundBtn) soundBtn.addEventListener("click", onGlobalUnlock);
