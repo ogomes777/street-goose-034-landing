@@ -1,0 +1,73 @@
+/* Street Goose 034 — aviso discreto de consentimento GA4 */
+.sg034-cookie-panel {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 10020;
+  width: min(420px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 22px;
+  color: #f5f5f5;
+  background: rgba(12, 12, 12, .98);
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 14px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .4);
+  font-family: inherit;
+  text-align: left;
+}
+.sg034-cookie-panel .sg034-cookie-eyebrow {
+  margin: 0 0 10px;
+  color: #ff8c4a;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+.sg034-cookie-panel h2 {
+  margin: 0 0 8px;
+  color: #fff;
+  font-size: 21px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+.sg034-cookie-panel p:not(.sg034-cookie-eyebrow) {
+  margin: 0;
+  color: #d0d0d0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.sg034-cookie-actions {
+  display: flex;
+  gap: 10px;
+  margin: 18px 0 12px;
+}
+.sg034-cookie-actions button {
+  flex: 1;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255,255,255,.28);
+  border-radius: 7px;
+  background: #1c1c1c;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sg034-cookie-actions .sg034-cookie-accept {
+  border-color: #ff5a00;
+  color: #100a06;
+  background: #ff6a19;
+}
+.sg034-cookie-panel a {
+  color: #bbb;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sg034-cookie-panel :focus-visible {
+  outline: 2px solid #ff8c4a;
+  outline-offset: 3px;
+}
+@media (max-width: 520px) {
+  .sg034-cookie-panel { right: 12px; left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); width: auto; padding: 18px; }
+}
