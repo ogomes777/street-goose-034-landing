@@ -87,7 +87,7 @@ var PAGES = {
         "<li><strong>Comunidade e ranking:</strong> fotos, legendas, curtidas, comentários, apelido, foto de perfil, XP e nível.</li>" +
         "<li><strong>Preferências:</strong> quais avisos você quer receber (no site, por e-mail ou no aparelho) e se quer novidades.</li>" +
         "<li><strong>Uso do site:</strong> data do último acesso à conta e, só se você ativar o “Pulso da Street”, escolhas da coleção de forma anônima.</li></ul>" +
-        "<p>Não usamos pixels de anúncio nem ferramentas de rastreamento de terceiros.</p>" +
+        "<p>Não usamos pixels de publicidade. O Google Analytics 4 (GA4) só é ativado se você aceitar os cookies de análise. Nesse caso, recebemos estatísticas de páginas visitadas e interações com a loja, sem enviar nome, CPF, e-mail ou telefone nos eventos.</p>" +
 
         "<h2>3. Para que usamos</h2>" +
         "<ul><li>Criar e proteger sua conta.</li>" +
@@ -97,13 +97,13 @@ var PAGES = {
         "<li>Prevenir fraude e abuso e cumprir obrigações legais.</li></ul>" +
 
         "<h2>4. Bases legais</h2>" +
-        "<p>Execução do contrato (conta e pedidos), cumprimento de obrigação legal (documentos fiscais e defesa do consumidor), legítimo interesse (segurança e prevenção a fraude) e consentimento (novidades, notificações no aparelho, “Pulso da Street”), que você pode retirar a qualquer momento.</p>" +
+        "<p>Execução do contrato (conta e pedidos), cumprimento de obrigação legal (documentos fiscais e defesa do consumidor), legítimo interesse (segurança e prevenção a fraude) e consentimento (novidades, notificações no aparelho, “Pulso da Street” e cookies do Google Analytics 4), que você pode retirar a qualquer momento.</p>" +
 
         "<h2>5. Com quem compartilhamos</h2>" +
         "<p>Não vendemos seus dados. Usamos apenas os serviços necessários para o site funcionar:</p>" +
         "<ul><li><strong>Supabase</strong> — banco de dados, login e arquivos, com servidores em São Paulo.</li>" +
         "<li><strong>Vercel</strong> e <strong>Cloudflare</strong> — hospedagem, entrega do site, verificação anti-robô e estatísticas de visita anônimas, sem cookies.</li>" +
-        "<li><strong>Google</strong> — login com Google e planilhas usadas pela equipe para organizar pedidos.</li>" +
+        "<li><strong>Google</strong> — login com Google, planilhas usadas pela equipe para organizar pedidos e Google Analytics 4 para medir a navegação somente após sua autorização.</li>" +
         "<li><strong>Resend</strong> — envio dos e-mails de aviso.</li>" +
         "<li><strong>WhatsApp</strong> — atendimento e fechamento dos pedidos.</li>" +
         "<li><strong>ViaCEP</strong> — preencher o endereço a partir do CEP.</li>" +
@@ -115,7 +115,7 @@ var PAGES = {
         "<p>Seu apelido, foto de perfil, nível e XP no ranking (você pode sair dele) e as fotos aprovadas na comunidade. Nome completo, CPF, contato e endereço nunca ficam públicos.</p>" +
 
         "<h2>7. Armazenamento no seu aparelho</h2>" +
-        "<p>O site guarda no navegador a sacola, os favoritos, tema, idioma, volume da música, um cache do catálogo e a sessão de login. Isso serve só para o site funcionar e lembrar suas escolhas.</p>" +
+        "<p>O site guarda no navegador a sacola, os favoritos, tema, idioma, volume da música, um cache do catálogo, a sessão de login e sua preferência sobre cookies de análise. Se você autorizar, o Google Analytics 4 também pode gravar cookies de medição (como _ga). Você pode recusar ou retirar essa autorização a qualquer momento.</p>" +
 
         "<h2>8. Por quanto tempo</h2>" +
         "<p>Mantemos os dados enquanto sua conta existir. Dados de pedidos são guardados pelo prazo exigido pelas leis fiscais e de defesa do consumidor, mesmo depois da exclusão da conta.</p>" +
@@ -124,7 +124,7 @@ var PAGES = {
         "<ul><li>Ver e baixar seus dados: <a href=\"/conta\">Minha conta</a> → “Baixar meus dados”.</li>" +
         "<li>Corrigir dados: Minha conta.</li>" +
         "<li>Excluir a conta: Minha conta → “Pedir exclusão da conta”, ou pelo WhatsApp.</li>" +
-        "<li>Retirar consentimentos: preferências de aviso, ranking e “Pulso da Street”, a qualquer momento.</li>" +
+        "<li>Retirar consentimentos: preferências de aviso, ranking e “Pulso da Street”, a qualquer momento. Para rever o Google Analytics, clique em <a href=\"#\" data-sg034-consent-open>Configurar cookies</a>.</li>" +
         "<li>Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).</li></ul>" +
 
         "<h2>10. Segurança</h2>" +
