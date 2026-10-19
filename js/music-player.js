@@ -19,6 +19,14 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
 
   var audio = root.querySelector("[data-music-audio]");
   if (!audio) return;
+  var mobilePlayback = window.matchMedia("(pointer: coarse)").matches && navigator.maxTouchPoints > 0;
+  // A edição mobile (96 kbps, gerada e versionada pelo CI) reduz tráfego
+  // e libera o decoder mais cedo em aparelhos modestos. Desktop preserva
+  // a trilha original. Em falha de rede do arquivo mobile, volta ao original.
+  var fallbackThemeSource = audio.src;
+  var usingMobileTheme = mobilePlayback;
+  var mobileThemeFallbackTried = false;
+  if (usingMobileTheme) audio.src = "/assets/street-goose-theme-mobile.mp3";
 
   // A intro dura menos de 19 s; começar a buscar a trilha enquanto o vídeo
   // roda evita que o carregamento de 11 MB atrase o cue dos 9,5 s. Não baixa
@@ -61,7 +69,6 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
 
   audio.volume = readVolume();
   audio.muted = readMuted();
-  var mobilePlayback = window.matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0;
   var MobileContext = window.AudioContext || window.webkitAudioContext;
   var mixer = mobilePlayback && MobileContext ? createMobileAudioMixer(audio, document.querySelector('[data-intro-audio]'), MobileContext) : null;
   function volume(){return mixer?mixer.getMusicVolume():audio.volume;}
@@ -176,7 +183,26 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
   });
   audio.addEventListener("waiting", function () { buffering = true; syncUI(); });
   audio.addEventListener("canplay", function () { buffering = false; syncUI(); });
-  audio.addEventListener("error", function () { mediaError = true; playPending = false; buffering = false; syncUI(); });
+  audio.addEventListener("error", function () {
+    if (usingMobileTheme && !mobileThemeFallbackTried) {
+      // Recuperação sem perder o play/pause nem o volume salvo.
+      mobileThemeFallbackTried = true;
+      mediaError = false;
+      ++playRequestId;
+      playPending = false;
+      if (playWatchdog) clearTimeout(playWatchdog);
+      playWatchdog = null;
+      audio.src = fallbackThemeSource;
+      audio.load();
+      if (cueTriggered && !userPaused && !userWantsMuted) attemptPlay(true);
+      syncUI();
+      return;
+    }
+    mediaError = true;
+    playPending = false;
+    buffering = false;
+    syncUI();
+  });
   audio.addEventListener("pause", syncUI);
   audio.addEventListener("volumechange", syncUI);
 
