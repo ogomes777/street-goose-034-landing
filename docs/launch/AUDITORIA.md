@@ -69,7 +69,7 @@ Prioridade: **P0** funcional, **P1** descoberta/medição, **P2** melhoria.
 | 14 | P2 | Celular baixava as duas versões do vídeo da intro (540p + 720p, ~8 MB) | medição por CDP | corrigido |
 | 15 | P2 | Link direto para qualquer página baixava a intro e os filmes da home escondidos atrás dela: 8,8 MB em `/termos` no celular, 13,9 MB em `/categoria/trajes` no desktop | medição por CDP | corrigido: 1 MB e 4 MB |
 | 16 | P2 | Os 5 vídeos de prévia das categorias (~4,8 MB) baixavam no carregamento, antes de aparecer | medição | corrigido: carregam ~600 px antes de entrar na tela |
-| 17 | P2 | Desempenho de laboratório da home no celular: 57, LCP 4,2 s, TBT 775 ms | Lighthouse, mediana de 3 | parcialmente tratado (ver RESULTADOS_QA.md) |
+| 17 | P2 | Desempenho de laboratório da home no celular: 57, LCP 4,2 s, TBT 775 ms | Lighthouse, mediana de 3 | parcialmente tratado: TBT −40%, nota 61; LCP depende de reestruturar o carregamento (ver RESULTADOS_QA.md) |
 | 18 | P2 | Trilha da intro (`street-goose-theme.mp3`) tem 11 MB a 320 kbps e é pré-carregada durante a intro para sincronizar com o vídeo | `ffprobe` | **não alterado** (decisão de produto: reencodar a 128–160 kbps cortaria ~60%) |
 | 19 | P2 | `http://streetgoose034.com.br` faz 2 saltos até o domínio canônico | `curl` | pendência externa (regra no Cloudflare) |
 | 20 | P2 | Favicon é o logo horizontal: ilegível em 16 px | inspeção | pendência de design (versão símbolo) |
