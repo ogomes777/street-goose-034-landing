@@ -1,0 +1,60 @@
+# One-time, source-controlled transcode of the existing store theme.
+# Runs only for this same-repo mobile-audio PR, then commits the optimized
+# MP3 to the PR branch. Production remains unchanged until tests/merge.
+name: Optimize Street Goose mobile audio
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/optimize-mobile-audio.yml"
+      - "js/music-player.js"
+      - "js/mobile-audio-mixer.js"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  encode:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'fix/mobile-audio-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          persist-credentials: true
+      - name: Transcode original theme for small/mobile devices
+        shell: bash
+        run: |
+          set -euo pipefail
+          command -v ffmpeg >/dev/null || { sudo apt-get update -qq; sudo apt-get install -y ffmpeg; }
+          test -s assets/street-goose-theme.mp3
+          ffmpeg -nostdin -hide_banner -loglevel error -y -i assets/street-goose-theme.mp3 \
+            -map 0:a:0 -vn -map_metadata -1 -c:a libmp3lame -b:a 96k \
+            -ar 44100 -ac 2 -id3v2_version 3 \
+            assets/street-goose-theme-mobile.mp3
+          test -s assets/street-goose-theme-mobile.mp3
+          source_size=$(stat -c%s assets/street-goose-theme.mp3)
+          output_size=$(stat -c%s assets/street-goose-theme-mobile.mp3)
+          echo "Original: ${source_size} bytes; optimized: ${output_size} bytes"
+          if [ "$output_size" -ge "$source_size" ]; then
+            echo "::error::Transcode did not reduce size; refusing to publish."
+            exit 1
+          fi
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 \
+            assets/street-goose-theme-mobile.mp3
+      - name: Commit optimized audio to the feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/street-goose-theme-mobile.mp3
+          if git diff --cached --quiet; then
+            echo "Optimized track already committed"
+            exit 0
+          fi
+          git commit -m "perf(audio): add 96k mobile music edition"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
