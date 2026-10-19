@@ -1,4 +1,5 @@
 import {attachAddressAssistant} from './address-assistant.js';
+import { newPasswordProblem } from '../src/lib/password-check.ts';
 /* Street Goose 034 — /conta e /conta/pedidos: área do cliente completa.
    Abas: Visão geral, Pedidos, Favoritos, Nível & XP, Cupons, Perfil,
    Preferências e Segurança — tudo com dado real do backend (RLS: cada
@@ -662,9 +663,11 @@ export function mountAccountPage(root, _params, onClose) {
       var smsg = form.querySelector("[data-password-msg]");
       var pw = form.querySelector('[name="password"]').value;
       var cf = form.querySelector('[name="confirm"]').value;
-      if (pw.length < 8) { smsg.textContent = "A senha precisa de pelo menos 8 caracteres."; return; }
       if (pw !== cf) { smsg.textContent = "As senhas não conferem."; return; }
       btn.disabled = true;
+      var problem = await newPasswordProblem(pw);
+      if (destroyed) return;
+      if (problem) { btn.disabled = false; smsg.textContent = problem; return; }
       var r = supa ? await supa.auth.updateUser({ password: pw }) : { error: { message: "indisponível" } };
       if (destroyed) return;
       btn.disabled = false;

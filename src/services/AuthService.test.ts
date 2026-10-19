@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const auth = vi.hoisted(() => ({ signInWithOtp: vi.fn(), verifyOtp: vi.fn(), signUp: vi.fn(), resend: vi.fn(), signInWithPassword: vi.fn(), getSession: vi.fn(), updateUser: vi.fn() }));
 vi.mock('../lib/supabase', () => ({ supabase: { auth }, isSupabaseConfigured: true }));
+// The leak lookup is covered in password-check.test.ts; here it never reaches the network.
+const passwords = vi.hoisted(() => ({ newPasswordProblem: vi.fn(async (_password: string): Promise<string | null> => null) }));
+vi.mock('../lib/password-check', () => passwords);
 import { AuthService } from './AuthService';
-beforeEach(() => { vi.resetAllMocks(); vi.stubGlobal('window', { location: { origin: 'https://www.streetgoose034.com.br' } }); });
+beforeEach(() => { vi.resetAllMocks(); passwords.newPasswordProblem.mockResolvedValue(null); vi.stubGlobal('window', { location: { origin: 'https://www.streetgoose034.com.br' } }); });
 describe('email authentication', () => {
   it('does not create accounts when requesting a login code and passes CAPTCHA', async () => {
     auth.signInWithOtp.mockResolvedValue({ error: null });
@@ -54,4 +57,18 @@ it('updates a password only using the authenticated client', async () => {
  auth.updateUser.mockResolvedValue({ error: null });
  expect(await AuthService.updatePassword('new-password')).toEqual({ ok: true });
  expect(auth.updateUser).toHaveBeenCalledWith({ password: 'new-password' });
+});
+
+describe('new passwords', () => {
+  it('refuses a weak password before calling Supabase', async () => {
+    passwords.newPasswordProblem.mockResolvedValue('Use letras e números na senha.');
+    const result = await AuthService.signUpWithEmail('User', 'user@example.com', 'abcdefgh');
+    expect(result).toMatchObject({ ok: false, reason: 'weak_password' });
+    expect(auth.signUp).not.toHaveBeenCalled();
+  });
+  it('refuses a weak new password before updating the account', async () => {
+    passwords.newPasswordProblem.mockResolvedValue('Use letras e números na senha.');
+    expect(await AuthService.updatePassword('abcdefgh')).toMatchObject({ ok: false, reason: 'weak_password' });
+    expect(auth.updateUser).not.toHaveBeenCalled();
+  });
 });
