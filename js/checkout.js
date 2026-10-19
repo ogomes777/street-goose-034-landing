@@ -1,3 +1,5 @@
+import { checkoutFieldErrors } from "./checkout-validation.js";
+
 /* Street Goose 034 — checkout foundation.
    Sem gateway de pagamento conectado ainda: a etapa final é um handoff
    estruturado para o WhatsApp, com o resumo do pedido pronto. Arquitetura
@@ -39,8 +41,8 @@
       '<div class="checkout-grid">' +
       '<label>Nome completo<input type="text" name="name" required autocomplete="name"></label>' +
       '<label>E-mail<input type="email" name="email" required autocomplete="email"></label>' +
-      '<label>Telefone<input type="tel" name="phone" required autocomplete="tel" data-mask="phone" placeholder="(00) 00000-0000"></label>' +
-      '<label>CEP<input type="text" name="cep" required data-mask="cep" placeholder="00000-000"></label>' +
+      '<label>Telefone<input type="tel" inputmode="tel" name="phone" required autocomplete="tel" data-mask="phone" placeholder="(00) 00000-0000"></label>' +
+      '<label>CEP<input type="text" inputmode="numeric" name="cep" required data-mask="cep" placeholder="00000-000"></label>' +
       '<label class="span-2">Rua<input type="text" name="street" required autocomplete="address-line1"></label>' +
       '<label>Número<input type="text" name="number" required autocomplete="address-line2"></label>' +
       '<label>Complemento<input type="text" name="complement" autocomplete="address-line3"></label>' +
@@ -50,6 +52,7 @@
       "</div>" +
       '<p class="checkout-note">Frete calculado no atendimento. Pagamento finalizado com a equipe Street Goose pelo WhatsApp.</p>' +
       '<button class="btn btn-primary checkout-submit" type="submit">Finalizar pelo WhatsApp</button>' +
+      '<p data-checkout-feedback role="alert" hidden></p>' +
       "</form>"
     );
   }
@@ -90,24 +93,55 @@
       var data = {};
       fd.forEach(function (v, k) { data[k] = String(v).trim(); });
 
-      var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email);
+      var errors = checkoutFieldErrors(data);
       form.querySelectorAll(".field-error").forEach(function (n) { n.classList.remove("field-error"); });
-      var invalid = [];
-      form.querySelectorAll("input[required]").forEach(function (input) {
-        if (!input.value.trim()) invalid.push(input);
+      form.querySelectorAll('input[aria-invalid="true"]').forEach(function (input) { input.removeAttribute("aria-invalid"); });
+      var first = null;
+      Object.keys(errors).forEach(function (field) {
+        var input = form.querySelector('[name="' + field + '"]');
+        if (!input) return;
+        input.closest("label").classList.add("field-error");
+        input.setAttribute("aria-invalid", "true");
+        if (!first) first = input;
       });
-      if (!emailOk) invalid.push(form.querySelector('[name="email"]'));
-      if (invalid.length) {
-        invalid.forEach(function (input) { input.closest("label").classList.add("field-error"); });
-        invalid[0].focus();
+      var feedback = form.querySelector("[data-checkout-feedback]");
+      if (feedback) {
+        feedback.hidden = !first;
+        feedback.textContent = first ? errors[first.name] : "";
+      }
+      if (first) { first.focus(); return; }
+
+      var btn = form.querySelector('[type="submit"]');
+      if (btn.disabled) return;
+      btn.disabled = true;
+      var msg = buildWhatsAppMessage(rows, data);
+      var link = window.SG.waLink(msg);
+      // Popup pode ser bloqueado no iPhone: a conversa continua disponível
+      // em um link acionável, sem perder a sacola.
+      var popup = null;
+      try { popup = window.open(link, "_blank"); } catch (_e) {}
+      if (popup) {
+        try { popup.opener = null; } catch (_e) {}
+        if (window.SG.toast) window.SG.toast("WHATSAPP ABERTO — CONFIRME SEU PEDIDO");
+        window.SG.cart.clear();
+        if (window.SG.closeCheckout) window.SG.closeCheckout();
         return;
       }
-
-      var msg = buildWhatsAppMessage(rows, data);
-      window.open(window.SG.waLink(msg), "_blank", "noopener");
-      if (window.SG.toast) window.SG.toast("PEDIDO ENVIADO PARA O WHATSAPP");
-      window.SG.cart.clear();
-      if (window.SG.closeCheckout) window.SG.closeCheckout();
+      if (feedback) {
+        feedback.hidden = false;
+        feedback.textContent = "O navegador bloqueou a abertura automática. Use o link abaixo para continuar no WhatsApp.";
+      }
+      var existing = form.querySelector("[data-checkout-retry]");
+      if (existing) existing.remove();
+      var retry = document.createElement("a");
+      retry.href = link;
+      retry.target = "_blank";
+      retry.rel = "noopener noreferrer";
+      retry.className = "btn btn-primary";
+      retry.setAttribute("data-checkout-retry", "");
+      retry.textContent = "Abrir pedido no WhatsApp";
+      form.appendChild(retry);
+      btn.disabled = false;
     });
   }
 
