@@ -1,8 +1,9 @@
 # E-mails de login (Supabase Auth via Resend)
 
-Os e-mails de cadastro, código de acesso e nova senha saem pela Resend
-(domínio `streetgoose034.com.br`, já verificado), não pelo envio padrão do
-Supabase, que tem limite baixo e cai no spam.
+**Já configurado e funcionando** (conferido em 19/10/2026): os e-mails de
+cadastro, código de acesso e nova senha saem pela Resend (domínio
+`streetgoose034.com.br`, verificado), não pelo envio padrão do Supabase.
+Os arquivos desta pasta são cópias dos modelos em uso, para referência.
 
 ## SMTP — Supabase → Authentication → Emails → SMTP Settings
 
@@ -13,21 +14,23 @@ Supabase, que tem limite baixo e cai no spam.
 | Host | `smtp.resend.com` |
 | Port | `465` |
 | Username | `resend` |
-| Password | uma API key da Resend com "Sending access" só para `streetgoose034.com.br` |
+| Password | API key da Resend (já cadastrada no Supabase) |
 
 ## Modelos — Supabase → Authentication → Emails → Templates
 
 | Modelo no Supabase | Assunto | Arquivo |
 |---|---|---|
-| Confirm signup | Confirme sua conta Street Goose 034 | `confirm-signup.html` |
-| Magic link | Seu código de acesso Street Goose 034 | `magic-link.html` (usa `{{ .Token }}`: o site pede o código) |
-| Reset password | Crie uma nova senha Street Goose 034 | `reset-password.html` |
+| Confirm signup | Confirme sua conta — Street Goose 034 | `confirm-signup.html` |
+| Magic link | Seu código de acesso — Street Goose 034 | `magic-link.html` (usa `{{ .Token }}`: o site pede o código, 8 dígitos) |
+| Reset password | Redefina sua senha — Street Goose 034 | `reset-password.html` |
 
 ## DNS — Cloudflare
 
-Registro TXT `_dmarc` com o valor `v=DMARC1; p=none;` (o Gmail exige DMARC).
+Registro TXT `_dmarc` com o valor `v=DMARC1; p=none;` (o Gmail exige DMARC). Criado em 19/10/2026.
 
 ## Limites
+
+Supabase → Authentication → Rate Limits: 100 e-mails por hora (era 30).
 
 Plano gratuito da Resend: 100 e-mails por dia e 3.000 por mês, somando os
 avisos (`avisos@`) e os e-mails de login.

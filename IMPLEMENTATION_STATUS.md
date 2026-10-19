@@ -60,7 +60,7 @@ Marcado como feito só depois de: editar → rodar localmente → abrir no naveg
 ## Etapa 6 — NÃO iniciada nesta rodada (escopo grande, ver relatório)
 - [ ] Tema claro/escuro/sistema
 - [ ] PT/EN/ES
-- [~] Login/logout: Google ativo e verificado em produção; e-mail funciona mas exige confirmação (SMTP padrão do Supabase, com limite de envio); Apple não configurado
+- [~] Login/logout: Google ativo e verificado em produção; e-mail funciona com confirmação, enviado pela Resend (SMTP próprio, domínio verificado, DMARC, 100 e-mails/hora — ver supabase/templates/README.md); Apple não configurado
 - [ ] Favoritos/sacola premium (redesign visual, já funcionais estruturalmente)
 - [ ] Checkout completo
 - [x] Ranking/XP/níveis/cupons — ver "Fidelidade" abaixo
