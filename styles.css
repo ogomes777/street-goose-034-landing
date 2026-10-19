@@ -976,14 +976,14 @@ footer>small{grid-column:1/-1;border-top:1px solid var(--line);padding-top:24px;
 @keyframes intro-pulse{50%{transform:scale(1.04);opacity:.65}}
 @keyframes intro-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 @keyframes intro-line{from{transform:scaleX(0);opacity:0}to{transform:scaleX(1);opacity:1}}
-.music-player{position:fixed;right:22px;bottom:22px;z-index:180;color:#f7f4ef}
-/* A categoria é uma overlay full-screen (z=200): controles de som precisam
-   ficar acima dela. Durante o checkout (modal ou página), a ação de finalizar
-   pedido tem prioridade e o player volta para debaixo do painel, sem bloquear
-   o botão de compra. :has() tem suporte atual em Chromium e WebKit. */
-body:has(.category-page:not([hidden])) .music-player{z-index:220}
-body:has([data-checkout-form]) .music-player,
-body:has([data-checkout-body]) .music-player{z-index:180}
+.music-player{position:fixed;right:22px;bottom:22px;z-index:205;color:#f7f4ef}
+/* Categoria e páginas overlay ficam em z=200: áudio fica clicável sobre
+   categorias, MAS abaixo de gavetas de compra (z=214), zoom, login e intro.
+   Quando uma rota de app está aberta, esconder o controle atrás dela para
+   nunca interceptar os botões do checkout e do painel. Evitar seletores
+   conflitantes com :has(.category-page), que tem maior especificidade. */
+body:has([data-app-page]:not([hidden])) .music-player,
+body:has(.drawer.is-open) .music-player{z-index:180}
 .music-player[hidden],.music-player [hidden]{display:none!important}
 .music-panel{display:flex;align-items:center;gap:12px;min-height:54px;padding:8px 12px;border:1px solid rgba(255,255,255,.15);border-radius:999px;background:rgba(12,12,12,.78);box-shadow:0 12px 34px rgba(0,0,0,.28);backdrop-filter:blur(18px)}
 .music-player-label{display:flex;align-items:center;gap:8px;font-size:8px;font-weight:700;letter-spacing:.12em;white-space:nowrap;color:rgba(255,255,255,.72)}
