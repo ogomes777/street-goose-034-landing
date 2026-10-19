@@ -24,7 +24,7 @@ jobs:
         run: npm ci
       - name: Compilar site para validar HTML SEO
         run: npm run build
-      - name: Instalar Chromium no ambiente de testes
-        run: npx playwright install --with-deps chromium
-      - name: Executar smoke tests reais
+      - name: Instalar Chromium e WebKit para testes mobile
+        run: npx playwright install --with-deps chromium webkit
+      - name: Executar testes Android (Chromium) e iPhone (WebKit simulados)
         run: npx playwright test --config=playwright.launch.config.ts
