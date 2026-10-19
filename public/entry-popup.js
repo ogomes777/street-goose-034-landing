@@ -520,7 +520,11 @@
   }
   function maybeTrigger() {
     if (!introReady || triggered || !popupEl) return;
-    if (openEl || document.querySelector('dialog[open]') || document.hidden) {
+    // Never over a page the visitor opened (bag, checkout, category...) or
+    // over the login: wait until they are back on the landing. The path
+    // check covers a direct link (/sacola) before the router has opened it.
+    if (openEl || document.querySelector('dialog[open], [data-auth-modal]:not([hidden])') ||
+        document.body.classList.contains('category-page-open') || location.pathname !== '/' || document.hidden) {
       timeTrigger = setTimeout(maybeTrigger, 500);
       return;
     }

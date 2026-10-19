@@ -102,7 +102,7 @@ var PAGES = {
         "<h2>5. Com quem compartilhamos</h2>" +
         "<p>Não vendemos seus dados. Usamos apenas os serviços necessários para o site funcionar:</p>" +
         "<ul><li><strong>Supabase</strong> — banco de dados, login e arquivos, com servidores em São Paulo.</li>" +
-        "<li><strong>Vercel</strong> e <strong>Cloudflare</strong> — hospedagem, entrega do site e verificação anti-robô.</li>" +
+        "<li><strong>Vercel</strong> e <strong>Cloudflare</strong> — hospedagem, entrega do site, verificação anti-robô e estatísticas de visita anônimas, sem cookies.</li>" +
         "<li><strong>Google</strong> — login com Google e planilhas usadas pela equipe para organizar pedidos.</li>" +
         "<li><strong>Resend</strong> — envio dos e-mails de aviso.</li>" +
         "<li><strong>WhatsApp</strong> — atendimento e fechamento dos pedidos.</li>" +

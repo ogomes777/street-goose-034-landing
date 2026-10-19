@@ -56,6 +56,16 @@ var processedGlobs = {
   acessorios: import.meta.glob("../assets/products-processed/products-outros/*.png", { eager: true, query: "?url", import: "default" })
 };
 
+// a mesma foto em WebP (scripts/make-web-images.mjs): mesmo tamanho e cor,
+// ~8x mais leve. É o que o site mostra; sem ela, cai na versão acima.
+var webGlobs = {
+  lupa: import.meta.glob("../assets/web-products/products-lupas/*.webp", { eager: true, query: "?url", import: "default" }),
+  relogios: import.meta.glob("../assets/web-products/products-relogios/*.webp", { eager: true, query: "?url", import: "default" }),
+  perfumes: import.meta.glob("../assets/web-products/products-perfumes/*.webp", { eager: true, query: "?url", import: "default" }),
+  trajes: import.meta.glob("../assets/web-products/products-moletons/*.webp", { eager: true, query: "?url", import: "default" }),
+  acessorios: import.meta.glob("../assets/web-products/products-outros/*.webp", { eager: true, query: "?url", import: "default" })
+};
+
 // miniaturas 160px (scripts/make-thumbs.mjs) — onde a peça aparece pequena,
 // ex.: seletor "Peça no visual" da comunidade. ?no-inline: viram arquivos
 // (carregados só quando aparecem), não base64 dentro deste JS de boot.
@@ -126,9 +136,13 @@ window.SG_CATALOG = Object.keys(CATEGORY_META).map(function (categoryId) {
   Object.keys(processedGlobs[categoryId]).forEach(function (key) {
     processedByStem[stem(key)] = processedGlobs[categoryId][key];
   });
+  var webByStem = {};
+  Object.keys(webGlobs[categoryId]).forEach(function (key) {
+    webByStem[stem(key)] = webGlobs[categoryId][key];
+  });
   var keys = Object.keys(globs[categoryId]).sort();
   var urlByStem = {};
-  keys.forEach(function (key) { urlByStem[stem(key)] = processedByStem[stem(key)] || globs[categoryId][key]; });
+  keys.forEach(function (key) { urlByStem[stem(key)] = webByStem[stem(key)] || processedByStem[stem(key)] || globs[categoryId][key]; });
   Object.keys(thumbGlobs[categoryId]).forEach(function (key) {
     var full = urlByStem[stem(key)];
     if (full) THUMB_BY_URL[full] = thumbGlobs[categoryId][key];
