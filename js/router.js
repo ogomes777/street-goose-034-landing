@@ -27,6 +27,9 @@
     "/comunidade": function () { return import("./community-page.js").then(function (m) { return m.mountCommunityPage; }); },
     "/pedido/:id": function () { return import("./order-page.js").then(function (m) { return m.mountOrderPage; }); },
     "/admin": function () { return import("./admin-page.js").then(function (m) { return m.mountAdminPage; }); },
+    "/termos": function () { return import("./legal-page.js").then(function (m) { return m.mountLegalPage; }); },
+    "/privacidade": function () { return import("./legal-page.js").then(function (m) { return m.mountLegalPage; }); },
+    "/trocas": function () { return import("./legal-page.js").then(function (m) { return m.mountLegalPage; }); },
   };
 
   var scrollY = 0;

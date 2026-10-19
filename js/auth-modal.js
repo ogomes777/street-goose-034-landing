@@ -90,7 +90,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
           '<label>' + i18nT("auth.email") + '<input type="email" name="email" required autocomplete="email"></label>' +
           '<label>' + i18nT("auth.password") + '<input type="password" name="password" required autocomplete="' + (isSignUp ? "new-password" : "current-password") + '" minlength="' + (isSignUp ? 8 : 6) + '"></label>' +
           (isSignUp ? '<label>' + i18nT("auth.confirmPassword") + '<input type="password" name="confirmPassword" required autocomplete="new-password" minlength="8"></label>' : "") +
-          (isSignUp ? '<label class="auth-terms"><input type="checkbox" name="terms" required> <span>' + i18nT("auth.terms") + "</span></label>" : "") +
+          (isSignUp ? '<label class="auth-terms"><input type="checkbox" name="terms" required> <span>' + termsWithLinks(i18nT("auth.terms")) + "</span></label>" : "") +
           '<div class="auth-captcha" data-auth-captcha></div>' +
           '<p class="auth-error" data-auth-error hidden></p>' +
           '<button class="btn btn-primary auth-submit" type="submit" data-auth-submit>' + i18nT(isSignUp ? "auth.submitSignUp" : "auth.submitSignIn") + "</button>" +
@@ -139,6 +139,15 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
     overlay.innerHTML = formHtml();
     if (mode === "emailCode") bindCodeForm(); else if (mode === "newPassword") bindNewPassword(); else bindForm();
     mountCaptchaWidget();
+  }
+
+  // "termos" / "política de privacidade" in any language open the documents
+  // in a new tab, so the half-filled sign-up form is never lost.
+  function termsWithLinks(text) {
+    var link = function (href) { return function (word) { return '<a href="' + href + '" target="_blank" rel="noopener">' + word + "</a>"; }; };
+    return window.SG.esc(text)
+      .replace(/(termos|terms|términos)/i, link("/termos"))
+      .replace(/(política de privacidade|privacy policy|política de privacidad)/i, link("/privacidade"));
   }
 
   function showError(msg, success) {

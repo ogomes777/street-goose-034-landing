@@ -1,0 +1,36 @@
+/* /termos, /privacidade, /trocas: a quiet reading page inside the app overlay. */
+.is-legal .legal-body { max-width: 760px; padding: 40px 24px 96px; }
+.is-legal .legal-kicker { margin: 0 0 10px; font-size: 11px; font-weight: 700; letter-spacing: .18em; color: var(--accent, #ff4d00); }
+.is-legal .legal-lead { margin: 0 0 24px; font-size: 18px; line-height: 1.55; color: var(--text-2); }
+.is-legal .legal-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 36px; }
+.is-legal .legal-doc .legal-nav a {
+  display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px;
+  border: 1px solid var(--border); border-radius: 999px;
+  color: var(--text-2); font-size: 14px; text-decoration: none;
+}
+.is-legal .legal-doc .legal-nav a:hover { border-color: var(--border-strong); color: var(--text); }
+.is-legal .legal-doc .legal-nav a[aria-current="page"] { border-color: var(--accent, #ff4d00); color: var(--text); }
+.is-legal .legal-doc h2 { margin: 40px 0 12px; font-size: 20px; line-height: 1.3; letter-spacing: -.01em; color: var(--text); }
+.is-legal .legal-doc p,
+.is-legal .legal-doc li { font-size: 16px; line-height: 1.7; color: var(--text-2); }
+.is-legal .legal-doc ul,
+.is-legal .legal-doc ol { margin: 0 0 12px; padding-left: 22px; }
+.is-legal .legal-doc li { margin: 6px 0; }
+.is-legal .legal-doc strong { color: var(--text); font-weight: 650; }
+.is-legal .legal-doc a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--accent, #ff4d00); }
+.is-legal .legal-company {
+  display: grid; gap: 0; margin: 0 0 16px; padding: 4px 18px;
+  border: 1px solid var(--border); border-radius: 16px;
+}
+.is-legal .legal-company div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.is-legal .legal-company div:last-child { border-bottom: 0; }
+.is-legal .legal-company dt { font-size: 13px; color: var(--muted); }
+.is-legal .legal-company dd { margin: 0; font-size: 15px; color: var(--text); overflow-wrap: anywhere; }
+.is-legal .legal-updated { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+@media (max-width: 640px) {
+  .is-legal .legal-body { padding: 28px 18px 72px; }
+  .is-legal .legal-lead { font-size: 16px; }
+  .is-legal .legal-doc h2 { font-size: 18px; margin-top: 32px; }
+  .is-legal .legal-doc p, .is-legal .legal-doc li { font-size: 15px; }
+  .is-legal .legal-company div { grid-template-columns: 1fr; gap: 2px; }
+}

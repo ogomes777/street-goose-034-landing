@@ -726,6 +726,9 @@ footer{max-width:var(--max);margin:auto;padding:0 24px 60px;display:grid;grid-te
 .footer-links a:hover{color:var(--accent)}
 footer>p{margin:0}
 footer>small{grid-column:1/-1;border-top:1px solid var(--line);padding-top:24px;margin-top:14px}
+.footer-legal{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 22px;font-size:12px;color:var(--muted)}
+.footer-legal a{display:inline-flex;align-items:center;min-height:32px}
+.footer-legal a:hover{color:var(--accent)}
 
 /* ===== POPUP / QUICKVIEW ===== */
 .popup,.quickview{position:fixed;inset:0;z-index:120;display:grid;place-items:center;opacity:0;visibility:hidden;transition:opacity var(--t-base)}

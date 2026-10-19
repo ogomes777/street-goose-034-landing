@@ -51,6 +51,18 @@
     {
       "source": "/admin",
       "destination": "/index.html"
+    },
+    {
+      "source": "/termos",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/privacidade",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/trocas",
+      "destination": "/index.html"
     }
   ],
   "headers": [

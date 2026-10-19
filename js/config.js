@@ -15,6 +15,17 @@ window.SG_CONTACT_CONFIG = {
   instagramFallbackUrl: "https://instagram.com/"
 };
 
+// Identificação da empresa nas páginas de termos, privacidade e trocas.
+// Preencha só com dados reais; cada linha aparece no site apenas quando
+// o campo estiver preenchido.
+window.SG_COMPANY_CONFIG = {
+  legalName: "",   // razão social
+  cnpj: "",        // 00.000.000/0000-00
+  address: "",     // endereço completo
+  email: "",       // e-mail de atendimento / privacidade
+  city: "Araxá — MG"
+};
+
 window.SG_PAYMENT_CONFIG = {
   // Nenhum gateway conectado ainda. createCheckoutSession/createPixPayment
   // ficam prontos para receber uma integração real sem mudar a UI.
