@@ -29,6 +29,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ -s assets/street-goose-theme-mobile.mp3 ]; then
+            echo "Optimized mobile track already committed; skipping redundant transcode."
+            exit 0
+          fi
           command -v ffmpeg >/dev/null || { sudo apt-get update -qq; sudo apt-get install -y ffmpeg; }
           test -s assets/street-goose-theme.mp3
           ffmpeg -nostdin -hide_banner -loglevel error -y -i assets/street-goose-theme.mp3 \
