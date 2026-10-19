@@ -30,6 +30,10 @@
     // o card nunca mostra nada além do poster ou do vídeo real
     var posterImg = document.createElement("img");
     posterImg.className = "portal-card-poster";
+    // below the fold: fetched as the cards approach, never competing with
+    // the hero poster for the first second of bandwidth
+    posterImg.loading = "lazy";
+    posterImg.decoding = "async";
     posterImg.src = cat.heroPoster;
     posterImg.alt = "";
     posterImg.setAttribute("aria-hidden", "true");
