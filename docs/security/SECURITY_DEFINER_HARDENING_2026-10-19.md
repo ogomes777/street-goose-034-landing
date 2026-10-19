@@ -6,8 +6,9 @@ Production Supabase project: `hfmzlieixfkisbyweprv`.
 The following changes were successfully applied as Supabase migrations:
 - `streetgoose_admin_rpc_restricted_searchpath_20261019` — 15 administrator RPCs.
 - `streetgoose_customer_rpc_restricted_searchpath_20261019` — 10 authenticated customer RPCs.
+- `streetgoose_privileged_helpers_restricted_searchpath_20261019` — 4 internal security helpers (`assert_admin`, `community_author`, `coupon_check`, `sg_rate_ok`).
 
-An additional administrator RPC was already using the empty search path. The six public RPCs previously hardened also remain unchanged.
+An additional administrator RPC was already using the empty search path. The six public RPCs previously hardened also remain unchanged. Overall, 29 new function metadata updates were applied in this review, including four privileged helpers.
 
 **Exactly what changed:** function metadata `search_path` is now `''`, preventing unintended object resolution through `public`. Existing `SECURITY DEFINER`, function source, arguments, ownership and `EXECUTE` grants were preserved. No frontend, visual design, customer records or production auth configuration were modified.
 
@@ -16,6 +17,8 @@ An additional administrator RPC was already using the empty search path. The six
 - 16/16 administrator RPCs raised `42501` for an authenticated identity with no administrative privileges.
 - A database-simulated existing admin identity passed checks for `is_admin`, order counts, orders list, customer list, general overview, and finance summary. The results returned only type assertions, not customer data.
 - 9 customer actions rejected an empty auth session as `auth_required`, and `create_whatsapp_order` rejected it with SQLSTATE `28000`.
+- Four internal helpers were checked: authorized administrator reports, public feed and ranking still worked, coupon lookup rejected an unknown code, and the rate-limit counter returned correctly in a transaction rolled back after the test.
+- An identity without admin rights could not see other users' orders, order items, address details or pending community posts (read-only RLS checks).
 - Admin RPC metadata: 16/16 now have restricted search paths, 0 remain with `search_path=public`.
 - The pre-existing public ranking/community RPC smoke tests passed with an anonymous database role in an earlier migration.
 - No test orders, newsletters, notifications or customers were created.
