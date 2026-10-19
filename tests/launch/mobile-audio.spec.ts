@@ -17,6 +17,9 @@ test("Mobile: autoplay bloqueado oferece som e primeiro gesto tenta recuperar", 
     };
   });
   await page.goto("/categoria/lupas", { waitUntil: "domcontentloaded" });
+  // A privacidade não pode obrigar o visitante a aceitar analytics para
+  // ouvir música. A escolha de recusar deve ser respeitada e desobstruir CTA.
+  await page.locator('[data-sg034-consent="denied"]').click();
   const player = page.locator("[data-music-player]");
   await expect(player).toBeVisible({ timeout: 20000 });
   await expect(page.locator("[data-music-playpause]")).toHaveAttribute("aria-label", "Ativar som");
@@ -50,6 +53,7 @@ test("Mobile: mixer suspenso reativa no primeiro toque sem exigir pause/play", a
     HTMLMediaElement.prototype.play = function () { return Promise.resolve(); };
   });
   await page.goto("/categoria/lupas", { waitUntil: "domcontentloaded" });
+  await page.locator('[data-sg034-consent="denied"]').click();
   await expect(page.locator("[data-music-player]")).toBeVisible({ timeout: 20000 });
   await page.evaluate(() => {
     const m = (window as any).SG.music;
