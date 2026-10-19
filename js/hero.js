@@ -13,17 +13,34 @@ import { preferLightSource } from "./video-scrub.js";
   var slides = window.SG_HERO_SLIDES || [];
   if (!slides.length) return;
 
-  // Preaquece os três banners do carousel em baixa prioridade. Assim a troca
-  // permanece instantânea sem competir com o MP4 que abre a experiência.
-  var campaignImagePreloads = slides.filter(function (slide) {
-    return slide.type === "image" && slide.image;
-  }).map(function (slide) {
-    var image = new Image();
-    image.decoding = "async";
-    image.fetchPriority = "low";
-    image.src = slide.image;
-    return image;
-  });
+  // Evita concorrer com a intro e com o poster principal durante o primeiro
+  // carregamento. Os banners são baixados após a intro e um pequeno respiro.
+  // Em economia de dados, cada imagem só é buscada quando o slide precisar.
+  var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  var saveData = Boolean(connection && connection.saveData);
+  var campaignImagePreloads = [];
+  var preloadedCampaigns = false;
+  function preloadCampaigns() {
+    if (preloadedCampaigns || saveData || location.pathname !== "/") return;
+    preloadedCampaigns = true;
+    slides.filter(function (slide) { return slide.type === "image" && slide.image; })
+      .forEach(function (slide) {
+        var image = new Image();
+        image.decoding = "async";
+        image.fetchPriority = "low";
+        image.src = slide.image;
+        campaignImagePreloads.push(image);
+      });
+  }
+  function scheduleCampaignPreload() {
+    if (saveData) return;
+    window.setTimeout(function () {
+      if ("requestIdleCallback" in window) requestIdleCallback(preloadCampaigns, { timeout: 3000 });
+      else preloadCampaigns();
+    }, 1600);
+  }
+  if (window.SG && window.SG.introComplete) scheduleCampaignPreload();
+  else document.addEventListener("sg:intro-complete", scheduleCampaignPreload, { once: true });
   window.addEventListener("pagehide", function () { campaignImagePreloads.length = 0; }, { once: true });
 
   // Resolves once a slide's banner is downloaded and decoded (or after `cap`
@@ -66,7 +83,7 @@ import { preferLightSource } from "./video-scrub.js";
   // preload is enough to resume the fetch; load() would reset the element
   // and repaint its poster (a later LCP for the same image).
   function startFilmLoad() {
-    if (!video || video.preload !== "none") return;
+    if (!video || saveData || video.preload !== "none") return;
     video.preload = "metadata";
   }
   // a page (category, terms, bag...) covers the landing
@@ -132,7 +149,7 @@ import { preferLightSource } from "./video-scrub.js";
   var heroVisible = heroRect.bottom > 0 && heroRect.top < window.innerHeight;
 
   function startVideoOnce() {
-    if (!video || videoStarted || !introComplete || !heroVisible || document.hidden || landingCovered()) return;
+    if (!video || saveData || videoStarted || !introComplete || !heroVisible || document.hidden || landingCovered()) return;
     video.preload = "auto";
     videoStarted = true;
     video.setAttribute("data-ready", "0");

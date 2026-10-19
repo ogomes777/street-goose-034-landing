@@ -3,6 +3,8 @@
    hoje é o handoff por WhatsApp (mesma lógica que já existia no modal
    antigo) — os demais aparecem desabilitados até um PSP ser configurado
    (ver PaymentService). Nenhum pagamento é aprovado no cliente. */
+import { checkoutFieldErrors } from "./checkout-validation.js";
+
 export function mountCheckoutPage(root, _params, onClose) {
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
 
@@ -42,20 +44,20 @@ export function mountCheckoutPage(root, _params, onClose) {
         '<div class="checkout-grid">' +
         '<label class="span-2">' + t("auth.name") + '<input name="name" required value="' + window.SG.esc(f.name) + '\"></label>' +
         '<label>' + t("auth.email") + '<input type="email" name="email" required value="' + window.SG.esc(f.email) + '\"></label>' +
-        '<label>Telefone<input name="phone" required data-mask="phone" placeholder="(00) 00000-0000" value="' + window.SG.esc(f.phone) + '\"></label>' +
+        '<label>Telefone<input type="tel" inputmode="tel" autocomplete="tel" name="phone" required data-mask="phone" placeholder="(00) 00000-0000" value="' + window.SG.esc(f.phone) + '\"></label>' +
         "</div>"
       );
     }
     if (STEPS[stepIndex] === "address") {
       return (
         '<div class="checkout-grid">' +
-        '<label>CEP<input name="cep" required data-mask="cep" placeholder="00000-000" value="' + window.SG.esc(f.cep) + '\"></label>' +
+        '<label>CEP<input inputmode="numeric" autocomplete="postal-code" name="cep" required data-mask="cep" placeholder="00000-000" value="' + window.SG.esc(f.cep) + '\"></label>' +
         '<label class="span-2">Rua<input name="street" required value="' + window.SG.esc(f.street) + '\"></label>' +
         '<label>Número<input name="number" required value="' + window.SG.esc(f.number) + '\"></label>' +
         '<label>Complemento<input name="complement" value="' + window.SG.esc(f.complement) + '\"></label>' +
         '<label>Bairro<input name="neighborhood" required value="' + window.SG.esc(f.neighborhood) + '\"></label>' +
         '<label>Cidade<input name="city" required value="' + window.SG.esc(f.city) + '\"></label>' +
-        '<label>Estado<input name="state" required maxlength="2" placeholder="UF" value="' + window.SG.esc(f.state) + '\"></label>' +
+        '<label>Estado<input name="state" autocomplete="address-level1" required maxlength="2" placeholder="UF" value="' + window.SG.esc(f.state) + '\"></label>' +
         "</div>"
       );
     }
@@ -168,18 +170,22 @@ export function mountCheckoutPage(root, _params, onClose) {
 
   function confirmationStepHtml() {
     if (formData.payment === "whatsapp") {
-      return '<div class="app-page-empty"><h2>Pedido enviado para o WhatsApp.</h2>' +
+      return '<div class="app-page-empty"><h2>Pedido preparado para o WhatsApp.</h2>' +
         (orderId ? '<p>Pedido <strong>#' + orderId.slice(0, 8).toUpperCase() + '</strong> salvo na sua conta.</p>' : "") +
         (orderSummary && orderSummary.couponCode && orderSummary.discountCents > 0
           ? "<p>Cupom <b>" + window.SG.esc(orderSummary.couponCode) + "</b> aplicado: −" + window.SG.formatPrice(orderSummary.discountCents) + ".</p>"
           : (coupon && orderId ? "<p>O cupom não pôde ser aplicado no pedido. a equipe confere no atendimento.</p>" : "")) +
-        '<p>A equipe Street Goose confirma disponibilidade e fecha o pagamento por lá.</p><a class="btn btn-primary" href="/">' + t("cart.continueShopping") + "</a></div>";
+        '<p>A equipe Street Goose confirma disponibilidade e fecha o pagamento por lá.</p>' +
+        (handoffUrl ? '<p><a class="btn btn-primary" target="_blank" rel="noopener noreferrer" href="' + window.SG.esc(handoffUrl) + '">Abrir conversa no WhatsApp</a></p>' : "") +
+        '<a class="text-link" href="/">' + t("cart.continueShopping") + "</a></div>";
     }
     return '<div class="app-page-empty"><h2>' + t("checkout.payment.unavailable") + "</h2><p>Esse método ainda depende de um provedor de pagamento configurado.</p></div>";
   }
 
   var orderId = null;
   var orderSummary = null;
+  var handoffUrl = null;
+  var submitting = false;
   var idempotencyKey = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
 
   // Registra o pedido no backend quando há sessão (RPC create_whatsapp_order).
@@ -231,23 +237,29 @@ export function mountCheckoutPage(root, _params, onClose) {
   }
 
   function validateStep() {
-    if (STEPS[stepIndex] === "identification" || STEPS[stepIndex] === "address") {
-      var invalid = [];
-      bodyEl.querySelectorAll(".checkout-grid input[required]").forEach(function (input) {
-        input.closest("label").classList.remove("field-error");
-        if (!input.value.trim()) invalid.push(input);
-      });
-      if (STEPS[stepIndex] === "identification") {
-        var emailInput = bodyEl.querySelector('[name="email"]');
-        if (emailInput && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value)) invalid.push(emailInput);
-      }
-      if (invalid.length) {
-        invalid.forEach(function (input) { input.closest("label").classList.add("field-error"); });
-        invalid[0].focus();
-        return false;
-      }
+    if (STEPS[stepIndex] !== "identification" && STEPS[stepIndex] !== "address") return true;
+    var current = {};
+    bodyEl.querySelectorAll(".checkout-grid input").forEach(function (input) {
+      current[input.name] = input.value.trim();
+      input.removeAttribute("aria-invalid");
+      input.closest("label").classList.remove("field-error");
+    });
+    var errors = checkoutFieldErrors(current);
+    var first = null;
+    Object.keys(errors).forEach(function (field) {
+      var input = bodyEl.querySelector('.checkout-grid input[name="' + field + '"]');
+      if (!input) return;
+      input.setAttribute("aria-invalid", "true");
+      input.closest("label").classList.add("field-error");
+      if (!first) first = input;
+    });
+    var notice = bodyEl.querySelector("[data-checkout-error]");
+    if (notice) {
+      notice.textContent = first ? errors[first.name] : "";
+      notice.hidden = !first;
     }
-    return true;
+    if (first) first.focus();
+    return !first;
   }
 
   async function renderStep() {
@@ -273,7 +285,8 @@ export function mountCheckoutPage(root, _params, onClose) {
       '<button class="btn btn-primary" data-checkout-next>' + (stepName === "review" ? t("cart.checkout") : t("checkout.next")) + "</button>" +
       "</div>";
 
-    bodyEl.innerHTML = '<div class="checkout-step-content">' + content + "</div>" + navHtml;
+    bodyEl.innerHTML = '<div class="checkout-step-content">' + content + "</div>" +
+      '<p class="checkout-validation-error" data-checkout-error role="alert" hidden></p>' + navHtml;
 
     bodyEl.querySelectorAll('[data-mask="cep"]').forEach(function (el) { el.addEventListener("input", function () { el.value = CEP_MASK(el.value); }); });
     bodyEl.querySelectorAll('[data-mask="phone"]').forEach(function (el) { el.addEventListener("input", function () { el.value = PHONE_MASK(el.value); }); });
@@ -282,6 +295,7 @@ export function mountCheckoutPage(root, _params, onClose) {
     if (backBtn) backBtn.addEventListener("click", function () { stepIndex--; renderStep(); });
     var nextBtn = bodyEl.querySelector("[data-checkout-next]");
     if (nextBtn) nextBtn.addEventListener("click", async function () {
+      if (submitting) return;
       if (stepName === "identification" || stepName === "address") { collectFields(); if (!validateStep()) return; }
       if (stepName === "payment") {
         var checked = bodyEl.querySelector('input[name="payment"]:checked');
@@ -292,13 +306,31 @@ export function mountCheckoutPage(root, _params, onClose) {
           // abre a aba já no clique (senão o bloqueador de popup barra
           // depois do await) e só depois aponta para o link com o nº do pedido
           var waWin = window.open("", "_blank");
+          submitting = true;
           nextBtn.disabled = true;
-          await registerOrder();
-          var link = window.SG.waLink(buildWhatsAppMessage());
-          if (window.SG.track) window.SG.track("whatsapp_click", { location: "checkout" });
-          if (waWin) { try { waWin.opener = null; } catch (_e) {} waWin.location.href = link; }
-          else window.location.href = link;
-          if (window.SG.cart) window.SG.cart.clear();
+          try {
+            await registerOrder();
+            handoffUrl = window.SG.waLink(buildWhatsAppMessage());
+            if (waWin) {
+              try { waWin.opener = null; } catch (_e) {}
+              waWin.location.href = handoffUrl;
+            } else {
+              // Alguns navegadores mobile bloqueiam popups: há um link
+              // explícito de recuperação na confirmação caso não abra.
+            }
+            if (window.SG.track) window.SG.track("whatsapp_click", { location: "checkout" });
+            if (window.SG.cart) window.SG.cart.clear();
+          } catch (_error) {
+            if (waWin) try { waWin.close(); } catch (_e) {}
+            var notice = bodyEl.querySelector("[data-checkout-error]");
+            if (notice) {
+              notice.hidden = false;
+              notice.textContent = "Não foi possível preparar o WhatsApp. Tente novamente; sua sacola está salva.";
+            }
+            submitting = false;
+            nextBtn.disabled = false;
+            return;
+          }
         }
       }
       stepIndex++;
