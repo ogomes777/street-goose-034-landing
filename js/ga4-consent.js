@@ -128,23 +128,30 @@
     if (!allowed.has(data.event)) return;
 
     const text = (value) => typeof value === "string" ? value.slice(0, 80) : undefined;
+    // nomes e parâmetros conforme docs/launch/03 (tabela GA4)
     const params = {};
-    if (text(data.location)) params.location = text(data.location);
+    if (text(data.location)) params.cta_location = text(data.location);
     if (text(data.label)) params.label = text(data.label);
     if (text(data.method)) params.method = text(data.method);
-    if (typeof data.slide === "number" && Number.isFinite(data.slide)) params.slide = data.slide;
+    if (text(data.slide)) params.slide = text(data.slide);
+    const item = text(data.product_id);
 
     if (data.event === "whatsapp_click") {
-      window.gtag("event", "generate_lead", { method: "whatsapp", ...params });
-    } else if (data.event === "product_open" && text(data.product_id)) {
-      window.gtag("event", "select_item", { items: [{ item_id: text(data.product_id) }], ...params });
-    } else if ((data.event === "add_to_cart" || data.event === "add_to_wishlist") && text(data.product_id)) {
-      window.gtag("event", data.event, { items: [{ item_id: text(data.product_id) }] });
+      // microconversão: clique não é lead confirmado
+      window.gtag("event", "click_whatsapp", params);
+    } else if (data.event === "product_open" && item) {
+      window.gtag("event", "view_item", { items: [{ item_id: item }], ...params });
+    } else if ((data.event === "add_to_cart" || data.event === "add_to_wishlist") && item) {
+      window.gtag("event", data.event, { items: [{ item_id: item }] });
     } else if (data.event === "order_created") {
-      window.gtag("event", "order_created", {
-        item_count: Array.isArray(data.items) ? data.items.length : 0,
+      // pedido gravado no banco: lead real; venda só quando a equipe confirma o pagamento
+      window.gtag("event", "generate_lead", {
+        lead_type: "pedido_whatsapp",
+        item_count: typeof data.items === "number" ? data.items : 0,
         has_unpriced: data.has_unpriced === true,
       });
+    } else if (data.event === "newsletter_submit") {
+      window.gtag("event", "generate_lead", { lead_type: "newsletter" });
     } else {
       window.gtag("event", data.event, params);
     }

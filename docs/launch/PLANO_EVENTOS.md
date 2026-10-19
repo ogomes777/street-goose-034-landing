@@ -2,7 +2,7 @@
 
 Implementação: `js/analytics.js`. `window.SG.track(nome, parâmetros)` grava em `window.dataLayer`, o formato que Google Tag Manager e GA4 leem.
 
-**Estado atual: nenhum fornecedor ligado.** Não há ID de medição real, então nenhum script de terceiro carrega e nenhum dado sai do aparelho. Os eventos ficam só na memória da página até alguém configurar o fornecedor (ver "Para ligar um fornecedor").
+**Estado atual: GA4 ligado com consentimento explícito (ver abaixo).** Não há ID de medição real, então nenhum script de terceiro carrega e nenhum dado sai do aparelho. Os eventos ficam só na memória da página até alguém configurar o fornecedor (ver "Para ligar um fornecedor").
 Visitas (pageviews) já são contadas pelo Cloudflare Web Analytics, que é anônimo, sem cookies e já citado na política de privacidade.
 
 ## Eventos
@@ -28,26 +28,24 @@ Regras seguidas:
 - **Sem dado pessoal.** Nenhum evento leva nome, e-mail, telefone, endereço ou id de usuário.
 - **Sem venda por clique.** Não existe evento `purchase`. A venda real só acontece quando a equipe marca o pedido como pago no painel. Para medir receita, use o financeiro do painel ou envie a conversão a partir do servidor quando o status virar "pago" (Measurement Protocol); essa parte fica para quando houver o ID.
 
-## Mapeamento sugerido para GA4
+## Envio ao GA4 (ativo, ID G-XPZWPBGLDN, só após aceite no aviso de cookies)
 
-| Evento do site | GA4 | Conversão (key event)? |
+`js/ga4-consent.js` traduz os eventos internos para os nomes da tabela do doc 03:
+
+| Evento do site | Enviado ao GA4 | Observação |
 |---|---|---|
-| `add_to_cart`, `add_to_wishlist`, `begin_checkout`, `login`, `sign_up` | mesmos nomes (eventos recomendados) | não |
-| `whatsapp_click` | `generate_lead` | sim, contato com intenção de compra |
-| `order_created` | evento personalizado `order_created` | sim, pedido registrado |
-| `product_open` | `select_item` | não |
-| demais | eventos personalizados | não |
+| `whatsapp_click` | `click_whatsapp` (`cta_location`) | microconversão, não lead |
+| `product_open` | `view_item` (`items[].item_id`, `cta_location`) | |
+| `add_to_cart`, `add_to_wishlist` | mesmos nomes (`items[].item_id`) | |
+| `begin_checkout` | `begin_checkout` (`cta_location`) | |
+| `order_created` | `generate_lead` (`lead_type: pedido_whatsapp`, `item_count`, `has_unpriced`) | pedido gravado no banco |
+| `newsletter_submit` | `generate_lead` (`lead_type: newsletter`) | inscrição aceita pelo servidor |
+| `login`, `sign_up` | mesmos nomes (`method`) | |
+| `page_view` | medição otimizada do GA4 (mudança de histórico) | sem envio manual, para não duplicar |
+| `purchase` | não enviado | venda é confirmada no painel; enviar pelo servidor (Measurement Protocol) quando houver segredo de API |
 
-## Para ligar um fornecedor (pendência)
-
-1. Criar a propriedade GA4 (ou contêiner do GTM) e enviar o ID (G-XXXX ou GTM-XXXX).
-2. Decidir e aprovar o aviso de consentimento de cookies (LGPD). GA4 grava cookies, então precisa de consentimento antes de coletar (Consent Mode v2 com padrão "negado").
-3. Implementação técnica:
-   - carregar o script do fornecedor só depois do consentimento;
-   - liberar os domínios dele na Content-Security-Policy (`vercel.json`: script-src, connect-src, img-src);
-   - desligar o `page_view` automático e mandar um por troca de rota (o site é de página única; o `js/router.js` já sabe quando a rota muda).
-4. Atualizar a política de privacidade (`js/legal-page.js`) citando o fornecedor.
-5. Verificar no DebugView do GA4 que cada interação gera um evento só.
+Recusar no aviso não carrega nada; revogar apaga os cookies `_ga` e recarrega sem GA4.
+Marcar `generate_lead` como evento-chave no GA4 (Admin → Eventos).
 
 ## Como verificar hoje
 
