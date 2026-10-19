@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test("Diagnóstico de bootstrap no iPhone e Android simulados", async ({ page, browserName }) => {
   const jsErrors: string[] = [];
@@ -24,4 +24,7 @@ test("Diagnóstico de bootstrap no iPhone e Android simulados", async ({ page, b
     resourceJs: performance.getEntriesByType("resource").filter((r) => /\.js($|\?)/.test(r.name)).length,
   }));
   console.log("BOOTSTRAP_DIAGNOSTICS_" + browserName + " " + JSON.stringify({ state, jsErrors, consoleErrors, failed }));
+  expect(failed.filter((url) => url.includes("127.0.0.1:4174/assets/"))).toEqual([]);
+  await expect(page.locator(".sg034-cookie-panel")).toBeVisible({ timeout: 10_000 });
+  await expect.poll(() => page.evaluate(() => typeof (window as any).SG_ROUTER), { timeout: 15_000 }).toBe("object");
 });
