@@ -63,8 +63,15 @@ async function bootstrap() {
   const { catalogReady } = await import("../js/catalog-sync.js");
   await catalogReady;
   await import("../js/boot-shop.js");
-  if ("requestIdleCallback" in window) requestIdleCallback(renderCharacter, { timeout: 1500 });
-  else setTimeout(renderCharacter, 300);
+  // A intro é um vídeo prioritário. Não competir pelo decoder/rede com
+  // a seção React até que o visitante tenha saído da abertura.
+  const scheduleCharacter = () => {
+    if ("requestIdleCallback" in window) requestIdleCallback(renderCharacter, { timeout: 1500 });
+    else setTimeout(renderCharacter, 300);
+  };
+  const introDone = (window as unknown as { SG?: { introComplete?: boolean } }).SG?.introComplete;
+  if (introDone) scheduleCharacter();
+  else document.addEventListener("sg:intro-complete", scheduleCharacter, { once: true });
 
   // sg-perf-low nasce de navigator.hardwareConcurrency/deviceMemory + innerWidth
   // < 720 — ou seja, praticamente todo celular (Safari nem expõe deviceMemory,
