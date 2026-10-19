@@ -148,7 +148,7 @@ export default defineConfig({
     headers: {
       ...securityHeaders,
       "Content-Security-Policy": (securityHeaders["Content-Security-Policy"] ?? "")
-        .replace(/;\\s*upgrade-insecure-requests\\b/g, ""),
+        .replace("; upgrade-insecure-requests", ""),
     },
   },
 });
