@@ -56,7 +56,7 @@ export function mountCategoryPage(root, slug, onRequestClose) {
       (reduced ? "" :
         '<video class="cat-hero-video" data-cat-video muted loop playsinline preload="auto" poster="' + cat.heroPoster + '" aria-hidden="true"><source src="' + heroVideoSrc + '" type="video/mp4" /></video>') +
       '<div class="cat-hero-scrim"></div>' +
-      '<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h2 class="cat-hero-title">' + cat.label + "</h2></div>" +
+      '<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h1 class="cat-hero-title">' + cat.label + "</h1></div>" +
       '<button class="cat-hero-cue" type="button" data-cat-cue>Ver as peças' +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
       "</button>" +

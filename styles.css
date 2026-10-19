@@ -533,6 +533,13 @@ img{max-width:100%;display:block}
 .cat-catalog{position:relative;z-index:5;background:#080808;padding:100px 24px 140px;margin-top:-4px}
 .cat-catalog-head{max-width:var(--max);margin:0 auto 40px;text-align:center}
 .cat-catalog-head h3{margin:0 0 8px;font-size:clamp(26px,4vw,40px);color:#fff}
+/* versão já no HTML de /categoria/* (scripts/vite-seo-pages.ts): mesmo
+   visual da página montada pelo app, que a substitui ao carregar */
+.cat-catalog-head h2{margin:0 0 8px;font-size:clamp(26px,4vw,40px);color:#fff}
+.cat-item.is-static{opacity:1;transform:none}
+.cat-seo-lead{max-width:640px;margin:-16px auto 40px;text-align:center;color:#9a9a95;font-size:15px;line-height:1.6}
+.cat-seo-links{max-width:var(--max);margin:48px auto 0;display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.cat-seo-links a{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border:1px solid rgba(255,255,255,.14);border-radius:999px;color:#f2f2ef;text-decoration:none;font-size:14px}
 .cat-catalog-head p{margin:0;color:#9a9a95}
 .cat-catalog-grid{max-width:var(--max);margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px}
 .cat-item{position:relative;background:#0e0e0e;border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden;opacity:0;transform:translateY(24px) scale(.97)}

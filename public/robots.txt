@@ -1,0 +1,7 @@
+# Street Goose 034
+# Páginas pessoais (conta, sacola, checkout, painel) usam noindex no próprio
+# HTML e no cabeçalho; não são bloqueadas aqui para o robô conseguir ler isso.
+User-agent: *
+Allow: /
+
+Sitemap: https://www.streetgoose034.com.br/sitemap.xml

@@ -332,7 +332,10 @@
     el.classList.add("is-open");
     el.setAttribute("aria-hidden", "false");
     openEl = el;
-    if (el === popupEl) window.dispatchEvent(new CustomEvent('sg:overlay', { detail: { open: true } }));
+    if (el === popupEl) {
+      window.dispatchEvent(new CustomEvent('sg:overlay', { detail: { open: true } }));
+      if (window.SG.track) window.SG.track("drop_popup_open");
+    }
     var closeBtn = el.querySelector(".popup-close");
     closeBtn && closeBtn.focus();
     document.addEventListener("keydown", onKeydown);
@@ -355,6 +358,7 @@
       if (!document.body.classList.contains('category-page-open')) window.dispatchEvent(new CustomEvent('sg:overlay', { detail: { open: false } }));
       window.SG.entryPopupSettled = true;
       document.dispatchEvent(new CustomEvent("sg:entry-popup-settled"));
+      if (window.SG.track) window.SG.track("drop_popup_close");
     }
   }
 

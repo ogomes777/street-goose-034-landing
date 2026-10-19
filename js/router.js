@@ -4,6 +4,8 @@
    compartilhado). History API + fallback SPA (vercel.json rewrite). Uma
    única fonte de verdade para "rota ativa"; navigate()/popstate convergem
    no mesmo render(). Cada módulo de página é importado sob demanda. */
+import { ROUTE_META, SITE_ORIGIN, metaForPath } from "./route-meta.js";
+
 (function () {
   "use strict";
 
@@ -90,7 +92,11 @@
     if (token !== routeToken) return;
     // Category to category: close the previous one, keep the saved scroll.
     if (currentTeardown) { currentTeardown(); currentTeardown = null; }
-    var alreadyOpen = !catOverlay.hidden;
+    // A category URL ships its page already in the HTML (see
+    // scripts/vite-seo-pages.ts): visible but not opened by the router yet.
+    var prerendered = catOverlay.hasAttribute("data-prerendered");
+    catOverlay.removeAttribute("data-prerendered");
+    var alreadyOpen = !catOverlay.hidden && !prerendered;
     if (!alreadyOpen) {
       setPortalPreviewsPaused(true);
       lockScroll();
@@ -144,8 +150,20 @@
     setPortalPreviewsPaused(false);
   }
 
+  // Tab title, description and canonical follow the route, the same values
+  // the build writes into each URL's HTML (js/route-meta.js).
+  function applyRouteMeta(path) {
+    var meta = metaForPath(path) || ROUTE_META["/"];
+    document.title = meta.title;
+    var desc = document.querySelector('meta[name="description"]');
+    if (desc && meta.description) desc.setAttribute("content", meta.description);
+    var canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical && meta.index) canonical.setAttribute("href", SITE_ORIGIN + (path === "/" ? "/" : path));
+  }
+
   function render() {
     var path = location.pathname;
+    applyRouteMeta(path.replace(/\/$/, "") || "/");
     var catSlug = categorySlugFromPath(path);
     var orderMatch = /^\/pedido\/([^/]+)\/?$/.exec(path);
     var appPath = orderMatch ? "/pedido/:id" : path.replace(/\/$/, "") || "/";

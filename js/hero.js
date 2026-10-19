@@ -51,11 +51,33 @@ import { preferLightSource } from "./video-scrub.js";
   }
 
   var track = heroEl.querySelector("[data-hero-track]");
+  // The first slide ships in the HTML for crawlers and no-JS visitors; the
+  // animated slider takes over from an empty track, exactly as before.
+  var staticSlide = track.querySelector("[data-static-slide]");
+  if (staticSlide && slides.length) staticSlide.remove();
   var video = heroEl.querySelector("[data-hero-video]");
   var fallbackImg = heroEl.querySelector("[data-hero-image]");
   // Slow connection on a large screen: the 1080p film (≈22 MB) would stall;
   // the 720p cut (≈4 MB) plays smoothly (see js/video-scrub.js).
   if (preferLightSource(video)) { try { video.load(); } catch (e) {} }
+  // The HTML ships the film with preload="none" so a direct link to another
+  // page (/termos, /categoria/...) never fetches it behind that page. On the
+  // landing it starts loading here, as it did from the HTML before.
+  function startFilmLoad() {
+    if (!video || video.preload !== "none") return;
+    video.preload = "metadata";
+    try { video.load(); } catch (e) {}
+  }
+  // a page (category, terms, bag...) covers the landing
+  function landingCovered() {
+    return location.pathname !== "/" || document.body.classList.contains("category-page-open");
+  }
+  if (!landingCovered()) startFilmLoad();
+  window.addEventListener("sg:overlay", function (e) {
+    if (e.detail && e.detail.open) return;
+    startFilmLoad();
+    resumeVideoIfNeeded();
+  });
   // Vite fingerprints the poster referenced by the HTML. Preserve that resolved
   // URL for the reduced-motion video slide instead of falling back to the
   // legacy runtime string from data.js (which is intentionally not bundled).
@@ -109,7 +131,7 @@ import { preferLightSource } from "./video-scrub.js";
   var heroVisible = heroRect.bottom > 0 && heroRect.top < window.innerHeight;
 
   function startVideoOnce() {
-    if (!video || videoStarted || !introComplete || !heroVisible || document.hidden) return;
+    if (!video || videoStarted || !introComplete || !heroVisible || document.hidden || landingCovered()) return;
     video.preload = "auto";
     videoStarted = true;
     video.setAttribute("data-ready", "0");
@@ -288,8 +310,11 @@ import { preferLightSource } from "./video-scrub.js";
     opts = opts || {};
     var next = (i + slides.length) % slides.length;
     if (next === index && !opts.force) return;
+    // only the visitor's own changes (arrows, keys, swipe), not autoplay
+    var byVisitor = index !== -1 && !opts.force && !opts.auto;
     index = next;
     var slide = slides[index];
+    if (byVisitor && window.SG.track) window.SG.track("campaign_slide_change", { slide: slide.id });
 
     applyAccent(slide);
     setMedia(slide);
@@ -311,7 +336,7 @@ import { preferLightSource } from "./video-scrub.js";
     whenSlideReady(slides[(index + 1) % slides.length], SLIDE_MS);
     timer = setTimeout(function () {
       whenSlideReady(slides[(index + 1) % slides.length], 4000).then(function () {
-        if (token === autoplayToken) next();
+        if (token === autoplayToken) goTo(index + 1, { auto: true });
       });
     }, SLIDE_MS);
   }

@@ -102,7 +102,18 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
   });
   if ("IntersectionObserver" in window) {
     var preloadIo = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) { if (e.isIntersecting) { startPreload(); preloadIo.disconnect(); } });
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        preloadIo.disconnect();
+        // a page opened by direct link (/termos...) covers the landing: wait
+        // until the visitor is back on it instead of fetching the film now
+        if (location.pathname === "/" && !document.body.classList.contains("category-page-open")) { startPreload(); return; }
+        window.addEventListener("sg:overlay", function onOverlay(ev) {
+          if (ev.detail && ev.detail.open) return;
+          window.removeEventListener("sg:overlay", onOverlay);
+          startPreload();
+        });
+      });
     }, { rootMargin: "250% 0px 250% 0px" });
     preloadIo.observe(section);
   } else {

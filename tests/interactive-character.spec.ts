@@ -223,7 +223,7 @@ test("short landscape viewports keep the editorial copy in frame", async ({ brow
     );
 
     await showInteractiveHero(page);
-    const headline = await page.locator(".sg-character-hero__copy h1").boundingBox();
+    const headline = await page.locator(".sg-character-hero__copy h2").boundingBox();
     const continuation = await page.locator(".sg-character-hero__scroll").boundingBox();
     expect(headline).not.toBeNull();
     expect(continuation).not.toBeNull();

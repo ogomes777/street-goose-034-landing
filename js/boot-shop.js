@@ -1,6 +1,7 @@
 /* Boot, part 2: runs after the catalog is ready (see js/catalog-sync.js).
    Same order as before: cart and wishlist before the router, which mounts the
    URL's route as soon as it loads (/checkout reads window.SG.cart on mount). */
+import './analytics.js';
 import './price-sync.js';
 import './cart.js';
 import './wishlist.js';
