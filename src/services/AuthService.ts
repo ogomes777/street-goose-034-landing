@@ -4,11 +4,12 @@
    resolve para { ok:false, reason:"not_configured" } em vez de simular
    sucesso ou travar silenciosamente. */
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { newPasswordProblem } from "../lib/password-check";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 export type AuthResult =
   | { ok: true; confirmationRequired?: boolean }
-  | { ok: false; reason: "not_configured" | "invalid_credentials" | "email_taken" | "network_error" | "unknown"; message: string };
+  | { ok: false; reason: "not_configured" | "invalid_credentials" | "email_taken" | "weak_password" | "network_error" | "unknown"; message: string };
 
 export const AuthService = {
   isConfigured(): boolean {
@@ -39,6 +40,8 @@ export const AuthService = {
 
   async signUpWithEmail(name: string, email: string, password: string, captchaToken?: string | null): Promise<AuthResult> {
     if (!supabase) return { ok: false, reason: "not_configured", message: "Cadastro ainda não configurado — falta VITE_SUPABASE_URL/VITE_SUPABASE_ANON_KEY." };
+    const problem = await newPasswordProblem(password);
+    if (problem) return { ok: false, reason: "weak_password", message: problem };
     const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin + "/", data: { name }, ...(captchaToken ? { captchaToken } : {}) } });
     if (error) {
       const reason = /already registered|already exists/i.test(error.message) ? "email_taken" : "unknown";
@@ -93,7 +96,8 @@ export const AuthService = {
 
   async updatePassword(password: string): Promise<AuthResult> {
     if (!supabase) return { ok: false, reason: "not_configured", message: "Atualização de senha indisponível." };
-    if (password.length < 8) return { ok: false, reason: "invalid_credentials", message: "Use pelo menos 8 caracteres." };
+    const problem = await newPasswordProblem(password);
+    if (problem) return { ok: false, reason: "weak_password", message: problem };
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !sessionData.session) return { ok: false, reason: "invalid_credentials", message: "Confirme seu acesso por e-mail antes de alterar a senha." };
     const { error } = await supabase.auth.updateUser({ password });
