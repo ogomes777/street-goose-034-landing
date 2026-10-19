@@ -23,6 +23,9 @@ test("Páginas de conta e checkout são noindex no HTML original", async ({ requ
 test("Mobile: links entre categorias continuam clicáveis depois da hidratação", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/categoria/lupas", { waitUntil: "domcontentloaded" });
+  // O aviso fixo pode cobrir o último link em uma viewport estreita.
+  // Recusar cookies preserva a privacidade e deixa o teste de navegação isolado.
+  await page.locator('[data-sg034-consent="denied"]').click();
   const anchor = page.locator('.category-page .cat-seo-links a[href="/categoria/relogios"]');
   await expect(anchor).toBeVisible({ timeout: 20_000 });
   await anchor.click();
