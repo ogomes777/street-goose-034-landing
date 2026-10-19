@@ -28,14 +28,19 @@
     if (loaded || document.querySelector("script[data-sg034-ga4]")) return;
     loaded = true;
 
-    window.dataLayer = window.dataLayer || [];
+    // Eventos SG disparados antes da autorização ficam só na memória local.
+    // Não entregar esse histórico ao Google quando o visitante aceita.
+    window.dataLayer = [];
     window.gtag = function () {
       window.dataLayer.push(arguments);
     };
     window.gtag("js", new Date());
     // A medição otimizada do fluxo GA4 já acompanha page_view e alterações
     // de histórico; não disparar page_view manual para evitar duplicação.
-    window.gtag("config", MEASUREMENT_ID, { anonymize_ip: true });
+    window.gtag("config", MEASUREMENT_ID, {
+      anonymize_ip: true,
+      page_location: window.location.origin + window.location.pathname.replace(/^\/pedido\/[^/]+$/, "/pedido/:id"),
+    });
 
     const script = document.createElement("script");
     script.async = true;
@@ -106,6 +111,42 @@
     if (event.target.closest("[data-sg034-consent-open]")) {
       event.preventDefault();
       showPanel();
+    }
+  });
+
+  // A camada própria da loja emite um evento DOM por ação real (js/analytics.js).
+  // Encaminhar somente os campos conhecidos, após consentimento, sem PII.
+  document.addEventListener("sg:analytics", (event) => {
+    if (!loaded || !event.detail || typeof window.gtag !== "function") return;
+    const data = event.detail;
+    const allowed = new Set([
+      "hero_cta_click", "campaign_slide_change", "product_open",
+      "add_to_cart", "add_to_wishlist", "begin_checkout", "order_created",
+      "whatsapp_click", "drop_popup_open", "drop_popup_close",
+      "newsletter_submit", "login", "sign_up",
+    ]);
+    if (!allowed.has(data.event)) return;
+
+    const text = (value) => typeof value === "string" ? value.slice(0, 80) : undefined;
+    const params = {};
+    if (text(data.location)) params.location = text(data.location);
+    if (text(data.label)) params.label = text(data.label);
+    if (text(data.method)) params.method = text(data.method);
+    if (typeof data.slide === "number" && Number.isFinite(data.slide)) params.slide = data.slide;
+
+    if (data.event === "whatsapp_click") {
+      window.gtag("event", "generate_lead", { method: "whatsapp", ...params });
+    } else if (data.event === "product_open" && text(data.product_id)) {
+      window.gtag("event", "select_item", { items: [{ item_id: text(data.product_id) }], ...params });
+    } else if ((data.event === "add_to_cart" || data.event === "add_to_wishlist") && text(data.product_id)) {
+      window.gtag("event", data.event, { items: [{ item_id: text(data.product_id) }] });
+    } else if (data.event === "order_created") {
+      window.gtag("event", "order_created", {
+        item_count: Array.isArray(data.items) ? data.items.length : 0,
+        has_unpriced: data.has_unpriced === true,
+      });
+    } else {
+      window.gtag("event", data.event, params);
     }
   });
 
