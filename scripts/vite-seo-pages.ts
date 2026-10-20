@@ -95,8 +95,8 @@ export function seoPages(): Plugin {
   // replaces it in place. Prices and buttons come with the app (live data).
   function categoryMarkup(slug: string, label: string, description: string, h1: string, poster: string, items: StaticItem[]): string {
     const others = CATALOG_CATEGORIES.filter((c) => c.slug !== slug)
-      .map((c) => `<a href="/categoria/${c.slug}">${esc(CATEGORY_LINK_TEXT[c.slug] ?? c.label)}</a>`).join("");
-    const guide = CATEGORY_SEO_CONTENT[slug];
+      .map((c) => `<a href="/categoria/${c.slug}">${esc((CATEGORY_LINK_TEXT as Record<string, string>)[c.slug] ?? c.label)}</a>`).join("");
+    const guide = (CATEGORY_SEO_CONTENT as Record<string, { heading: string; paragraphs: string[] }>)[slug];
     const editorial = guide ? `<section class="cat-seo-guide" aria-label="Sobre a coleção"><p class="cat-seo-guide-kicker">GUIA DA COLEÇÃO</p><h2>${esc(guide.heading)}</h2>${guide.paragraphs.map((p: string) => `<p>${esc(p)}</p>`).join("")}</section>` : "";
     return (
       `<a class="cat-close" href="/" aria-label="Voltar para a loja"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></a>` +
