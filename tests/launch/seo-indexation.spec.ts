@@ -142,11 +142,13 @@ test("Contato oficial: Instagram, suporte e CNPJ aparecem no site e termos", asy
   await expect(page.locator("footer a[href='mailto:streetlupas034@gmail.com']")).toHaveCount(1);
   await expect(page.locator("footer")).toContainText("45.692.155/0001-74");
   const cfg = await page.evaluate(() => (window as any).SG_COMPANY_CONFIG);
-  expect(cfg).toMatchObject({ cnpj: "45.692.155/0001-74", email: "streetlupas034@gmail.com", legalName: "" });
+  expect(cfg).toMatchObject({ cnpj: "45.692.155/0001-74", email: "streetlupas034@gmail.com", legalName: "Tiago Gabriel Barros Carneiro" });
   await page.goto("/termos", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".legal-company")).toContainText("45.692.155/0001-74");
+  await expect(page.locator(".legal-company")).toContainText("Tiago Gabriel Barros Carneiro");
   await expect(page.locator(".legal-company")).toContainText("streetlupas034@gmail.com");
   const html = await (await request.get("/")).text();
   expect(html).toContain('"taxID":"45.692.155/0001-74"');
+  expect(html).toContain('"legalName":"Tiago Gabriel Barros Carneiro"');
   expect(html).toContain('"sameAs":["https://www.instagram.com/street_goose034/"]');
 });
