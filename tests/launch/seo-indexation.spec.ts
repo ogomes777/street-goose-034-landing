@@ -152,3 +152,41 @@ test("Contato oficial: Instagram, suporte e CNPJ aparecem no site e termos", asy
   expect(html).toContain('"legalName":"Tiago Gabriel Barros Carneiro"');
   expect(html).toContain('"sameAs":["https://www.instagram.com/street_goose034/"]');
 });
+
+
+test("SEO comercial: categorias têm intenção de compra, H1, conteúdo próprio e links rastreáveis no HTML", async ({ request }) => {
+  const cases = [
+    { slug: "lupas", title: "Lupas e Óculos de Estilo Urbano", h1: "Lupas e Óculos", heading: "Lupas e óculos para um visual de rua" },
+    { slug: "acessorios", title: "Acessórios Streetwear: Mochilas e Coletes", h1: "Acessórios", heading: "Mochilas, coletes e acessórios streetwear" },
+    { slug: "relogios", title: "Relógios de Estilo Urbano", h1: "Relógios", heading: "Relógios para completar o estilo urbano" },
+    { slug: "perfumes", title: "Perfumes e Fragrâncias", h1: "Perfumes", heading: "Perfumes e fragrâncias para marcar presença" },
+    { slug: "trajes", title: "Moletons e Roupas Streetwear", h1: "Moletons e Trajes", heading: "Moletons e blusas de frio streetwear" },
+  ];
+  for (const entry of cases) {
+    const resp = await request.get("/categoria/" + entry.slug);
+    expect(resp.status()).toBe(200);
+    const html = await resp.text();
+    expect(html).toContain(entry.title);
+    expect(html).toContain(entry.heading);
+    expect(html).toMatch(new RegExp("<h1[^>]*>" + entry.h1 + "</h1>"));
+    expect([...html.matchAll(/<h1(?:\s|>)/g)]).toHaveLength(1);
+    expect(html).toContain('class="cat-seo-guide"');
+    expect(html).toContain('class="cat-seo-links"');
+    expect(html).toContain('href="/categoria/lupas"');
+    expect(html).toContain('href="/categoria/trajes"');
+    expect(html).not.toContain('<meta name="keywords"');
+  }
+  const home = await (await request.get("/")).text();
+  expect(home).toContain("Lupas, óculos e moda streetwear");
+  expect(home).toContain('class="sg-seo-home-links"');
+  expect(home).toContain("Mochilas e acessórios");
+  expect(home).toContain("Araxá (MG)");
+});
+
+test("SEO comercial: o guia continua visível após hidratar a categoria", async ({ page }) => {
+  await page.goto("/categoria/lupas", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("[data-category-page] [data-cat-cue]")).toBeVisible({ timeout: 20000 });
+  await expect(page.locator("[data-category-page] .cat-seo-guide")).toContainText("Lupas e óculos para um visual de rua");
+  await expect(page.locator("[data-category-page] .cat-hero-title")).toHaveText("Lupas e Óculos");
+  await expect(page.locator("[data-category-page] .cat-seo-links a[href='/categoria/trajes']")).toContainText("Moletons e trajes");
+});
