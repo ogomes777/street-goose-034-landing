@@ -101,7 +101,7 @@ export function mountCategoryPage(root, slug, onRequestClose, prerendered) {
       (reduced ? "" :
         '<video class="cat-hero-video" data-cat-video muted loop playsinline preload="metadata" poster="' + cat.heroPoster + '" aria-hidden="true"><source src="' + heroVideoSrc + '" type="video/mp4" /></video>') +
       '<div class="cat-hero-scrim"></div>' +
-      '<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h1 class="cat-hero-title">' + window.SG.esc(heroHeading) + "</h1></div>" +
+      '<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h1 class="cat-hero-title' + (heroHeading.length > 12 ? ' cat-hero-title--long' : '') + '">' + window.SG.esc(heroHeading) + "</h1></div>" +
       '<button class="cat-hero-cue" type="button" data-cat-cue>Ver as peças' +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
       "</button>" +
