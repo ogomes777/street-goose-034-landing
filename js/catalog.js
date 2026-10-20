@@ -10,23 +10,23 @@
    real de cada um. */
 import { CATALOG_CATEGORIES, PRODUCT_GROUPS, productName, productAlt } from "./catalog-data.js";
 import heroLupasVideo from "../assets/heroes/loop/hero-lupas.mp4";
-import heroLupasVideoMobile from "../assets/heroes/loop-mobile/hero-lupas.mp4";
+import heroLupasVideoMobile from "../assets/heroes/loop-mobile-optimized/hero-lupas.mp4";
 import heroLupasPoster from "../assets/heroes/posters-web/hero-lupas-poster.webp";
 import heroLupasPreview from "../assets/heroes/previews/hero-lupas.mp4";
 import heroAcessoriosVideo from "../assets/heroes/loop/hero-acessorios.mp4";
-import heroAcessoriosVideoMobile from "../assets/heroes/loop-mobile/hero-acessorios.mp4";
+import heroAcessoriosVideoMobile from "../assets/heroes/loop-mobile-optimized/hero-acessorios.mp4";
 import heroAcessoriosPoster from "../assets/heroes/posters-web/hero-acessorios-poster.webp";
 import heroAcessoriosPreview from "../assets/heroes/previews/hero-acessorios.mp4";
 import heroRelogiosVideo from "../assets/heroes/loop/hero-relogios.mp4";
-import heroRelogiosVideoMobile from "../assets/heroes/loop-mobile/hero-relogios.mp4";
+import heroRelogiosVideoMobile from "../assets/heroes/loop-mobile-optimized/hero-relogios.mp4";
 import heroRelogiosPoster from "../assets/heroes/posters-web/hero-relogios-poster.webp";
 import heroRelogiosPreview from "../assets/heroes/previews/hero-relogios.mp4";
 import heroPerfumesVideo from "../assets/heroes/loop/hero-perfumes.mp4";
-import heroPerfumesVideoMobile from "../assets/heroes/loop-mobile/hero-perfumes.mp4";
+import heroPerfumesVideoMobile from "../assets/heroes/loop-mobile-optimized/hero-perfumes.mp4";
 import heroPerfumesPoster from "../assets/heroes/posters-web/hero-perfumes-poster.webp";
 import heroPerfumesPreview from "../assets/heroes/previews/hero-perfumes.mp4";
 import heroTrajesVideo from "../assets/heroes/loop/hero-trajes.mp4";
-import heroTrajesVideoMobile from "../assets/heroes/loop-mobile/hero-trajes.mp4";
+import heroTrajesVideoMobile from "../assets/heroes/loop-mobile-optimized/hero-trajes.mp4";
 import heroTrajesPoster from "../assets/heroes/posters-web/hero-trajes-poster.webp";
 import heroTrajesPreview from "../assets/heroes/previews/hero-trajes.mp4";
 
