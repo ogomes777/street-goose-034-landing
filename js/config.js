@@ -11,7 +11,7 @@ window.SG_STORE_CONFIG = {
 window.SG_CONTACT_CONFIG = {
   whatsappNumber: "553497281423", // +55 34 9728-1423 (cliente, 08/10/2026) — formato E.164 sem "+"
   whatsappFallbackUrl: "https://wa.me/",
-  instagramHandle: "",
+  instagramHandle: "street_goose034",
   instagramFallbackUrl: "https://instagram.com/"
 };
 
@@ -19,10 +19,10 @@ window.SG_CONTACT_CONFIG = {
 // Preencha só com dados reais; cada linha aparece no site apenas quando
 // o campo estiver preenchido.
 window.SG_COMPANY_CONFIG = {
-  legalName: "",   // razão social
-  cnpj: "",        // 00.000.000/0000-00
+  legalName: "",   // razão social (aguardando confirmação documental)
+  cnpj: "45.692.155/0001-74",        // CNPJ informado pelo responsável, dígitos verificadores válidos
   address: "",     // endereço completo
-  email: "",       // e-mail de atendimento / privacidade
+  email: "streetlupas034@gmail.com",       // e-mail de atendimento / privacidade
   city: "Araxá — MG"
 };
 

@@ -133,3 +133,20 @@ test("Mobile: filmes H264 mantidos com variantes compactas sem mudar o poster", 
   expect(bytes).toBeLessThan(3_000_000);
   await expect(page.locator("[data-category-page] .cat-hero-poster")).toBeVisible();
 });
+
+test("Contato oficial: Instagram, suporte e CNPJ aparecem no site e termos", async ({ page, request }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("footer a[data-contact-instagram]")).toHaveAttribute(
+    "href", "https://instagram.com/street_goose034"
+  );
+  await expect(page.locator("footer a[href='mailto:streetlupas034@gmail.com']")).toHaveCount(1);
+  await expect(page.locator("footer")).toContainText("45.692.155/0001-74");
+  const cfg = await page.evaluate(() => (window as any).SG_COMPANY_CONFIG);
+  expect(cfg).toMatchObject({ cnpj: "45.692.155/0001-74", email: "streetlupas034@gmail.com", legalName: "" });
+  await page.goto("/termos", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".legal-company")).toContainText("45.692.155/0001-74");
+  await expect(page.locator(".legal-company")).toContainText("streetlupas034@gmail.com");
+  const html = await (await request.get("/")).text();
+  expect(html).toContain('"taxID":"45.692.155/0001-74"');
+  expect(html).toContain('"sameAs":["https://www.instagram.com/street_goose034/"]');
+});
