@@ -117,6 +117,17 @@ export function seoPages(): Plugin {
     const description = meta.description ?? (ROUTE_META as Record<string, Meta>)["/"].description ?? "";
     // the home's first hero slide (with its H1) belongs to the home only
     let html = replaceOne(base, /<div class="hero-slide-content" data-static-slide>[\s\S]*?<\/a><\/div><\/div>/, "", "slide estático do hero");
+    // Direct category URLs ship a visible prerendered overlay. Keep the home
+    // hero in document flow for SPA navigation, but don't render it behind the
+    // category: its off-screen video otherwise competes for the LCP candidate.
+    // visibility:hidden preserves geometry (unlike display:none, which caused CLS).
+    if (route.startsWith("/categoria/")) {
+      html = replaceOne(html, /<html lang="pt-BR" data-theme="dark">/,
+        '<html lang="pt-BR" data-theme="dark" data-sg-direct-category>', "category-entry");
+      html = replaceOne(html, /<head>/,
+        '<head><style data-sg-category-first-paint>html[data-sg-direct-category] main#top > section.hero{visibility:hidden!important}</style>',
+        "category-entry critical style");
+    }
     html = replaceOne(html, /<title>[^<]*<\/title>/, `<title>${esc(meta.title)}</title>`, "title");
     html = replaceOne(html, /<meta name="description" content="[^"]*"/, `<meta name="description" content="${esc(description)}"`, "description");
     html = replaceOne(html, /<meta name="robots" content="[^"]*"/, `<meta name="robots" content="${meta.index ? "index, follow, max-image-preview:large" : "noindex"}"`, "robots");
