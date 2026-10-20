@@ -44,6 +44,19 @@ test("SEO: sitemap contempla exatamente as URLs indexaveis", async ({ request })
   expect(xml).not.toContain("/admin");
 });
 
+test("SEO: sitemap sinaliza somente atualizações significativas e verificáveis", async ({ request }) => {
+  const response = await request.get("/sitemap.xml");
+  expect(response.status()).toBe(200);
+  const xml = await response.text();
+  const tags = [...xml.matchAll(/<url><loc>([^<]+)<\/loc>(?:<lastmod>([^<]+)<\/lastmod>)?<\/url>/g)];
+  expect(tags).toHaveLength(12);
+  const fresh = ["/", "/categoria/lupas", "/categoria/acessorios", "/categoria/relogios", "/categoria/perfumes", "/categoria/trajes"];
+  for (const [, url, date] of tags) {
+    const relative = new URL(url).pathname;
+    expect(date || undefined).toBe(fresh.includes(relative) ? "2026-10-20" : undefined);
+  }
+});
+
 test("SEO: robots publica sitemap; checkout privado nao deve indexar", async ({ request }) => {
   const [robots, checkout] = await Promise.all([request.get("/robots.txt"), request.get("/checkout")]);
   expect(robots.status()).toBe(200);
