@@ -1,0 +1,46 @@
+name: Street Goose | Preparar videos mobile otimizados
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/encode-mobile-media.py"
+      - ".github/workflows/encode-mobile-media.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: encode-streetgoose-mobile-media
+  cancel-in-progress: false
+
+jobs:
+  encode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 38
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - name: Verificar ffmpeg no runner
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
+          ffmpeg -version | head -2
+      - name: Criar cortes H264 opcionais e comparar com as originais
+        run: |
+          python3 scripts/encode-mobile-media.py
+      - name: Registrar somente os vídeos aprovados, preservando os originais
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A assets/heroes/loop-mobile-optimized/ assets/heroes/web/hero-film-mobile-optimized.mp4 assets/INTRO-LOADER-STREET-540-optimized.mp4 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Nenhum corte melhor passou nos controles de qualidade."
+          else
+            git commit -m "assets(perf): store quality-checked lighter mobile video cuts"
+            git push origin HEAD:main
+          fi
