@@ -114,7 +114,10 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
           startPreload();
         });
       });
-    }, { rootMargin: "250% 0px 250% 0px" });
+    // Mobile: 250% started downloading the 1.3MB scrub film on the first
+    // frame of the home while the intro and poster still needed bandwidth.
+    // 90% viewport still prefetches before users reach the scroll sequence.
+    }, { rootMargin: matchMedia("(max-width: 900px)").matches ? "90% 0px 90% 0px" : "250% 0px 250% 0px" });
     preloadIo.observe(section);
   } else {
     startPreload();

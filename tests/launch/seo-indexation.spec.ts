@@ -66,3 +66,20 @@ test("SEO: todas as categorias publicam lista de pecas e breadcrumb estruturado"
   }
 });
 
+
+test("LCP: categoria direta esconde apenas a pintura da home, sem mexer no layout", async ({ page }) => {
+  await page.goto("/categoria/lupas", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-sg-direct-category", "");
+  const homeHero = page.locator("main#top > section.hero");
+  await expect(homeHero).toHaveCSS("visibility", "hidden");
+  const before = await homeHero.boundingBox();
+  expect(before?.height).toBeGreaterThan(200);
+  // SEO markup for direct entry remains visible and crawlable.
+  await expect(page.locator("[data-category-page] .cat-hero-poster")).toBeVisible();
+  await page.waitForFunction(() => typeof (window as any).SG_ROUTER?.navigate === "function");
+  await page.evaluate(() => (window as any).SG_ROUTER.navigate("/"));
+  await expect(page.locator("html")).not.toHaveAttribute("data-sg-direct-category", "");
+  await expect(homeHero).toHaveCSS("visibility", "visible");
+  const after = await homeHero.boundingBox();
+  expect(after?.height).toBeCloseTo(before!.height, 0);
+});

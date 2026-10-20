@@ -165,6 +165,9 @@ import { ROUTE_META, SITE_ORIGIN, metaForPath } from "./route-meta.js";
     var path = location.pathname;
     applyRouteMeta(path.replace(/\/$/, "") || "/");
     var catSlug = categorySlugFromPath(path);
+    // Keep the home hero paintable when SPA navigation returns from a direct
+    // category entry. Does not toggle display/position/dimensions.
+    document.documentElement.toggleAttribute("data-sg-direct-category", Boolean(catSlug));
     var orderMatch = /^\/pedido\/([^/]+)\/?$/.exec(path);
     var appPath = orderMatch ? "/pedido/:id" : path.replace(/\/$/, "") || "/";
     var isAppRoute = orderMatch ? true : Object.prototype.hasOwnProperty.call(APP_LOADERS, appPath);
