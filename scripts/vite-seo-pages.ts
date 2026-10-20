@@ -129,7 +129,7 @@ export function seoPages(): Plugin {
     // when a visitor enters a category/checkout directly. For categories, give
     // the actually visible category poster the high-priority request instead.
     html = replaceOne(html,
-      /<link rel="preload" as="image" href="assets\/heroes\/web\/hero-poster-960\.jpg" fetchpriority="high" \/>/,
+      /<link rel="preload" as="image" href="[^"]*hero-poster-960[^"]*" fetchpriority="high" \/>/,
       image ? `<link rel="preload" as="image" href="${esc(image)}" fetchpriority="high" />` : "",
       "preload exclusivo da home");
     // the home's Organization/WebSite graph stays on the home; other public
