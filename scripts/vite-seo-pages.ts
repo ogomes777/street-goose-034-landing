@@ -121,6 +121,20 @@ export function seoPages(): Plugin {
     html = replaceOne(html, /<meta name="description" content="[^"]*"/, `<meta name="description" content="${esc(description)}"`, "description");
     html = replaceOne(html, /<meta name="robots" content="[^"]*"/, `<meta name="robots" content="${meta.index ? "index, follow, max-image-preview:large" : "noindex"}"`, "robots");
     html = replaceOne(html, /<link rel="canonical" href="[^"]*" \/>/, meta.index ? `<link rel="canonical" href="${url}" />` : "", "canonical");
+    // Direct category links have their own visible, prerendered full-screen page.
+    // The landing hero still exists behind it for SPA navigation, but must not
+    // paint/compete as LCP while the category is the actual page being visited.
+    // This critical inline CSS applies before the shared stylesheet finishes;
+    // the router removes data-entry-category when navigating away.
+    if (route.startsWith("/categoria/")) {
+      html = replaceOne(html,
+        /<html lang="pt-BR" data-theme="dark">/,
+        '<html lang="pt-BR" data-theme="dark" data-entry-category>',
+        "category entry marker");
+      html = replaceOne(html, /<head>/,
+        '<head><style data-sg-critical-category>html[data-entry-category] main#top > section.hero{display:none!important}</style>',
+        "category critical CSS");
+    }
     html = replaceOne(html, /<meta property="og:url" content="[^"]*"/, `<meta property="og:url" content="${url}"`, "og:url");
     html = replaceOne(html, /<meta property="og:title" content="[^"]*"/, `<meta property="og:title" content="${esc(meta.title)}"`, "og:title");
     html = replaceOne(html, /<meta property="og:description" content="[^"]*"/, `<meta property="og:description" content="${esc(description)}"`, "og:description");

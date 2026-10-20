@@ -1,0 +1,68 @@
+name: Street Goose | Lighthouse production SEO + Core Web Vitals
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/lighthouse-production.yml"
+      - "scripts/report-lighthouse.mjs"
+      - "tests/launch/seo-indexation.spec.ts"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/lighthouse-production.yml"
+      - "scripts/report-lighthouse.mjs"
+  workflow_dispatch:
+  schedule:
+    - cron: "15 11 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Instalar Chrome headless
+        id: chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
+      - name: Auditar performance e SEO no dominio em producao
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          set -euo pipefail
+          mkdir -p lighthouse-reports
+          # Lighthouse tracing may sporadically fail NO_NAVSTART on shared CI
+          # Chrome hosts. Retry the run without reporting a false site outage.
+          audit() {
+            local name="$1" url="$2" preset="$3"
+            for attempt in 1 2 3; do
+              echo "Lighthouse ${name} attempt ${attempt}/3"
+              if npx --yes --package=lighthouse@12.8.2 lighthouse "$url" --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" $preset --only-categories=performance,seo --throttling-method=simulate --output=json --output-path="lighthouse-reports/${name}.json" --max-wait-for-load=60000 --quiet; then
+                return 0
+              fi
+              echo "Lighthouse trace failed. Retrying after cooldown."
+              sleep 6
+            done
+            return 1
+          }
+          audit home-mobile "https://www.streetgoose034.com.br/" ""
+          audit category-mobile "https://www.streetgoose034.com.br/categoria/lupas" ""
+          audit home-desktop "https://www.streetgoose034.com.br/" "--preset=desktop"
+      - name: Resumir indicadores e maiores recursos de rede
+        if: always()
+        run: node scripts/report-lighthouse.mjs lighthouse-reports
+      - name: Publicar relatorios como artefatos do workflow
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: streetgoose-lighthouse-reports
+          path: lighthouse-reports/*.json
+          retention-days: 30
+          if-no-files-found: warn

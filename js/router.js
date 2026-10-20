@@ -165,6 +165,8 @@ import { ROUTE_META, SITE_ORIGIN, metaForPath } from "./route-meta.js";
     var path = location.pathname;
     applyRouteMeta(path.replace(/\/$/, "") || "/");
     var catSlug = categorySlugFromPath(path);
+    // Release the direct-entry LCP guard when the SPA returns to the home.
+    document.documentElement.toggleAttribute("data-entry-category", Boolean(catSlug));
     var orderMatch = /^\/pedido\/([^/]+)\/?$/.exec(path);
     var appPath = orderMatch ? "/pedido/:id" : path.replace(/\/$/, "") || "/";
     var isAppRoute = orderMatch ? true : Object.prototype.hasOwnProperty.call(APP_LOADERS, appPath);
