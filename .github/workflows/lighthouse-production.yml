@@ -11,6 +11,13 @@ on:
     paths:
       - ".github/workflows/lighthouse-production.yml"
       - "scripts/report-lighthouse.mjs"
+      - "scripts/vite-seo-pages.ts"
+      - "js/router.js"
+      - "js/category-page.js"
+      - "js/hero.js"
+      - "index.html"
+      - "styles.css"
+      - "vite.config.ts"
   workflow_dispatch:
   schedule:
     - cron: "15 11 * * 1"
