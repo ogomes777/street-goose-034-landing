@@ -103,7 +103,7 @@ import { ROUTE_META, SITE_ORIGIN, metaForPath } from "./route-meta.js";
     }
     catOverlay.hidden = false;
     if (!alreadyOpen) setOverlayOpen(true);
-    currentTeardown = categoryModule.mountCategoryPage(catOverlay, slug, requestClose);
+    currentTeardown = categoryModule.mountCategoryPage(catOverlay, slug, requestClose, prerendered);
   }
 
   function closeCategory() {

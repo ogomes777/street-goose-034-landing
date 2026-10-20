@@ -12,7 +12,7 @@ import { ROUTE_META } from "./route-meta.js";
    esconde de novo ao voltar o scroll. scroller é o overlay
    (.category-page), que tem overflow-y:auto — o document/window não rola
    enquanto a categoria está aberta (body fica position:fixed, ver router.js). */
-export function mountCategoryPage(root, slug, onRequestClose) {
+export function mountCategoryPage(root, slug, onRequestClose, prerendered) {
   var cat = window.SG_CATALOG_BY_SLUG && window.SG_CATALOG_BY_SLUG[slug];
   if (!cat) {
     root.innerHTML = '<p style="color:#fff;padding:120px 24px;text-align:center">Categoria não encontrada.</p>';
@@ -58,6 +58,36 @@ export function mountCategoryPage(root, slug, onRequestClose) {
   }
   var itemsHtml = cat.items.map(itemHtml).join("");
 
+  // A categoria acessada diretamente já veio no HTML, com poster e H1.
+  // Evite destruir e recriar esse poster ao hidratar; isso atrasava LCP
+  // vários segundos e rebaixava a experiência em celulares modestos.
+  // Com navegação interna SPA, mantém o caminho original de montagem.
+  var hasStaticHero = Boolean(prerendered && root.querySelector(".cat-hero-poster") && root.querySelector(".cat-catalog-grid"));
+  if (hasStaticHero) {
+    var staticHero = root.querySelector(".cat-hero");
+    var staticGrid = root.querySelector(".cat-catalog-grid");
+    var staticCatalog = root.querySelector(".cat-catalog");
+    var staticClose = root.querySelector(".cat-close");
+    staticHero.setAttribute("data-cat-hero", "");
+    staticCatalog.setAttribute("data-cat-catalog", "");
+    staticGrid.setAttribute("data-cat-grid", "");
+    staticClose.setAttribute("data-cat-close", "");
+    // Only mount the interactive layer above the same preloaded image.
+    // The overlay geometry, hero poster, heading and backdrop never change.
+    if (!reduced) {
+      staticHero.querySelector(".cat-hero-scrim").insertAdjacentHTML("beforebegin",
+        '<video class="cat-hero-video" data-cat-video muted loop playsinline preload="metadata" poster="' + cat.heroPoster + '" aria-hidden="true"><source src="' + heroVideoSrc + '" type="video/mp4" /></video>');
+    }
+    staticHero.insertAdjacentHTML("beforeend",
+      '<button class="cat-hero-cue" type="button" data-cat-cue>Ver as peças' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>');
+    // Products and prices are live and may differ from the build snapshot.
+    // Reconcile the below-the-fold cards without touching the hero subtree.
+    staticGrid.innerHTML = itemsHtml;
+    var countLabel = staticCatalog.querySelector(".cat-catalog-head p");
+    if (countLabel) countLabel.textContent = cat.count + " peças";
+  } else {
+
   root.innerHTML =
     '<button class="cat-close" type="button" data-cat-close aria-label="Fechar categoria">' +
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
@@ -79,6 +109,7 @@ export function mountCategoryPage(root, slug, onRequestClose) {
       '<div class="cat-catalog-grid" data-cat-grid>' + itemsHtml + "</div>" +
       '<nav class="cat-seo-links" aria-label="Outras categorias">' + crosslinksHtml + "</nav>" +
     "</div>";
+  }
 
   // root é reaproveitado entre categorias (só o innerHTML troca) — sem isso
   // o scrollTop de uma categoria anterior vaza pra próxima
@@ -92,7 +123,7 @@ export function mountCategoryPage(root, slug, onRequestClose) {
   var grid = root.querySelector("[data-cat-grid]");
   var items = Array.prototype.slice.call(grid.children);
 
-  function close() { onRequestClose(); }
+  function close(event) { if (event) event.preventDefault(); onRequestClose(); }
   closeBtn.addEventListener("click", close);
   function onKeydown(e) { if (e.key === "Escape") close(); }
   document.addEventListener("keydown", onKeydown);

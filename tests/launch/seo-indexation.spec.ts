@@ -83,3 +83,24 @@ test("LCP: categoria direta esconde apenas a pintura da home, sem mexer no layou
   const after = await homeHero.boundingBox();
   expect(after?.height).toBeCloseTo(before!.height, 0);
 });
+
+test("LCP: hidratacao da categoria preserva o poster ja pintado pelo HTML", async ({ page }) => {
+  await page.addInitScript(() => {
+    (window as any).__initialCategoryPoster = null;
+    const observer = new MutationObserver(() => {
+      if (!(window as any).__initialCategoryPoster) {
+        const poster = document.querySelector("[data-category-page] .cat-hero-poster");
+        if (poster) (window as any).__initialCategoryPoster = poster;
+      }
+    });
+    observer.observe(document, { subtree: true, childList: true });
+  });
+  await page.goto("/categoria/lupas", { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => document.querySelector("[data-category-page] [data-cat-video]") !== null);
+  const stable = await page.evaluate(() => (window as any).__initialCategoryPoster === document.querySelector("[data-category-page] .cat-hero-poster"));
+  expect(stable).toBe(true);
+  await expect(page.locator("[data-category-page] [data-cat-cue]")).toBeVisible();
+  await expect(page.locator("[data-category-page] .cat-item")).not.toHaveCount(0);
+  await page.locator("[data-category-page] .cat-close").click();
+  await expect(page).toHaveURL("/");
+});

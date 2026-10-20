@@ -1,11 +1,9 @@
-import { StrictMode } from "react";
 import '../js/copy-typography.css';
 import '../js/landing-refinement.css';
 import '../js/ranking-preview.css';
 import '../js/gem-crystals.css';
 import '../js/community-app.css';
 import '../js/perf-budget.css';
-import { createRoot } from "react-dom/client";
 
 type StreetGooseWindow = Window &
   typeof globalThis & {
@@ -31,12 +29,15 @@ async function bootstrap() {
       // A cena e seu CSS ficam num chunk carregado apenas quando necessário.
       // Antes, o import estático incluía tudo no grafo inicial do site, mesmo
       // que a renderização React só acontecesse após o primeiro scroll/idle.
-      void import("./components/interactive-character/InteractiveCharacterHero")
-        .then(({ InteractiveCharacterHero }) => {
+      // React is only needed for this below-fold chapter. Do not make its
+      // vendor bundle block first paint of the cinematic intro and category.
+      void Promise.all([
+        import("./components/interactive-character/InteractiveCharacterHero"),
+        import("react"),
+        import("react-dom/client"),
+      ]).then(([{ InteractiveCharacterHero }, { createElement, StrictMode }, { createRoot }]) => {
           createRoot(heroRoot).render(
-            <StrictMode>
-              <InteractiveCharacterHero />
-            </StrictMode>,
+            createElement(StrictMode, null, createElement(InteractiveCharacterHero)),
           );
           // O capítulo passa a ter altura: recalcular os gatilhos de scroll.
           requestAnimationFrame(() => requestAnimationFrame(() => (window as StreetGooseWindow).ScrollTrigger?.refresh()));

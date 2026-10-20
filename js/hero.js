@@ -90,10 +90,7 @@ import { preferLightSource } from "./video-scrub.js";
   function landingCovered() {
     return location.pathname !== "/" || document.body.classList.contains("category-page-open");
   }
-  // While the 18s intro is playing, the landing video is obscured.
-  // Avoid a second media download/decoder fighting with the intro on phones.
-  // The film is fetched immediately when the intro finishes or is skipped.
-  if (!landingCovered() && window.SG.introComplete) startFilmLoad();
+  if (!landingCovered()) startFilmLoad();
   window.addEventListener("sg:overlay", function (e) {
     if (e.detail && e.detail.open) return;
     startFilmLoad();
@@ -413,7 +410,6 @@ import { preferLightSource } from "./video-scrub.js";
   document.addEventListener("visibilitychange", syncHeroActivity);
   document.addEventListener("sg:intro-complete", function () {
     introComplete = true;
-    if (!landingCovered()) startFilmLoad();
     if (video) { try { video.currentTime = 0; } catch (e) {} }
     goTo(0, { force: true, silent: true });
     syncHeroActivity();
