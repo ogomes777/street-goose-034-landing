@@ -14,6 +14,8 @@ FILES = [
     ("assets/heroes/loop-mobile/hero-relogios.mp4", "assets/heroes/loop-mobile-optimized/hero-relogios.mp4"),
     ("assets/heroes/loop-mobile/hero-perfumes.mp4", "assets/heroes/loop-mobile-optimized/hero-perfumes.mp4"),
     ("assets/heroes/loop-mobile/hero-trajes.mp4", "assets/heroes/loop-mobile-optimized/hero-trajes.mp4"),
+    ("assets/heroes/web/hero-3d-mobile.mp4", "assets/heroes/web/hero-3d-mobile-optimized.mp4"),
+    ("assets/heroes/web/film-scrub-mobile.mp4", "assets/heroes/web/film-scrub-mobile-optimized.mp4"),
     ("assets/heroes/web/hero-film-mobile.mp4", "assets/heroes/web/hero-film-mobile-optimized.mp4"),
     ("assets/INTRO-LOADER-STREET-540.mp4", "assets/INTRO-LOADER-STREET-540-optimized.mp4"),
 ]
