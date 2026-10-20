@@ -24,9 +24,86 @@
     }
   }
 
+
+  // Core Web Vitals RUM: métricas reais do navegador, sem PII e só
+  // transmitidas ao GA4 depois que a pessoa aceitou analytics.
+  // LCP e CLS usam PerformanceObserver; INP é uma estimativa p98 de
+  // interações observadas (a implementação oficial é a referência final).
+  // Visitas sem suporte à métrica não geram número artificial.
+  let vitalsStarted = false;
+  function startWebVitals() {
+    if (vitalsStarted || typeof PerformanceObserver !== "function") return;
+    vitalsStarted = true;
+    const supported = PerformanceObserver.supportedEntryTypes || [];
+    let lcp = null;
+    let maxCls = 0;
+    let sessionCls = 0;
+    let sessionStart = 0;
+    let previousShift = 0;
+    const interactions = new Map();
+    let reported = false;
+
+    function observe(type, handler, options = {}) {
+      if (!supported.includes(type)) return;
+      try {
+        const observer = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) handler(entry);
+        });
+        observer.observe({ type, buffered: true, ...options });
+      } catch {
+        // Alguns motores não oferecem o mesmo tipo ou configuração.
+      }
+    }
+
+    observe("largest-contentful-paint", (entry) => { lcp = entry.startTime; });
+    observe("layout-shift", (entry) => {
+      if (entry.hadRecentInput) return;
+      if (!sessionStart || entry.startTime - previousShift > 1000 || entry.startTime - sessionStart > 5000) {
+        sessionStart = entry.startTime;
+        sessionCls = 0;
+      }
+      sessionCls += entry.value;
+      previousShift = entry.startTime;
+      maxCls = Math.max(maxCls, sessionCls);
+    });
+    observe("event", (entry) => {
+      if (!entry.interactionId) return;
+      interactions.set(entry.interactionId, Math.max(interactions.get(entry.interactionId) || 0, entry.duration));
+    }, { durationThreshold: 40 });
+
+    function emit(name, value, good, improve) {
+      if (!Number.isFinite(value)) return;
+      window.gtag("event", "web_vital", {
+        metric_name: name,
+        metric_value: Math.round(value),
+        metric_rating: value <= good ? "good" : value <= improve ? "needs_improvement" : "poor",
+        metric_origin: "browser",
+        non_interaction: true,
+      });
+    }
+
+    function report() {
+      if (reported || !loaded || readChoice() !== "accepted" || typeof window.gtag !== "function") return;
+      reported = true;
+      if (lcp !== null) emit("LCP", lcp, 2500, 4000);
+      // CLS é um número decimal; escala x1000 para manter o evento inteiro.
+      if (supported.includes("layout-shift")) emit("CLS", maxCls * 1000, 100, 250);
+      if (interactions.size) {
+        const delays = [...interactions.values()].sort((a, b) => b - a);
+        const sample = Math.min(delays.length - 1, Math.floor(delays.length / 50));
+        emit("INP_estimate", delays[sample], 200, 500);
+      }
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") report();
+    });
+    window.addEventListener("pagehide", report, { once: true });
+  }
+
   function loadAnalytics() {
     if (loaded || document.querySelector("script[data-sg034-ga4]")) return;
     loaded = true;
+    startWebVitals();
 
     // Eventos SG disparados antes da autorização ficam só na memória local.
     // Não entregar esse histórico ao Google quando o visitante aceita.
