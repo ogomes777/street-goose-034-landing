@@ -65,3 +65,13 @@ test("SEO: todas as categorias publicam lista de pecas e breadcrumb estruturado"
     expect(html).toContain('class="cat-seo-links"');
   }
 });
+
+test("LCP: categoria direta nao renderiza o hero oculto da home, SPA volta normalmente", async ({ page }) => {
+  await page.goto("/categoria/lupas", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("html")).toHaveAttribute("data-entry-category", "");
+  await expect(page.locator("main#top > section.hero")).toHaveCSS("display", "none");
+  await page.waitForFunction(() => typeof (window as any).SG_ROUTER?.navigate === "function");
+  await page.evaluate(() => (window as any).SG_ROUTER.navigate("/"));
+  await expect(page.locator("html")).not.toHaveAttribute("data-entry-category", "");
+  await expect(page.locator("main#top > section.hero")).not.toHaveCSS("display", "none");
+});
