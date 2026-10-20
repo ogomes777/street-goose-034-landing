@@ -175,7 +175,13 @@ export function seoPages(): Plugin {
     async closeBundle() {
       const indexPath = path.join(outDir, "index.html");
       // og:image must be an absolute URL for social previews
-      const base = readFileSync(indexPath, "utf8").replace(/(<meta property="og:image" content=")\/(?!\/)/, `$1${SITE_ORIGIN}/`);
+      const commit = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || "").trim();
+      const raw = readFileSync(indexPath, "utf8").replace(/(<meta property="og:image" content=")\/(?!\/)/, `$1${SITE_ORIGIN}/`);
+      // Lighthouse must observe the actual deployed Git commit, not the
+      // previous version while Vercel is still building.
+      const base = /^[0-9a-f]{40}$/i.test(commit)
+        ? raw.replace("</head>", `<meta name="sg-deploy-commit" content="${commit}"></head>`)
+        : raw;
       writeFileSync(indexPath, base);
 
       const supabaseUrl = env.VITE_SUPABASE_URL;
