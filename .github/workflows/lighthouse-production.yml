@@ -29,6 +29,7 @@ permissions:
 
 jobs:
   lighthouse:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -41,6 +42,23 @@ jobs:
         uses: browser-actions/setup-chrome@v2
         with:
           chrome-version: stable
+      - name: Esperar a Vercel publicar este commit no dominio canonico
+        if: github.event_name == 'push'
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 48); do
+            live="$(curl -fLsS --max-time 20 --retry 1 'https://www.streetgoose034.com.br/' || true)"
+            if printf '%s' "$live" | grep -Fq "name=\"sg-deploy-commit\" content=\"$EXPECTED_COMMIT\""; then
+              echo "Producao conferida: commit $EXPECTED_COMMIT"
+              exit 0
+            fi
+            echo "Deploy ainda em propagacao ($attempt/48)"
+            sleep 10
+          done
+          echo "A versao esperada nao esta no dominio; abortando auditoria para evitar metricas falsas."
+          exit 1
       - name: Auditar performance e SEO no dominio em producao
         env:
           CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
