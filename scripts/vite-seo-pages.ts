@@ -125,6 +125,13 @@ export function seoPages(): Plugin {
     html = replaceOne(html, /<meta property="og:title" content="[^"]*"/, `<meta property="og:title" content="${esc(meta.title)}"`, "og:title");
     html = replaceOne(html, /<meta property="og:description" content="[^"]*"/, `<meta property="og:description" content="${esc(description)}"`, "og:description");
     if (image) html = replaceOne(html, /<meta property="og:image" content="[^"]*"/, `<meta property="og:image" content="${SITE_ORIGIN}${image}"`, "og:image");
+    // Every route inherits the home markup. Do not preload the home hero poster
+    // when a visitor enters a category/checkout directly. For categories, give
+    // the actually visible category poster the high-priority request instead.
+    html = replaceOne(html,
+      /<link rel="preload" as="image" href="assets\/heroes\/web\/hero-poster-960\.jpg" fetchpriority="high" \/>/,
+      image ? `<link rel="preload" as="image" href="${esc(image)}" fetchpriority="high" />` : "",
+      "preload exclusivo da home");
     // the home's Organization/WebSite graph stays on the home; other public
     // pages describe where they sit in the site
     const ld = meta.index
