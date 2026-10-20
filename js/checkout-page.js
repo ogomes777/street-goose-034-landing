@@ -184,6 +184,8 @@ export function mountCheckoutPage(root, _params, onClose) {
 
   var orderId = null;
   var orderSummary = null;
+  // One accepted backend order must count only once, even on a repeated attempt.
+  var leadTrackedOrderId = null;
   var handoffUrl = null;
   var submitting = false;
   var idempotencyKey = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
@@ -201,11 +203,20 @@ export function mountCheckoutPage(root, _params, onClose) {
         idempotencyKey,
         coupon ? coupon.code : null
       );
-      if (res.ok) {
+      if (res.ok && res.orderId) {
         orderId = res.orderId;
-        orderSummary = await mod.OrderService.getSummary(orderId);
-        // order saved, payment still to be confirmed by the team: not a sale
-        if (window.SG.track) window.SG.track("order_created", { items: rows.length, has_unpriced: hasUnpriced() });
+        // A falha ao buscar resumo (cupons/conexão) não pode apagar um lead
+        // cujo pedido já foi confirmado e gravado no Supabase.
+        // Não inclui ID, nome, telefone ou endereço nos parâmetros do GA4.
+        if (leadTrackedOrderId !== orderId) {
+          leadTrackedOrderId = orderId;
+          if (window.SG.track) window.SG.track("order_created", {
+            items: rows.reduce(function (total, row) { return total + row.qty; }, 0),
+            has_unpriced: hasUnpriced()
+          });
+        }
+        try { orderSummary = await mod.OrderService.getSummary(orderId); }
+        catch (_e) { orderSummary = null; /* mantém o pedido e segue para WhatsApp */ }
       }
     } catch (_e) { /* segue pelo WhatsApp */ }
   }
