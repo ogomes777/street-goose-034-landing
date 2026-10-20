@@ -100,24 +100,32 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
     // travado no frame 0 esperando o próximo evento de scroll — reaplica agora
     if (filmST) applyProgress(filmST.progress);
   });
+  // The film is below the hero and cannot be reached while the full-screen
+  // intro is active. Prefetching it 2.5 viewports early competed with the
+  // mobile intro/hero for ~1.3MB. Wait for the intro to finish AND the chapter
+  // to approach the viewport. Its poster remains available in the meantime.
+  var filmNearViewport = false;
+  function maybePreloadFilm() {
+    if (!filmNearViewport || !window.SG.introComplete) return;
+    if (location.pathname !== "/" || document.body.classList.contains("category-page-open")) return;
+    startPreload();
+  }
+  document.addEventListener("sg:intro-complete", maybePreloadFilm);
+  window.addEventListener("sg:overlay", function (event) {
+    if (event.detail && event.detail.open) return;
+    maybePreloadFilm();
+  });
   if ("IntersectionObserver" in window) {
     var preloadIo = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (!e.isIntersecting) return;
-        preloadIo.disconnect();
-        // a page opened by direct link (/termos...) covers the landing: wait
-        // until the visitor is back on it instead of fetching the film now
-        if (location.pathname === "/" && !document.body.classList.contains("category-page-open")) { startPreload(); return; }
-        window.addEventListener("sg:overlay", function onOverlay(ev) {
-          if (ev.detail && ev.detail.open) return;
-          window.removeEventListener("sg:overlay", onOverlay);
-          startPreload();
-        });
-      });
-    }, { rootMargin: "250% 0px 250% 0px" });
+      if (!entries.some(function (entry) { return entry.isIntersecting; })) return;
+      filmNearViewport = true;
+      preloadIo.disconnect();
+      maybePreloadFilm();
+    }, { rootMargin: matchMedia("(max-width: 900px)").matches ? "65% 0px 65% 0px" : "200% 0px 200% 0px" });
     preloadIo.observe(section);
   } else {
-    startPreload();
+    filmNearViewport = true;
+    maybePreloadFilm();
   }
 
   /* ---------------- Jornada do produto (timeline pausada, tocada via progress) ---------------- */
