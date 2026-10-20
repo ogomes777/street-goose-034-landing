@@ -186,7 +186,7 @@ export function seoPages(): Plugin {
       for (const [route, meta] of Object.entries(ROUTE_META as Record<string, Meta>)) {
         if (route === "/") continue;
         const cat = CATALOG_CATEGORIES.find((c) => route === "/categoria/" + c.slug);
-        const poster = cat ? assetUrl.get(`assets/heroes/loop/hero-${cat.slug}-poster.jpg`) ?? null : null;
+        const poster = cat ? (assetUrl.get(`assets/heroes/posters-web/hero-${cat.slug}-poster.webp`) ?? assetUrl.get(`assets/heroes/loop/hero-${cat.slug}-poster.jpg`) ?? null) : null;
         let html = withMeta(base, route, meta, poster);
         if (cat && poster) {
           const items = categoryItems(cat, rows, storage);
