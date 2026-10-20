@@ -38,10 +38,23 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p lighthouse-reports
-          # Does not touch the shop build or alter real visitors.
-          npx --yes --package=lighthouse@12.8.2 lighthouse "https://www.streetgoose034.com.br/" --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" --only-categories=performance,seo --throttling-method=simulate --output=json --output-path=lighthouse-reports/home-mobile.json --max-wait-for-load=60000 --quiet
-          npx --yes --package=lighthouse@12.8.2 lighthouse "https://www.streetgoose034.com.br/categoria/lupas" --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" --only-categories=performance,seo --throttling-method=simulate --output=json --output-path=lighthouse-reports/category-mobile.json --max-wait-for-load=60000 --quiet
-          npx --yes --package=lighthouse@12.8.2 lighthouse "https://www.streetgoose034.com.br/" --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" --preset=desktop --only-categories=performance,seo --throttling-method=simulate --output=json --output-path=lighthouse-reports/home-desktop.json --max-wait-for-load=60000 --quiet
+          # Lighthouse tracing may sporadically fail NO_NAVSTART on shared CI
+          # Chrome hosts. Retry the run without reporting a false site outage.
+          audit() {
+            local name="$1" url="$2" preset="$3"
+            for attempt in 1 2 3; do
+              echo "Lighthouse ${name} attempt ${attempt}/3"
+              if npx --yes --package=lighthouse@12.8.2 lighthouse "$url" --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" $preset --only-categories=performance,seo --throttling-method=simulate --output=json --output-path="lighthouse-reports/${name}.json" --max-wait-for-load=60000 --quiet; then
+                return 0
+              fi
+              echo "Lighthouse trace failed. Retrying after cooldown."
+              sleep 6
+            done
+            return 1
+          }
+          audit home-mobile "https://www.streetgoose034.com.br/" ""
+          audit category-mobile "https://www.streetgoose034.com.br/categoria/lupas" ""
+          audit home-desktop "https://www.streetgoose034.com.br/" "--preset=desktop"
       - name: Resumir indicadores e maiores recursos de rede
         if: always()
         run: node scripts/report-lighthouse.mjs lighthouse-reports
