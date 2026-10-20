@@ -104,3 +104,17 @@ test("LCP: hidratacao da categoria preserva o poster ja pintado pelo HTML", asyn
   await page.locator("[data-category-page] .cat-close").click();
   await expect(page).toHaveURL("/");
 });
+
+test("Mobile: filmes H264 mantidos com variantes compactas sem mudar o poster", async ({ page, request }) => {
+  await page.goto("/categoria/lupas", { waitUntil: "domcontentloaded" });
+  const source = page.locator("[data-category-page] video.cat-hero-video source");
+  await expect(source).toHaveCount(1);
+  const src = await source.getAttribute("src");
+  expect(src).toMatch(/hero-lupas-.*\.mp4/);
+  const video = await request.get(src!);
+  expect(video.status()).toBe(200);
+  const bytes = (await video.body()).length;
+  expect(bytes).toBeGreaterThan(100_000);
+  expect(bytes).toBeLessThan(3_000_000);
+  await expect(page.locator("[data-category-page] .cat-hero-poster")).toBeVisible();
+});
