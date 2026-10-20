@@ -103,7 +103,7 @@ export function seoPages(): Plugin {
       `<section class="cat-hero"><img class="cat-hero-bg" src="${poster}" alt="" aria-hidden="true" />` +
       `<img class="cat-hero-poster" src="${poster}" alt="" fetchpriority="high" />` +
       `<div class="cat-hero-scrim"></div>` +
-      `<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h1 class="cat-hero-title">${esc(h1)}</h1></div></section>` +
+      `<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h1 class="cat-hero-title${h1.length > 12 ? " cat-hero-title--long" : ""}">${esc(h1)}</h1></div></section>` +
       `<div class="cat-catalog"><div class="cat-catalog-head"><h2>${esc(label)}</h2><p>${items.length} peças</p></div>` +
       `<p class="cat-seo-lead">${esc(description)}</p>` +
       `<div class="cat-catalog-grid">` +
