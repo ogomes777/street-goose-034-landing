@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 const categories = [
-  ["lupas", "Lupas"],
+  ["lupas", "Lupas e Óculos"],
   ["acessorios", "Acessórios"],
   ["relogios", "Relógios"],
   ["perfumes", "Perfumes"],
-  ["trajes", "Trajes"],
+  ["trajes", "Moletons e Trajes"],
 ] as const;
 
 test("SEO: a home publica título e canonical", async ({ request }) => {
@@ -21,7 +21,8 @@ test("SEO: as cinco categorias possuem HTML acessível e links relacionados", as
     const response = await request.get("/categoria/" + slug);
     expect(response.status()).toBe(200);
     const html = await response.text();
-    expect(html).toContain('<h1 class="cat-hero-title">' + label + "</h1>");
+    expect(html).toContain(">" + label + "</h1>");
+    expect(html).toMatch(/<h1 class="cat-hero-title(?: cat-hero-title--long)?">/);
     expect(html).toContain('rel="canonical"');
     expect(html).toContain('class="cat-seo-links"');
     expect(html).toContain('class="cat-item is-static"');
@@ -31,7 +32,7 @@ test("SEO: as cinco categorias possuem HTML acessível e links relacionados", as
 test("Mobile: categoria mantém título e navegação cruzada após iniciar o JavaScript", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/categoria/lupas", { waitUntil: "domcontentloaded" });
-  await expect(page.locator(".category-page .cat-hero-title")).toHaveText("Lupas", { timeout: 20_000 });
+  await expect(page.locator(".category-page .cat-hero-title")).toHaveText("Lupas e Óculos", { timeout: 20_000 });
   await expect(page.locator(".category-page .cat-seo-links a")).toHaveCount(4, { timeout: 20_000 });
 });
 

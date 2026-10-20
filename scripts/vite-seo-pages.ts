@@ -9,7 +9,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Plugin } from "vite";
-import { ROUTE_META, SITE_NAME, SITE_ORIGIN } from "../js/route-meta.js";
+import { ROUTE_META, SITE_NAME, SITE_ORIGIN, CATEGORY_SEO_CONTENT, CATEGORY_LINK_TEXT } from "../js/route-meta.js";
 import { CATALOG_CATEGORIES, PRODUCT_GROUPS, productAlt, productName } from "../js/catalog-data.js";
 
 type Meta = { index: boolean; title: string; description?: string; h1?: string };
@@ -93,22 +93,24 @@ export function seoPages(): Plugin {
 
   // Same structure and classes as js/category-page.js, so the app's mount
   // replaces it in place. Prices and buttons come with the app (live data).
-  function categoryMarkup(slug: string, label: string, description: string, poster: string, items: StaticItem[]): string {
+  function categoryMarkup(slug: string, label: string, description: string, h1: string, poster: string, items: StaticItem[]): string {
     const others = CATALOG_CATEGORIES.filter((c) => c.slug !== slug)
-      .map((c) => `<a href="/categoria/${c.slug}">${esc(c.label)}</a>`).join("");
+      .map((c) => `<a href="/categoria/${c.slug}">${esc((CATEGORY_LINK_TEXT as Record<string, string>)[c.slug] ?? c.label)}</a>`).join("");
+    const guide = (CATEGORY_SEO_CONTENT as Record<string, { heading: string; paragraphs: string[] }>)[slug];
+    const editorial = guide ? `<section class="cat-seo-guide" aria-label="Sobre a coleção"><p class="cat-seo-guide-kicker">GUIA DA COLEÇÃO</p><h2>${esc(guide.heading)}</h2>${guide.paragraphs.map((p: string) => `<p>${esc(p)}</p>`).join("")}</section>` : "";
     return (
       `<a class="cat-close" href="/" aria-label="Voltar para a loja"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></a>` +
       `<section class="cat-hero"><img class="cat-hero-bg" src="${poster}" alt="" aria-hidden="true" />` +
       `<img class="cat-hero-poster" src="${poster}" alt="" fetchpriority="high" />` +
       `<div class="cat-hero-scrim"></div>` +
-      `<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h1 class="cat-hero-title">${esc(label)}</h1></div></section>` +
+      `<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h1 class="cat-hero-title${h1.length > 12 ? " cat-hero-title--long" : ""}">${esc(h1)}</h1></div></section>` +
       `<div class="cat-catalog"><div class="cat-catalog-head"><h2>${esc(label)}</h2><p>${items.length} peças</p></div>` +
       `<p class="cat-seo-lead">${esc(description)}</p>` +
       `<div class="cat-catalog-grid">` +
       items.map((it) =>
         `<article class="cat-item is-static" data-product-id="${esc(it.id)}"><div class="cat-item-img"><img src="${esc(it.image)}" alt="${esc(it.alt)}" loading="lazy" /></div>` +
         `<div class="cat-item-body"><p class="cat-item-name">${esc(it.name)}</p></div></article>`).join("") +
-      `</div><nav class="cat-seo-links" aria-label="Outras categorias">${others}</nav></div>`
+      `</div>${editorial}<nav class="cat-seo-links" aria-label="Outras categorias">${others}</nav></div>`
     );
   }
 
@@ -197,7 +199,7 @@ export function seoPages(): Plugin {
         if (cat && poster) {
           const items = categoryItems(cat, rows, storage);
           html = replaceOne(html, overlay,
-            `<section class="category-page" data-category-page data-prerendered aria-label="$1">${categoryMarkup(cat.slug, cat.label, meta.description ?? "", poster, items)}</section>`,
+            `<section class="category-page" data-category-page data-prerendered aria-label="$1">${categoryMarkup(cat.slug, cat.label, meta.description ?? "", meta.h1 ?? cat.label, poster, items)}</section>`,
             "overlay da categoria");
         }
         const out = path.join(outDir, routeFile(route));

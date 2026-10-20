@@ -1,5 +1,5 @@
 import { CATALOG_CATEGORIES } from "./catalog-data.js";
-import { ROUTE_META } from "./route-meta.js";
+import { ROUTE_META, CATEGORY_SEO_CONTENT, CATEGORY_LINK_TEXT } from "./route-meta.js";
 
 /* Street Goose 034 — Página de categoria (montada sob demanda pelo router).
    Hero com vídeo em loop infinito tocando sozinho — não depende do scroll.
@@ -31,9 +31,12 @@ export function mountCategoryPage(root, slug, onRequestClose, prerendered) {
   var reduced = window.SG.prefersReducedMotion() || saveData;
   var routeMeta = ROUTE_META["/categoria/" + slug];
   var description = routeMeta && routeMeta.description ? routeMeta.description : "";
+  var heroHeading = routeMeta && routeMeta.h1 ? routeMeta.h1 : cat.label;
+  var guide = CATEGORY_SEO_CONTENT[slug];
+  var editorialHtml = guide ? '<section class="cat-seo-guide" aria-label="Sobre a coleção"><p class="cat-seo-guide-kicker">GUIA DA COLEÇÃO</p><h2>' + window.SG.esc(guide.heading) + "</h2>" + guide.paragraphs.map(function (p) { return "<p>" + window.SG.esc(p) + "</p>"; }).join("") + "</section>" : "";
   var otherCategories = CATALOG_CATEGORIES.filter(function (c) { return c.slug !== slug; });
   var crosslinksHtml = otherCategories.map(function (c) {
-    return '<a href="/categoria/' + window.SG.esc(c.slug) + '">' + window.SG.esc(c.label) + "</a>";
+    return '<a href="/categoria/' + window.SG.esc(c.slug) + '">' + window.SG.esc(CATEGORY_LINK_TEXT[c.slug] || c.label) + "</a>";
   }).join("");
 
   function itemBodyHtml(item) {
@@ -98,7 +101,7 @@ export function mountCategoryPage(root, slug, onRequestClose, prerendered) {
       (reduced ? "" :
         '<video class="cat-hero-video" data-cat-video muted loop playsinline preload="metadata" poster="' + cat.heroPoster + '" aria-hidden="true"><source src="' + heroVideoSrc + '" type="video/mp4" /></video>') +
       '<div class="cat-hero-scrim"></div>' +
-      '<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h1 class="cat-hero-title">' + cat.label + "</h1></div>" +
+      '<div class="cat-hero-copy"><p class="cat-hero-kicker">STREET GOOSE 034</p><h1 class="cat-hero-title' + (heroHeading.length > 12 ? ' cat-hero-title--long' : '') + '">' + window.SG.esc(heroHeading) + "</h1></div>" +
       '<button class="cat-hero-cue" type="button" data-cat-cue>Ver as peças' +
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
       "</button>" +
@@ -107,6 +110,7 @@ export function mountCategoryPage(root, slug, onRequestClose, prerendered) {
       '<div class="cat-catalog-head"><h2>' + cat.label + "</h2><p>" + cat.count + " peças</p></div>" +
       '<p class="cat-seo-lead">' + window.SG.esc(description) + "</p>" +
       '<div class="cat-catalog-grid" data-cat-grid>' + itemsHtml + "</div>" +
+      editorialHtml +
       '<nav class="cat-seo-links" aria-label="Outras categorias">' + crosslinksHtml + "</nav>" +
     "</div>";
   }
