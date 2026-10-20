@@ -2605,3 +2605,64 @@ button.admin-post-media{position:relative;width:100%;padding:0;border:0;cursor:z
 @media(max-width:480px){.ranking-stage-member{gap:4px}.ranking-stage-member .ranking-stage-stone{font-size:6.5px;max-width:100px}.ranking-stage-leaders{bottom:52px}}
 .ranking-stage-member>span:not(.ranking-medal){font-size:9px;line-height:1.5;color:#c2b6d0}
 @media(max-width:480px){.ranking-stage-member>span:not(.ranking-medal){font-size:8px;max-width:85px}}
+
+
+/* SEO comercial: conteúdo útil visível, sem interferir no palco cinematográfico.
+   Renderização SSR e SPA usam os mesmos elementos. */
+.sg-seo-home-intro{
+  max-width:900px;margin:52px auto 0;padding:28px clamp(16px,4vw,36px);
+  text-align:center;border-top:1px solid rgba(255,255,255,.1);
+  color:rgba(245,245,242,.86)
+}
+.sg-seo-home-eyebrow,.cat-seo-guide-kicker{
+  margin:0 0 10px!important;color:#9f9f9b;font-size:11px!important;
+  line-height:1.6;letter-spacing:.23em;font-weight:700
+}
+.sg-seo-home-intro h2{
+  margin:0 0 12px;font-size:clamp(22px,3vw,32px);font-weight:750;
+  letter-spacing:-.025em;color:#f6f6f3
+}
+.sg-seo-home-intro > p:not(.sg-seo-home-eyebrow){
+  margin:0 auto;max-width:740px;font-size:14px;line-height:1.8;color:#a9a9a6
+}
+.sg-seo-home-links{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:9px;margin-top:25px
+}
+.sg-seo-home-links a{
+  display:inline-flex;align-items:center;min-height:44px;
+  padding:10px 16px;border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;color:#efefed;text-decoration:none;
+  font-size:13px;font-weight:600;transition:border-color .2s,background .2s
+}
+.sg-seo-home-links a:hover,.sg-seo-home-links a:focus-visible,
+.cat-seo-links a:hover,.cat-seo-links a:focus-visible{
+  border-color:rgba(255,255,255,.48);background:rgba(255,255,255,.07)
+}
+.cat-hero-title--long{
+  max-width:calc(100vw - 32px);margin:0 auto;
+  padding:0 8px;font-size:clamp(32px,6.2vw,76px);
+  line-height:1.12;text-wrap:balance
+}
+.cat-seo-guide{
+  max-width:830px;margin:66px auto 0;
+  padding:32px clamp(18px,4vw,38px);
+  border-top:1px solid rgba(255,255,255,.15);
+  border-bottom:1px solid rgba(255,255,255,.09);
+  color:#b5b5b0
+}
+.cat-seo-guide h2{
+  margin:0 0 16px;color:#f1f1ee;
+  font-size:clamp(22px,3vw,34px);font-weight:720;
+  line-height:1.22;letter-spacing:-.02em
+}
+.cat-seo-guide p:not(.cat-seo-guide-kicker){
+  margin:0 0 13px;max-width:720px;font-size:15px;line-height:1.8
+}
+.cat-seo-guide p:last-child{margin-bottom:0}
+@media(max-width:600px){
+  .sg-seo-home-intro{margin-top:32px;padding:24px 0 6px}
+  .sg-seo-home-links{gap:7px}
+  .sg-seo-home-links a{padding:9px 13px;font-size:12px}
+  .cat-seo-guide{margin-top:50px;padding:26px 4px}
+  .cat-seo-guide p:not(.cat-seo-guide-kicker){font-size:14px}
+}
