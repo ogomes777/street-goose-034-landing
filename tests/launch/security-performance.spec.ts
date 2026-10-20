@@ -27,3 +27,24 @@ test("Performance: a cena interativa fica fora do grafo de entrada e sob demanda
   expect(html).not.toMatch(/<link[^>]+(?:modulepreload|preload)[^>]+InteractiveCharacterHero/i);
   expect(html).toContain('id="interactive-character-root"');
 });
+
+test("Performance: categorias priorizam o próprio poster, sem baixar preload da home", async ({ request }) => {
+  const [homeResponse, categoryResponse, checkoutResponse] = await Promise.all([
+    request.get("/"),
+    request.get("/categoria/lupas"),
+    request.get("/checkout"),
+  ]);
+  expect(homeResponse.ok()).toBe(true);
+  expect(categoryResponse.ok()).toBe(true);
+  expect(checkoutResponse.ok()).toBe(true);
+  const home = await homeResponse.text();
+  const category = await categoryResponse.text();
+  const checkout = await checkoutResponse.text();
+  const homePreload = home.match(/<link rel="preload" as="image" href="[^"]*hero-poster-960[^"]*" fetchpriority="high" \/>/)?.[0];
+  expect(homePreload).toBeTruthy();
+  expect(category).not.toContain(homePreload!);
+  expect(checkout).not.toContain(homePreload!);
+  const visiblePoster = category.match(/<img class="cat-hero-poster" src="([^"]+)"/);
+  expect(visiblePoster).not.toBeNull();
+  expect(category).toContain(`<link rel="preload" as="image" href="${visiblePoster![1]}" fetchpriority="high" />`);
+});

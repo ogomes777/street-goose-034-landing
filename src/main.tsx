@@ -89,19 +89,29 @@ async function bootstrap() {
     await import("../js/scene.js");
   };
 
+  // A hero scene is geometrically visible even behind the fullscreen intro.
+  // Delay its Three.js download/GPU work until the intro finishes, so mobile
+  // decoders and the opening film get priority without removing the scene.
   const threeTargets = document.querySelectorAll("[data-hero-canvas], [data-film-canvas]");
-  if ("IntersectionObserver" in window && threeTargets.length) {
-    const sceneObserver = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        sceneObserver.disconnect();
-        void loadThreeScenes();
-      },
-      { rootMargin: "1000px 0px" },
-    );
-    threeTargets.forEach((target) => sceneObserver.observe(target));
+  const observeThreeScenes = () => {
+    if ("IntersectionObserver" in window && threeTargets.length) {
+      const sceneObserver = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          sceneObserver.disconnect();
+          void loadThreeScenes();
+        },
+        { rootMargin: "1000px 0px" },
+      );
+      threeTargets.forEach((target) => sceneObserver.observe(target));
+    } else {
+      globalThis.setTimeout(() => void loadThreeScenes(), 900);
+    }
+  };
+  if ((window as unknown as { SG?: { introComplete?: boolean } }).SG?.introComplete) {
+    observeThreeScenes();
   } else {
-    globalThis.setTimeout(() => void loadThreeScenes(), 900);
+    document.addEventListener("sg:intro-complete", observeThreeScenes, { once: true });
   }
 
   // Payment Terminal, final-act e newsletter compartilham um único
