@@ -207,12 +207,21 @@ export function seoPages(): Plugin {
         writeFileSync(out, html);
       }
 
-      // sitemap: only public, indexable, canonical URLs. No <lastmod>: the
-      // build cannot know when each page's content really changed.
-      const urls = Object.entries(ROUTE_META as Record<string, Meta>).filter(([, m]) => m.index).map(([route]) => SITE_ORIGIN + route);
+      // Só registra mudanças editoriais realmente confirmadas, nunca a
+      // data do deploy. Ao alterar significativamente uma página no futuro,
+      // atualize apenas a sua data. Páginas sem data ficam sem <lastmod>.
+      const lastmodByRoute: Record<string, string> = {
+        "/": "2026-10-20",
+        "/categoria/lupas": "2026-10-20",
+        "/categoria/acessorios": "2026-10-20",
+        "/categoria/relogios": "2026-10-20",
+        "/categoria/perfumes": "2026-10-20",
+        "/categoria/trajes": "2026-10-20",
+      };
+      const urls = Object.entries(ROUTE_META as Record<string, Meta>).filter(([, m]) => m.index);
       writeFileSync(path.join(outDir, "sitemap.xml"),
         `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-        urls.map((u) => `  <url><loc>${u}</loc></url>`).join("\n") + `\n</urlset>\n`);
+        urls.map(([route]) => `  <url><loc>${SITE_ORIGIN + route}</loc>${lastmodByRoute[route] ? `<lastmod>${lastmodByRoute[route]}</lastmod>` : ""}</url>`).join("\n") + `\n</urlset>\n`);
     },
   };
 }

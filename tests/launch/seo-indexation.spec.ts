@@ -44,6 +44,19 @@ test("SEO: sitemap contempla exatamente as URLs indexaveis", async ({ request })
   expect(xml).not.toContain("/admin");
 });
 
+test("SEO: sitemap sinaliza somente atualizações significativas e verificáveis", async ({ request }) => {
+  const response = await request.get("/sitemap.xml");
+  expect(response.status()).toBe(200);
+  const xml = await response.text();
+  const tags = [...xml.matchAll(/<url><loc>([^<]+)<\/loc>(?:<lastmod>([^<]+)<\/lastmod>)?<\/url>/g)];
+  expect(tags).toHaveLength(12);
+  const fresh = ["/", "/categoria/lupas", "/categoria/acessorios", "/categoria/relogios", "/categoria/perfumes", "/categoria/trajes"];
+  for (const [, url, date] of tags) {
+    const relative = new URL(url).pathname;
+    expect(date || undefined).toBe(fresh.includes(relative) ? "2026-10-20" : undefined);
+  }
+});
+
 test("SEO: robots publica sitemap; checkout privado nao deve indexar", async ({ request }) => {
   const [robots, checkout] = await Promise.all([request.get("/robots.txt"), request.get("/checkout")]);
   expect(robots.status()).toBe(200);
@@ -135,10 +148,11 @@ test("Mobile: filmes H264 mantidos com variantes compactas sem mudar o poster", 
 });
 
 test("Contato oficial: Instagram, suporte e CNPJ aparecem no site e termos", async ({ page, request }) => {
+  test.setTimeout(90000); // Mobile lento: aguarda inicialização real sem falsos negativos por CPU compartilhada
   await page.goto("/", { waitUntil: "domcontentloaded" });
   // Em iPhones simulados com CPU lenta, o bootstrap da loja pode terminar
   // depois de domcontentloaded. Aguardar a inicialização real, não um timer fixo.
-  await page.waitForFunction(() => Boolean((window as any).SG_CONTACT_CONFIG?.instagramHandle), { timeout: 30000 });
+  await page.waitForFunction(() => Boolean((window as any).SG_CONTACT_CONFIG?.instagramHandle), null, { timeout: 30000 });
   await expect(page.locator("footer a[data-contact-instagram]")).toHaveAttribute(
     "href", "https://instagram.com/street_goose034", { timeout: 30000 }
   );
@@ -147,10 +161,10 @@ test("Contato oficial: Instagram, suporte e CNPJ aparecem no site e termos", asy
   const cfg = await page.evaluate(() => (window as any).SG_COMPANY_CONFIG);
   expect(cfg).toMatchObject({ cnpj: "45.692.155/0001-74", email: "streetlupas034@gmail.com", legalName: "Tiago Gabriel Barros Carneiro" });
   await page.goto("/termos", { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => Boolean(document.querySelector(".legal-company")), { timeout: 30000 });
+  await page.waitForFunction(() => Boolean(document.querySelector(".legal-company")?.textContent?.includes("streetlupas034@gmail.com")), null, { timeout: 30000 });
   await expect(page.locator(".legal-company")).toContainText("45.692.155/0001-74", { timeout: 30000 });
-  await expect(page.locator(".legal-company")).toContainText("Tiago Gabriel Barros Carneiro");
-  await expect(page.locator(".legal-company")).toContainText("streetlupas034@gmail.com");
+  await expect(page.locator(".legal-company")).toContainText("Tiago Gabriel Barros Carneiro", { timeout: 15000 });
+  await expect(page.locator(".legal-company")).toContainText("streetlupas034@gmail.com", { timeout: 15000 });
   const html = await (await request.get("/")).text();
   expect(html).toContain('"taxID":"45.692.155/0001-74"');
   expect(html).toContain('"legalName":"Tiago Gabriel Barros Carneiro"');
