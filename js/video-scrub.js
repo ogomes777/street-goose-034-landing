@@ -54,7 +54,11 @@ export function createVideoScrubber(video, minStep) {
 export function preferLightSource(video) {
   if (!video) return false;
   var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  var slow = conn && (conn.saveData || /(^|-)(2g|3g)$/.test(conn.effectiveType || "") || (conn.downlink > 0 && conn.downlink < 5));
+  // Slow networks or genuinely modest desktop hardware get the smaller cut.
+  // This is only a source choice: cinematic timing/UX stay unchanged.
+  var lowMemory = typeof navigator.deviceMemory === "number" && navigator.deviceMemory <= 2;
+  var lowCpu = typeof navigator.hardwareConcurrency === "number" && navigator.hardwareConcurrency <= 2;
+  var slow = (conn && (conn.saveData || /(^|-)(2g|3g)$/.test(conn.effectiveType || "") || (conn.downlink > 0 && conn.downlink < 5))) || lowMemory || lowCpu;
   var desktop = video.querySelector("[data-src-desktop]");
   if (!slow || !desktop || !video.querySelector("[data-src-mobile]")) return false;
   desktop.remove();
