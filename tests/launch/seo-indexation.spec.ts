@@ -136,15 +136,19 @@ test("Mobile: filmes H264 mantidos com variantes compactas sem mudar o poster", 
 
 test("Contato oficial: Instagram, suporte e CNPJ aparecem no site e termos", async ({ page, request }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  // Em iPhones simulados com CPU lenta, o bootstrap da loja pode terminar
+  // depois de domcontentloaded. Aguardar a inicialização real, não um timer fixo.
+  await page.waitForFunction(() => Boolean((window as any).SG_CONTACT_CONFIG?.instagramHandle), { timeout: 30000 });
   await expect(page.locator("footer a[data-contact-instagram]")).toHaveAttribute(
-    "href", "https://instagram.com/street_goose034"
+    "href", "https://instagram.com/street_goose034", { timeout: 30000 }
   );
   await expect(page.locator("footer a[href='mailto:streetlupas034@gmail.com']")).toHaveCount(1);
   await expect(page.locator("footer")).toContainText("45.692.155/0001-74");
   const cfg = await page.evaluate(() => (window as any).SG_COMPANY_CONFIG);
   expect(cfg).toMatchObject({ cnpj: "45.692.155/0001-74", email: "streetlupas034@gmail.com", legalName: "Tiago Gabriel Barros Carneiro" });
   await page.goto("/termos", { waitUntil: "domcontentloaded" });
-  await expect(page.locator(".legal-company")).toContainText("45.692.155/0001-74");
+  await page.waitForFunction(() => Boolean(document.querySelector(".legal-company")), { timeout: 30000 });
+  await expect(page.locator(".legal-company")).toContainText("45.692.155/0001-74", { timeout: 30000 });
   await expect(page.locator(".legal-company")).toContainText("Tiago Gabriel Barros Carneiro");
   await expect(page.locator(".legal-company")).toContainText("streetlupas034@gmail.com");
   const html = await (await request.get("/")).text();
