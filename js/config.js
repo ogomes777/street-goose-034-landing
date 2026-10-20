@@ -19,7 +19,7 @@ window.SG_CONTACT_CONFIG = {
 // Preencha só com dados reais; cada linha aparece no site apenas quando
 // o campo estiver preenchido.
 window.SG_COMPANY_CONFIG = {
-  legalName: "",   // razão social (aguardando confirmação documental)
+  legalName: "Tiago Gabriel Barros Carneiro",   // razão social confirmada pelo responsável em 20/10/2026
   cnpj: "45.692.155/0001-74",        // CNPJ informado pelo responsável, dígitos verificadores válidos
   address: "",     // endereço completo
   email: "streetlupas034@gmail.com",       // e-mail de atendimento / privacidade
