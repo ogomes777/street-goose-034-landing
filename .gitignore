@@ -15,6 +15,9 @@ supabase/.temp
 !/assets/INTRO-LOADER-STREET-small.mp4
 !/assets/heroes/loop/*.mp4
 !/assets/heroes/loop-mobile/*.mp4
+!/assets/heroes/loop-mobile-optimized/*.mp4
+!/assets/INTRO-LOADER-STREET-540-optimized.mp4
+!/assets/heroes/web/hero-film-mobile-optimized.mp4
 !/assets/heroes/previews/*.mp4
 !/assets/heroes/web/*.mp4
 *.mov
@@ -23,3 +26,6 @@ supabase/.temp
 # Generated and verified during prebuild/predev
 public/product-cutout/
 public/brand/sg034-idvisual-cutout.webp
+
+# Generated WebP hero posters are reconstructed at prebuild.
+/assets/heroes/posters-web/
