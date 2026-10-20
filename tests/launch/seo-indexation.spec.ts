@@ -106,9 +106,24 @@ test("LCP: hidratacao da categoria preserva o poster ja pintado pelo HTML", asyn
 });
 
 test("Mobile: filmes H264 mantidos com variantes compactas sem mudar o poster", async ({ page, request }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/categoria/lupas", { waitUntil: "domcontentloaded" });
+  // Aguarda a hidratação do hero SSR. iPhone/WebKit e CPUs lentas podem
+  // levar mais de 5 segundos com vídeo pesado e tarefas em segundo plano.
+  await expect(page.locator("[data-category-page] [data-cat-cue]")).toBeVisible({ timeout: 20_000 });
   const source = page.locator("[data-category-page] video.cat-hero-video source");
-  await expect(source).toHaveCount(1);
+  // Economia de dados remove intencionalmente a tag de vídeo; o pôster fica.
+  const reduced = await page.evaluate(() => {
+    const sg = (window as any).SG;
+    const conn = (navigator as any).connection;
+    return Boolean((sg?.prefersReducedMotion && sg.prefersReducedMotion()) || conn?.saveData);
+  });
+  if (reduced) {
+    await expect(source).toHaveCount(0);
+    await expect(page.locator("[data-category-page] .cat-hero-poster")).toBeVisible();
+    return;
+  }
+  await expect(source).toHaveCount(1, { timeout: 15_000 });
   const src = await source.getAttribute("src");
   expect(src).toMatch(/hero-lupas-.*\.mp4/);
   const video = await request.get(src!);
