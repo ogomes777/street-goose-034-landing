@@ -40,10 +40,10 @@ test("Performance: categorias priorizam o próprio poster, sem baixar preload da
   const home = await homeResponse.text();
   const category = await categoryResponse.text();
   const checkout = await checkoutResponse.text();
-  const homePreload = 'rel="preload" as="image" href="assets/heroes/web/hero-poster-960.jpg"';
-  expect(home).toContain(homePreload);
-  expect(category).not.toContain(homePreload);
-  expect(checkout).not.toContain(homePreload);
+  const homePreload = home.match(/<link rel="preload" as="image" href="[^"]*hero-poster-960[^"]*" fetchpriority="high" \/>/)?.[0];
+  expect(homePreload).toBeTruthy();
+  expect(category).not.toContain(homePreload!);
+  expect(checkout).not.toContain(homePreload!);
   const visiblePoster = category.match(/<img class="cat-hero-poster" src="([^"]+)"/);
   expect(visiblePoster).not.toBeNull();
   expect(category).toContain(`<link rel="preload" as="image" href="${visiblePoster![1]}" fetchpriority="high" />`);
