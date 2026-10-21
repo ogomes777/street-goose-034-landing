@@ -66,7 +66,7 @@ async function bootstrap() {
           mountCharacter();
         };
         if ("requestIdleCallback" in window) window.requestIdleCallback(run, { timeout: 1700 });
-        else window.setTimeout(run, 80);
+        else globalThis.setTimeout(run, 80);
       }, 300);
     };
 
