@@ -142,6 +142,10 @@ import { preferLightSource } from "./video-scrub.js";
      Isso preserva o currentTime sozinho na maioria dos browsers. Como proteção
      extra contra o Safari/iOS suspender mídia fora de tela, guardamos
      currentTime + timestamp e recalculamos a posição esperada ao retomar. */
+  // Low-end phones cannot afford decoding a hidden 720p loop while the
+  // carousel displays a still image. Keep the original continuous-film
+  // behavior on medium/high devices.
+  var pauseHiddenFilm = window.matchMedia("(pointer: coarse)").matches && window.SG.perfTier === "low";
   var videoStarted = false;
   var savedCurrentTime = 0;
   var suspendedAt = 0;
@@ -149,7 +153,7 @@ import { preferLightSource } from "./video-scrub.js";
   var heroVisible = heroRect.bottom > 0 && heroRect.top < window.innerHeight;
 
   function startVideoOnce() {
-    if (!video || saveData || videoStarted || !introComplete || !heroVisible || document.hidden || landingCovered()) return;
+    if (!video || saveData || videoStarted || !introComplete || !heroVisible || document.hidden || landingCovered() || (pauseHiddenFilm && (index < 0 || slides[index].type !== "video"))) return;
     video.preload = "auto";
     videoStarted = true;
     video.setAttribute("data-ready", "0");
@@ -163,7 +167,7 @@ import { preferLightSource } from "./video-scrub.js";
   }
 
   function resumeVideoIfNeeded() {
-    if (!video || !heroVisible || document.hidden) return;
+    if (!video || !heroVisible || document.hidden || (pauseHiddenFilm && (index < 0 || slides[index].type !== "video"))) return;
     if (!videoStarted) { startVideoOnce(); return; }
     if (!video.paused) return;
     if (suspendedAt && video.duration) {
@@ -227,6 +231,7 @@ import { preferLightSource } from "./video-scrub.js";
       fallbackImg.style.opacity = "";
       resumeVideoIfNeeded();
     } else {
+      if (pauseHiddenFilm) pauseVideoOffscreen();
       var mobile = window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
       fallbackImg.style.objectPosition = (mobile && slide.mobileFocus) || slide.focus || "center";
       var nextImage = slide.image;
