@@ -69,6 +69,10 @@ jobs:
             exit 1
           fi
           count="$(jq 'length' "$report")"
+          if [ "$count" -gt 0 ]; then
+            # Apenas regra, caminho e hash de commit: nunca logar payload/segredo.
+            jq -r '.[] | "TIPO=\\(.RuleID) ARQUIVO=\\(.File) COMMIT=\\((.Commit // "")[0:12])"' "$report" | sort -u
+          fi
           rm -f "$report"
           if [ "$count" -gt 0 ]; then
             echo "::error::Gitleaks detectou $count potencial(is) segredo(s) no historico Git. Revisar e rotacionar credenciais antes de liberar a auditoria."
