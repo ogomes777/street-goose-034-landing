@@ -11,6 +11,19 @@ if (strip) {
     }, {threshold: 0.12});
     io.observe(strip);
   }
+  // Pause decorative pixel signal when tiles leave the screen or tab is hidden.
+  // This observer does not schedule any animation frames.
+  if (!reduced.matches && 'IntersectionObserver' in window) {
+    let visible = false;
+    const updateSignal = () => strip.classList.toggle('sg-trust-active', visible && !document.hidden);
+    const signalObserver = new IntersectionObserver(entries => {
+      visible = entries.some(entry => entry.isIntersecting);
+      updateSignal();
+    }, {rootMargin:'70px 0px 70px 0px',threshold:0.01});
+    signalObserver.observe(strip);
+    document.addEventListener('visibilitychange', updateSignal, {passive:true});
+    window.addEventListener('pagehide', () => signalObserver.disconnect(), {once:true});
+  }
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     strip.querySelectorAll(':scope > div').forEach(tile => {
       let frame = 0, point = null;

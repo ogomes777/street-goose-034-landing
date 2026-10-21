@@ -1,0 +1,53 @@
+name: Street Goose - Optical Signal mobile e desktop
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "js/final-four-polish.css"
+      - "js/final-four-interactions.js"
+      - "js/newsletter-scene.js"
+      - "tests/launch/optical-signal.spec.ts"
+      - "playwright.optical.config.ts"
+      - ".github/workflows/optical-signal.yml"
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "js/final-four-polish.css"
+      - "js/final-four-interactions.js"
+      - "js/newsletter-scene.js"
+      - "tests/launch/optical-signal.spec.ts"
+      - "playwright.optical.config.ts"
+      - ".github/workflows/optical-signal.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: street-optical-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  optical:
+    name: Marcas, pixels e optical signal (mobile e desktop)
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Dependencias
+        run: npm ci --no-fund
+      - name: Build e validacao TypeScript
+        run: npm run build
+      - name: Instalar Chromium e WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Testar Safari, Android e desktop
+        run: npx playwright test tests/launch/optical-signal.spec.ts --config=playwright.optical.config.ts

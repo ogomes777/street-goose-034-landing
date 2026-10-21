@@ -224,3 +224,100 @@
   #top .trust-strip>div{transition:border-color .2s ease}
   #top .trust-strip>div.is-touching{transform:none}
 }
+
+/* SG034 / authored optical icons and restrained pixel breathing.
+   SVG icons replace box glyphs. Only opacity is animated; no canvas, blur or layout loops. */
+#top .trust-strip>div.sg-trust-tile{
+  background:
+    radial-gradient(ellipse at 80% 9%,#ba864a12,transparent 56%),
+    linear-gradient(164deg,#171615,#0a0b0c 82%);
+}
+#top .trust-strip .trust-icon.sg-trust-mark{
+  border:0;border-radius:0;background:none;box-shadow:none;
+  padding:0;margin:0 0 19px;
+  width:clamp(62px,7vw,78px);height:clamp(52px,5.6vw,68px);
+  display:flex;align-items:center;justify-content:flex-start;
+  flex:none;color:#d9b980;
+}
+#top .trust-strip .sg-trust-mark svg{
+  display:block;width:100%;height:100%;overflow:visible;
+  fill:none;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+#top .trust-strip .sg-mark-solid{stroke:#e6c58d;stroke-width:2.1;filter:none}
+#top .trust-strip .sg-mark-wire{stroke:#986e42;stroke-width:1.4}
+#top .trust-strip .sg-mark-reflection{stroke:#b9d0cc;stroke-width:1.25;opacity:.77}
+#top .trust-strip .sg-mark-accent{stroke:#8ac6b0;stroke-width:2.6}
+#top .trust-strip .sg-mark-034{
+  font:800 13px/1 Manrope,Arial,sans-serif;
+  letter-spacing:-.07em;fill:#e7c892;stroke:none;
+}
+#top .trust-strip .sg-trust-desc{position:relative;z-index:1}
+#top .trust-strip .sg-trust-pixels{
+  display:block;position:absolute;inset:0;z-index:0;
+  pointer-events:none;overflow:hidden;
+}
+#top .trust-strip .sg-trust-pixels i{
+  position:absolute;display:block;box-sizing:border-box;
+  width:4px;height:4px;border-radius:1px;
+  background:#cb9e60;
+  box-shadow:0 0 9px #bd865d3a;
+  opacity:.11;
+  will-change:opacity;
+  animation:sg034-pixel-heart 8.8s ease-in-out infinite;
+  animation-play-state:paused;
+}
+#top .trust-strip .sg-trust-pixels i:nth-child(1){top:20%;right:20%;animation-delay:-1.2s;animation-duration:9s}
+#top .trust-strip .sg-trust-pixels i:nth-child(2){top:42%;right:10%;width:3px;height:3px;background:#84c9b0;animation-delay:-5.4s;animation-duration:11.5s}
+#top .trust-strip .sg-trust-pixels i:nth-child(3){bottom:16%;right:24%;width:3px;height:3px;animation-delay:-2.8s;animation-duration:13s}
+#top .trust-strip .sg-trust-pixels i:nth-child(4){top:15%;left:52%;width:2px;height:2px;background:#d9c49a;animation-delay:-7.8s;animation-duration:10.5s}
+#top .trust-strip>div:nth-child(2) .sg-trust-pixels{transform:rotate(12deg)}
+#top .trust-strip>div:nth-child(3) .sg-trust-pixels{transform:rotate(-9deg)}
+#top .trust-strip>div:nth-child(4) .sg-trust-pixels{transform:rotate(22deg)}
+#top .trust-strip.sg-trust-active .sg-trust-pixels i{animation-play-state:running}
+#top .trust-strip.sg-trust-active .sg-trust-mark .sg-mark-reflection{
+  animation:sg034-signature-signal 8s ease-in-out infinite;
+}
+#top .trust-strip>div:nth-child(2) .sg-mark-reflection{animation-delay:-2s}
+#top .trust-strip>div:nth-child(3) .sg-mark-reflection{animation-delay:-4s}
+#top .trust-strip>div:nth-child(4) .sg-mark-reflection{animation-delay:-6s}
+@keyframes sg034-pixel-heart{
+  0%,100%{opacity:.1}
+  36%{opacity:.16}
+  50%{opacity:.72}
+  68%{opacity:.13}
+}
+@keyframes sg034-signature-signal{0%,100%{opacity:.45}50%{opacity:1}}
+@media(max-width:700px){
+  #top .trust-strip .trust-icon.sg-trust-mark{
+    width:64px;height:54px;margin:0 0 13px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #top .trust-strip .sg-trust-pixels i,
+  #top .trust-strip.sg-trust-active .sg-trust-mark .sg-mark-reflection{
+    animation:none!important;opacity:.37;will-change:auto;
+  }
+}
+
+/* Optical Signal finish: reflective depth below accessible HTML content. */
+#top .newsletter{
+  isolation:isolate;
+  background:radial-gradient(ellipse at 72% 49%,#15364b2b,transparent 56%),
+    radial-gradient(ellipse at 78% 66%,#9c5d2624,transparent 45%),
+    #08090b;
+}
+#top .newsletter:before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  border:1px solid #8ca1a814;
+  background:linear-gradient(120deg,transparent 11%,#d1a36d0b 41%,transparent 70%);
+}
+#top .newsletter .newsletter-copy,
+#top .newsletter .newsletter-form-wrap{z-index:2}
+#top .newsletter .newsletter-canvas{z-index:1}
+@media(max-width:700px){
+  #top .newsletter{
+    background:radial-gradient(ellipse at 55% 60%,#20344426,transparent 65%),
+      radial-gradient(ellipse at 75% 80%,#935e2f15,transparent 50%),#08090b;
+  }
+}
