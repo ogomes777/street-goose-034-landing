@@ -97,6 +97,9 @@ function refresh() {
 section.querySelector('[data-install]').addEventListener('click', async () => {
   const status = section.querySelector('[data-install-status]');
   if (standalone()) { refresh(); return; }
+  // Social-app webviews may expose prompt hooks that never complete.
+  // Do not mark installed or invoke them here: hand off to a real browser.
+  if (inAppBrowser) { showGuide(); return; }
   if (installPrompt) {
     const prompt = installPrompt; installPrompt = null;
     try {
