@@ -112,7 +112,6 @@ type Result<T = object> = ({ ok: true } & T) | { ok: false; reason?: string; mes
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // limite do bucket (0010)
 const MAX_ORIGINAL_BYTES = 30 * 1024 * 1024; // foto de celular grande: a gente reduz antes
 const MAX_EDGE = 1800; // nítido no visualizador em tela cheia, leve no feed
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 interface FeedRow {
   id: string;
@@ -180,9 +179,6 @@ async function signUrls(paths: string[]): Promise<Map<string, string>> {
   return urls;
 }
 
-function isAccepted(file: File): boolean {
-  return ACCEPTED_TYPES.includes(file.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
-}
 
 async function decode(file: File): Promise<{ source: CanvasImageSource; width: number; height: number; release: () => void } | null> {
   try {
