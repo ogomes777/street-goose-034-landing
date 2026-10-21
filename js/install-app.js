@@ -19,6 +19,9 @@ section.querySelector('.sg-install-pass').insertAdjacentHTML('afterbegin',
   '<div class="sg-pass-window-controls" aria-hidden="true"><i></i><i></i><i></i></div><div class="sg-pass-emboss" aria-hidden="true"></div>');
 section.querySelector('.sg-install-steps li:nth-child(2)').insertAdjacentHTML('beforeend',
   '<span class="sg-steps-bell" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4M3 4 1 6m20-2 2 2"/></svg></span>');
+// Decorative only: notification permission still happens only on explicit user click.
+section.querySelector('[data-push]').insertAdjacentHTML('afterbegin',
+  '<svg class="sg-push-button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/></svg>');
 const INSTALL_FLAG = 'sg034_install_confirmed_v2';
 function alreadyConfirmed() { try { return localStorage.getItem(INSTALL_FLAG) === 'yes'; } catch (_) { return false; } }
 function storeInstalledChoice() { try { localStorage.setItem(INSTALL_FLAG, 'yes'); } catch (_) { /* storage disabled */ } }
