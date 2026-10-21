@@ -37,3 +37,13 @@ export async function isSafeAvatarBlob(blob: Blob): Promise<boolean> {
     return false;
   }
 }
+
+/** Client-side defence in depth. Supabase Storage independently checks MIME and file limits. */
+export function isSupportedCommunityImage(file: { name: string; type: string; size: number }): boolean {
+  if (!file || !Number.isFinite(file.size) || file.size <= 0 || file.size > 30*1024*1024) return false;
+  const mime = (file.type || "").toLowerCase();
+  const accepted = ["image/jpeg","image/png","image/webp","image/heic","image/heif"];
+  if (accepted.includes(mime)) return true;
+  if (mime && mime !== "application/octet-stream") return false;
+  return /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
+}
