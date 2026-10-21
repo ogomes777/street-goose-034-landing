@@ -295,15 +295,18 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
     if (!cueTriggered || userWantsMuted || userPaused) return;
     // pointerdown/keydown é gesto válido. Pode reanimar o mixer mesmo quando
     // o elemento HTML ainda diz "playing" mas o dispositivo está em silêncio.
-    if (mixer && mixer.ready() && !mixer.isRunning()) mixer.unlock();
-    if (audio.paused || autoplayBlocked || mediaError) attemptPlay(true);
+    // Um gesto também precisa recuperar um mixer que não conseguiu ser
+    // inicializado no primeiro toque. O contexto pode existir e estar
+    // suspenso mesmo quando <audio>.paused é false.
+    if (mixer) mixer.unlock();
+    if (audio.paused || autoplayBlocked || mediaError || buffering) attemptPlay(true);
     else syncUI();
   }
 
   // Retry inside a real gesture, including after the intro has closed.
   document.addEventListener("pointerdown", function (event) {
     if (!root.contains(event.target) &&
-        (autoplayBlocked || (mixer && mixer.ready() && !mixer.isRunning()))) retryIfBlocked();
+        (autoplayBlocked || buffering || (mixer && mixer.ready() && !mixer.isRunning()))) retryIfBlocked();
   }, true);
   document.addEventListener("keydown", function (event) {
     if (!root.contains(event.target) &&
@@ -317,7 +320,7 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
     if (userWantsMuted) return;
     // Um gesto de ativação não deve ser ignorado só porque play() anterior
     // ficou pendente na rede. Reabrir o contexto imediatamente no gesto.
-    if (mixer && mixer.ready() && !mixer.isRunning()) mixer.unlock();
+    if (mixer) mixer.unlock();
     if (playPending) return;
     if(mixer&&mixer.unlock()){
       playPending=true;
