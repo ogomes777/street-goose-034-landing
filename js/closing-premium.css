@@ -35,7 +35,7 @@
   padding:20px 8px 28px;
 }
 .sg-install .sg-install-pass-stage:before{
-  animation:none;inset:12% 3%;transform:translateZ(-15px);filter:blur(20px);
+  animation:none;inset:12% 3%;transform:translateZ(-15px);
   background:radial-gradient(ellipse,#c59a4866,transparent 70%);
 }
 .sg-install .sg-install-pass{
@@ -81,7 +81,6 @@
 .sg-install-pass b{
   font-size:clamp(58px,10vw,88px);font-weight:600;
   text-shadow:0 4px 14px #0006;
-  filter:drop-shadow(0 2px 2px #0006);
 }
 .sg-install-pass .sg-pass-chip{z-index:3;box-shadow:0 4px 8px #0007,inset 0 2px 2px #fff8}
 .sg-install-pass-stage.is-tapped .sg-install-pass{
