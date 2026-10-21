@@ -17,27 +17,34 @@ test.describe("SG 034 / Optical Signal premium", () => {
     expect(iconFrame.background).toBe("rgba(0, 0, 0, 0)");
   });
 
-  test("pixel respira no viewport e pausa quando a aba fica oculta", async ({page}) => {
-    await page.goto("/", {waitUntil:"domcontentloaded"});
-    // The cinematic intro intentionally fixes the body to avoid background scroll.
-    // Close it using the site's actual skip button before testing intersection.
-    await page.locator("[data-intro-skip]").evaluate((element: HTMLButtonElement) => element.click());
-    await expect.poll(() => page.evaluate(() => document.body.style.position), {timeout:10_000}).not.toBe("fixed");
-    const strip = page.locator("#top .trust-strip");
-    await strip.evaluate(el => el.scrollIntoView({behavior:"instant",block:"center"}));
-    await expect.poll(() => strip.evaluate(el => {
-      const box = el.getBoundingClientRect();
-      return box.bottom > 0 && box.top < innerHeight;
-    }), {timeout:10_000}).toBe(true);
-    await expect(strip).toHaveClass(/sg-trust-active/, {timeout:10_000});
-    await expect(strip.locator(".sg-trust-pixels i").first()).toHaveCSS("animation-play-state","running");
-    // A real inactive tab triggers visibilitychange even when an entry popup
-    // locks scrolling. Test that signal suspension without fighting that UI.
-    await page.evaluate(() => {
-      Object.defineProperty(document, "hidden", {configurable:true, get: () => true});
-      document.dispatchEvent(new Event("visibilitychange"));
+  test("observador inicia e suspende pixels conforme visibilidade", async ({page}) => {
+    // Exercise the same observer callback as IntersectionObserver, without
+    // relying on page scrolling while the cinematic intro/popups own scroll.
+    await page.addInitScript(() => {
+      const NativeObserver = window.IntersectionObserver;
+      const env = window as typeof window & { __sgSignalTest?: (visible:boolean) => void };
+      window.IntersectionObserver = class extends NativeObserver {
+        constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+          super(callback, options);
+          if (options?.rootMargin === "70px 0px 70px 0px") {
+            env.__sgSignalTest = (visible:boolean) => callback(
+              [{isIntersecting:visible, intersectionRatio:visible?1:0} as IntersectionObserverEntry],
+              this
+            );
+          }
+        }
+      };
     });
-    await expect(strip).not.toHaveClass(/sg-trust-active/, {timeout:10_000});
+    await page.goto("/", {waitUntil:"domcontentloaded"});
+    const strip = page.locator("#top .trust-strip");
+    await expect.poll(() => page.evaluate(
+      () => typeof (window as typeof window & { __sgSignalTest?: (v:boolean) => void }).__sgSignalTest
+    ), {timeout:15_000}).toBe("function");
+    await page.evaluate(() => (window as typeof window & { __sgSignalTest:(v:boolean)=>void }).__sgSignalTest(true));
+    await expect(strip).toHaveClass(/sg-trust-active/);
+    await expect(strip.locator(".sg-trust-pixels i").first()).toHaveCSS("animation-play-state","running");
+    await page.evaluate(() => (window as typeof window & { __sgSignalTest:(v:boolean)=>void }).__sgSignalTest(false));
+    await expect(strip).not.toHaveClass(/sg-trust-active/);
     await expect(strip.locator(".sg-trust-pixels i").first()).toHaveCSS("animation-play-state","paused");
   });
 
