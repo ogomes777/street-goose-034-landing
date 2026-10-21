@@ -1,0 +1,48 @@
+name: Street Goose - seguranca e dependencias
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "20 11 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-audit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-audit:
+    name: Dependencias - vulnerabilidades conhecidas
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Instalar do lockfile sem executar scripts
+        run: npm ci --ignore-scripts --no-fund
+      - name: Bloquear vulnerabilidades high e critical em producao
+        run: npm audit --omit=dev --audit-level=high
+      - name: Bloquear vulnerabilidades critical inclusive no ambiente de build
+        run: npm audit --audit-level=critical
+
+  secret-scan:
+    name: Segredos - historico e codigo
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
