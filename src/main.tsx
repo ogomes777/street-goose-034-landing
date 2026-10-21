@@ -67,6 +67,11 @@ async function bootstrap() {
   // A intro é um vídeo prioritário. Não competir pelo decoder/rede com
   // a seção React até que o visitante tenha saído da abertura.
   const scheduleCharacter = () => {
+    // Em aparelhos touch, a intro acaba de liberar vídeo e áudio.
+    // Não baixar React, o personagem e seus shaders no mesmo instante:
+    // o primeiro scroll já chama renderCharacter (listener acima).
+    // Desktop mantém o carregamento antecipado em idle.
+    if (window.matchMedia("(pointer: coarse)").matches) return;
     if ("requestIdleCallback" in window) requestIdleCallback(renderCharacter, { timeout: 1500 });
     else setTimeout(renderCharacter, 300);
   };
