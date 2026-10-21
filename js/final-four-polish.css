@@ -1,0 +1,226 @@
+/* Street Goose 034 / premium close-up polish. Production: CSS layers only,
+   single shared Three.js canvas, no animated blur or layout properties. */
+
+/* Physical card geometry (ISO/ID-1 ratio) overrides three inherited min-heights. */
+.sg-install .sg-install-pass-stage{
+  display:grid;place-items:center;
+  width:100%;max-width:520px;box-sizing:border-box;
+  padding:16px 12px 19px;
+  margin:0 auto 22px;
+  overflow:visible;
+}
+.sg-install .sg-install-pass{
+  box-sizing:border-box;
+  width:min(100%,430px);
+  max-width:100%;
+  height:auto;
+  min-height:0;
+  aspect-ratio:1.586 / 1;
+  padding:clamp(15px,3.4vw,24px);
+  border-radius:clamp(14px,2.6vw,21px);
+  flex:0 0 auto;
+  justify-content:space-between;
+  transform-origin:center center;
+  backface-visibility:hidden;
+}
+.sg-install .sg-install-pass>span{
+  max-width:75%;
+  font-size:clamp(8px,2vw,12px);letter-spacing:clamp(1.8px,.5vw,3px);
+  line-height:1.25;flex:none;
+}
+.sg-install .sg-install-pass>b{
+  font-size:clamp(48px,10.2vw,82px);
+  line-height:.95;
+  margin:0;
+  flex:none;
+  letter-spacing:-.075em;
+}
+.sg-install .sg-install-pass>small{
+  font-size:clamp(7px,1.45vw,10px);
+  line-height:1.4;max-width:63%;
+  letter-spacing:clamp(.7px,.24vw,2.2px);
+  flex:none;
+}
+.sg-install .sg-install-pass .sg-pass-chip{
+  width:clamp(34px,9vw,48px);
+  height:clamp(26px,7vw,37px);
+  bottom:clamp(14px,3.3vw,26px);
+  right:clamp(14px,3.3vw,26px);
+}
+.sg-install .sg-install-pass .sg-pass-window-controls{top:clamp(10px,2.7vw,14px);right:clamp(12px,3.3vw,18px)}
+.sg-install .sg-install-pass .sg-pass-emboss{inset:7px;border-radius:clamp(10px,2vw,15px)}
+.sg-install .sg-install-pass .sg-pass-dust{animation:none}
+.sg-install .sg-install-pass-stage:before{inset:18% 7%;opacity:.47}
+@media(max-width:700px){
+  /* The outer frames used 24+20px padding on each side, starving the card.
+     Recover width without overflow; the card retains its real 1.586 aspect. */
+  .sg-install{margin-left:12px;margin-right:12px;padding:16px}
+  .sg-install .sg-install-actions{padding:14px}
+  .sg-install .sg-install-pass-stage{padding:8px 2px 12px;max-width:390px}
+  .sg-install .sg-install-pass{width:min(100%,360px);height:auto;min-height:0;padding:clamp(13px,3.7vw,18px)}
+  .sg-install .sg-install-pass>b{font-size:clamp(46px,13vw,68px)}
+  .sg-install .sg-install-pass .sg-pass-chip{right:clamp(13px,4vw,19px);bottom:clamp(12px,3.6vw,18px)}
+}
+@media(max-width:380px){
+  .sg-install .sg-install-pass{width:100%;min-height:0;padding:12px 14px}
+  .sg-install .sg-install-pass>b{font-size:48px}
+  .sg-install .sg-install-pass>small{letter-spacing:.7px}
+}
+@media(hover:none){
+  .sg-install-pass-stage.is-tracking .sg-install-pass{--sg-card-lift:-2px}
+}
+
+/* Human concierge / handoff, intentionally NOT a payment method. */
+.payment-terminal .payment-whatsapp{
+  box-sizing:border-box;
+  max-width:700px;
+  min-height:180px;
+  padding:clamp(27px,4.2vw,42px);
+  gap:clamp(15px,3vw,25px);
+  border:1px solid #ba995d52;
+  border-radius:clamp(22px,4vw,30px);
+  background:
+    radial-gradient(ellipse at 8% 0%,#41c99212,transparent 47%),
+    linear-gradient(130deg,#161a19,#0b0f0e 54%,#181b18 100%);
+  box-shadow:inset 0 1px 0 #f3e2bf1c,0 15px 45px #0008,0 0 0 1px #d4ae5b0d;
+  isolation:isolate;overflow:hidden;
+  color:#f7f4ec;
+}
+.payment-terminal .payment-whatsapp:before{
+  content:"";position:absolute;z-index:-1;pointer-events:none;
+  width:55%;aspect-ratio:1;top:-85%;right:-12%;
+  background:radial-gradient(circle,#31d59c3d 0%,#28c08a14 25%,transparent 67%);
+  opacity:.32;
+  animation:sg-wa-breathe 7s ease-in-out infinite;
+}
+.payment-terminal .payment-whatsapp:after{
+  content:"";position:absolute;z-index:-1;pointer-events:none;inset:0;border-radius:inherit;
+  border:1px solid #d6b47b33;
+  background:linear-gradient(120deg,transparent 14%,#d5b37410 36%,transparent 64%);
+  opacity:.8;
+}
+.payment-terminal .payment-whatsapp .pmt-icon{
+  position:relative;z-index:1;
+  width:clamp(40px,6vw,55px);height:clamp(40px,6vw,55px);
+  flex:0 0 auto;
+  filter:drop-shadow(0 4px 8px #0c6a403b);
+}
+.payment-terminal .payment-whatsapp>div{min-width:0;position:relative}
+.payment-whatsapp-overline{
+  display:block;margin:0 0 12px;
+  font:800 10px/1.3 Manrope,Inter,sans-serif;letter-spacing:.2em;
+  color:#bfa67a;
+}
+.payment-terminal .payment-whatsapp-title{
+  font:800 clamp(20px,2.7vw,26px)/1.12 Manrope,Inter,sans-serif;
+  letter-spacing:-.045em;margin:0 0 12px;color:#f5f0e6;
+}
+.payment-terminal .payment-whatsapp-copy{
+  color:#b9bcb8;
+  font:500 clamp(13px,1.6vw,15px)/1.65 Manrope,Inter,sans-serif;
+  max-width:43ch;margin:0;
+}
+.payment-terminal .payment-whatsapp .payment-whatsapp-cta{
+  position:relative;z-index:1;
+  min-height:53px;border-radius:13px;
+  background:linear-gradient(135deg,#d9c39c16,#8bbd9b11);
+  border:1px solid #b9a37f64;
+  box-shadow:inset 0 1px 0 #ffffff18,0 7px 20px #0004;
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:13px 20px;
+  font:800 11px/1.3 Manrope,Inter,sans-serif;
+  letter-spacing:.13em;
+  color:#f3ede1;
+  transition:transform .2s ease,border-color .2s ease,background-color .2s ease;
+}
+.payment-terminal .payment-whatsapp .payment-whatsapp-cta:is(:hover,:focus-visible){
+  transform:translateY(-2px);border-color:#53d6a28c;
+  box-shadow:inset 0 1px 0 #ffffff24,0 8px 24px #2ac18327;
+}
+.payment-terminal .payment-whatsapp .payment-whatsapp-cta:focus-visible{outline:2px solid #51ce9e;outline-offset:4px}
+@keyframes sg-wa-breathe{0%,100%{transform:scale(.85);opacity:.22}50%{transform:scale(1.12);opacity:.6}}
+@media(max-width:860px){
+  .payment-terminal .payment-whatsapp{
+    flex-direction:column;text-align:center;gap:20px;
+    padding:clamp(28px,7vw,40px) clamp(22px,6vw,30px);
+  }
+  .payment-terminal .payment-whatsapp .payment-whatsapp-cta{width:min(100%,300px);box-sizing:border-box;max-width:100%;white-space:normal;margin:4px auto 0}
+  .payment-terminal .payment-whatsapp-copy{margin-inline:auto}
+  .payment-terminal .payment-whatsapp:before{width:90%;top:-38%;right:5%}
+}
+
+/* Four trust markers: editorial grid with restrained titanium + gold lighting. */
+#top .trust-strip{
+  counter-reset:sg-trust;
+  gap:clamp(9px,1.35vw,15px);
+  align-items:stretch;
+}
+#top .trust-strip>div{
+  counter-increment:sg-trust;
+  position:relative;isolation:isolate;
+  min-width:0;
+  min-height:148px;
+  padding:clamp(20px,3.1vw,30px);
+  box-sizing:border-box;
+  overflow:hidden;
+  border:1px solid #c29e6d40;
+  border-radius:16px;
+  background:
+    linear-gradient(145deg,#d2a76b0c,transparent 40%),
+    linear-gradient(160deg,#141414,#090909 80%);
+  box-shadow:inset 0 1px 0 #fff3,0 12px 34px #0004;
+  gap:9px;
+  transition:transform .25s ease,border-color .25s ease;
+}
+#top .trust-strip>div:before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(circle at var(--sg-trust-x,50%) var(--sg-trust-y,20%),#f1bf6d27,transparent 57%);
+  opacity:.45;transition:opacity .25s ease;
+}
+#top .trust-strip>div:after{
+  content:"0" counter(sg-trust);
+  position:absolute;top:21px;right:21px;
+  font:700 10px/1 Manrope,Arial,sans-serif;letter-spacing:.16em;color:#b09a7759;
+}
+#top .trust-strip .trust-icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:39px;height:39px;
+  border:1px solid #c6a4704a;border-radius:12px;
+  background:#d5b37710;
+  color:#ddc092;font-size:22px;
+  margin:0 0 13px;
+}
+#top .trust-strip b{
+  font:800 clamp(11px,1.1vw,14px)/1.35 Manrope,Inter,sans-serif;
+  letter-spacing:.15em;color:#eee7df;
+}
+#top .trust-strip span:not(.trust-icon){
+  color:#bdb8b0;font:500 clamp(12px,1.2vw,15px)/1.5 Manrope,Inter,sans-serif;
+}
+#top .trust-strip>div:is(:hover,:focus-within,.is-touching){
+  transform:translate3d(0,-3px,0);
+  border-color:#dfb7778c;
+}
+#top .trust-strip>div:is(:hover,:focus-within,.is-touching):before{opacity:.9}
+#top .trust-strip.is-inview>div{animation:sg-trust-enter .65s cubic-bezier(.22,1,.36,1) both}
+#top .trust-strip.is-inview>div:nth-child(2){animation-delay:85ms}
+#top .trust-strip.is-inview>div:nth-child(3){animation-delay:170ms}
+#top .trust-strip.is-inview>div:nth-child(4){animation-delay:255ms}
+@keyframes sg-trust-enter{from{opacity:.35;transform:translate3d(0,18px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+@media(max-width:700px){
+  #top .trust-strip{gap:9px;padding:0 18px;margin-block:60px}
+  #top .trust-strip>div{min-height:158px;padding:20px 18px;border-radius:14px}
+  #top .trust-strip>div:after{top:18px;right:16px}
+  #top .trust-strip .trust-icon{margin-bottom:10px;width:36px;height:36px}
+}
+@media(max-width:350px){#top .trust-strip>div{padding:18px 13px}#top .trust-strip b{font-size:10px;letter-spacing:.09em}}
+@media(prefers-reduced-motion:reduce){
+  .payment-terminal .payment-whatsapp:before{animation:none;opacity:.35}
+  #top .trust-strip.is-inview>div{animation:none}
+  #top .trust-strip>div{transition:none;transform:none!important}
+  .payment-terminal .payment-whatsapp .payment-whatsapp-cta{transition:none}
+}
+@media(hover:none){
+  #top .trust-strip>div{transition:border-color .2s ease}
+  #top .trust-strip>div.is-touching{transform:none}
+}

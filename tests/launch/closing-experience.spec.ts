@@ -71,4 +71,41 @@ test.describe("Street Goose / experiencia final de instalacao", () => {
     await expect(install).toBeVisible();
   });
 
+  test("cartao 034 tem aspecto de cartao fisico nos celulares", async ({page}) => {
+    await page.setViewportSize({width:375,height:812});
+    await page.goto("/", {waitUntil:"domcontentloaded"});
+    const card = page.locator(".sg-install-pass");
+    await expect(card).toBeVisible({timeout:20_000});
+    const result = await card.evaluate(el => {
+      const rect = el as HTMLElement;
+      const style = getComputedStyle(rect);
+      return {
+        ratio: rect.offsetWidth / rect.offsetHeight,
+        width: rect.offsetWidth,
+        height: rect.offsetHeight,
+        aspect: style.aspectRatio,
+        minHeight: parseFloat(style.minHeight) || 0,
+        overflowX: document.documentElement.scrollWidth - document.documentElement.clientWidth
+      };
+    });
+    expect(result.ratio).toBeGreaterThan(1.5);
+    expect(result.ratio).toBeLessThan(1.68);
+    expect(result.width).toBeGreaterThan(250);
+    expect(result.height).toBeLessThan(240);
+    expect(result.minHeight).toBe(0);
+    expect(result.overflowX).toBeLessThanOrEqual(1);
+  });
+
+  test("whatsapp concierge e quadrados mantem hierarquia e usabilidade", async ({page}) => {
+    await page.goto("/", {waitUntil:"domcontentloaded"});
+    const panel = page.locator(".payment-whatsapp");
+    await expect(panel.locator("[data-whatsapp-cta]")).toBeVisible({timeout:20_000});
+    await expect(panel.locator(".payment-whatsapp-overline")).toContainText("CONCIERGE");
+    await expect(page.locator("#top .trust-strip > div")).toHaveCount(4);
+    await expect(page.locator("#top .trust-strip .trust-icon")).toHaveCount(4);
+    await expect(page.locator("[data-newsletter-canvas]")).toHaveCount(1);
+    const waLink = await panel.locator("[data-whatsapp-cta]").getAttribute("href");
+    expect(waLink).toMatch(/^https:\/\/(?:wa\.me|api\.whatsapp\.com)\//);
+  });
+
 });
