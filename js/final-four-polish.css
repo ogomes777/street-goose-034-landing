@@ -299,3 +299,25 @@
     animation:none!important;opacity:.37;will-change:auto;
   }
 }
+
+/* Optical Signal finish: reflective depth below accessible HTML content. */
+#top .newsletter{
+  isolation:isolate;
+  background:radial-gradient(ellipse at 72% 49%,#15364b2b,transparent 56%),
+    radial-gradient(ellipse at 78% 66%,#9c5d2624,transparent 45%),
+    #08090b;
+}
+#top .newsletter:before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  border:1px solid #8ca1a814;
+  background:linear-gradient(120deg,transparent 11%,#d1a36d0b 41%,transparent 70%);
+}
+#top .newsletter .newsletter-copy,
+#top .newsletter .newsletter-form-wrap{z-index:2}
+#top .newsletter .newsletter-canvas{z-index:1}
+@media(max-width:700px){
+  #top .newsletter{
+    background:radial-gradient(ellipse at 55% 60%,#20344426,transparent 65%),
+      radial-gradient(ellipse at 75% 80%,#935e2f15,transparent 50%),#08090b;
+  }
+}
