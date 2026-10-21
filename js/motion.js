@@ -38,15 +38,20 @@
     // lookups inside the timed loop: the production obfuscator rewrites
     // `Math.sqrt` into a string-array call, which measured the obfuscator
     // (31 ms on a desktop) instead of the device.
-    var sqrt = Math.sqrt, now = performance.now.bind(performance), x = 0, bench = Infinity;
-    for (var run = 0; run < 3; run++) {
-      var t0 = now();
-      for (var i = 0; i < 100000; i++) x += sqrt(i) * 1.0001;
-      bench = Math.min(bench, (now() - t0) * 3);
+    // Benchmarking 300k square roots on the main thread during the mobile
+    // first paint can itself drop frames. Hardware/memory/network signals
+    // already identify low-end touch devices without a synchronous stress test.
+    if (!window.matchMedia("(pointer: coarse)").matches) {
+      var sqrt = Math.sqrt, now = performance.now.bind(performance), x = 0, bench = Infinity;
+      for (var run = 0; run < 3; run++) {
+        var t0 = now();
+        for (var i = 0; i < 100000; i++) x += sqrt(i) * 1.0001;
+        bench = Math.min(bench, (now() - t0) * 3);
+      }
+      window.SG.perfBench = x > 0 ? Math.round(bench * 10) / 10 : 0;
+      if (bench > 22) return "low";
+      if (bench > 9) score -= 1;
     }
-    window.SG.perfBench = x > 0 ? Math.round(bench * 10) / 10 : 0;
-    if (bench > 22) return "low";
-    if (bench > 9) score -= 1;
     if (cores <= 4) score -= 1;
     if (mem && mem <= 4) score -= 1;
     if (conn && conn.effectiveType === "3g") score -= 1;
