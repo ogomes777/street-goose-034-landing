@@ -35,7 +35,9 @@
   scene.add(revealRoot);
   var rig = new THREE.Group();
   revealRoot.add(rig);
-  var entranceCameraBias = 1.3;
+  var cameraDolly = { z: 1.6 };
+  var mobileTier = window.SG.perfTier !== "high";
+  var leanMode = window.SG.perfTier === "low" || Boolean(navigator.connection && navigator.connection.saveData);
 
   function lensShape(rx, ry) {
     var shape = new THREE.Shape();
@@ -129,10 +131,82 @@
   for (var pi = 0; pi < count; pi++) { pPos[pi * 3] = starts[pi].x; pPos[pi * 3 + 1] = starts[pi].y; pPos[pi * 3 + 2] = starts[pi].z; }
   var pGeo = new THREE.BufferGeometry();
   pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
-  var pMat = new THREE.PointsMaterial({ color: 0xffcf9e, size: 0.035, transparent: true, opacity: 0, sizeAttenuation: true });
+  var pMat = new THREE.PointsMaterial({
+    color: 0xffd7a3, size: leanMode ? 0.029 : 0.034,
+    transparent: true, opacity: 0, sizeAttenuation: true, depthWrite: false
+  });
   var particles = new THREE.Points(pGeo, pMat);
   rig.add(particles);
   var particleProgress = { t: 0 };
+
+  /* SG OPTICAL SIGNAL // holographic scan geometry
+     Same scene / renderer. Real vector curves, zero texture downloads, no
+     post-processing, no extra RAF or WebGL context. */
+  var opticalHud = new THREE.Group();
+  rig.add(opticalHud);
+  var hudLines = [];
+  function makeHudArc(horizontal, vertical, tint, phase, segments) {
+    var positions = [];
+    for (var a = 0; a <= segments; a++) {
+      var angle = phase + (a / segments) * Math.PI * 1.52;
+      positions.push(new THREE.Vector3(
+        Math.cos(angle) * horizontal,
+        Math.sin(angle) * vertical,
+        -0.38
+      ));
+    }
+    var geometry = new THREE.BufferGeometry().setFromPoints(positions);
+    var material = new THREE.LineBasicMaterial({
+      color: tint, transparent: true, opacity: 0,
+      depthWrite: false, blending: THREE.AdditiveBlending
+    });
+    var line = new THREE.Line(geometry, material);
+    opticalHud.add(line);
+    hudLines.push(line);
+  }
+  makeHudArc(3.08, 1.63, 0x72c9e8, -0.44, leanMode ? 40 : 78);
+  if (!leanMode) {
+    makeHudArc(2.82, 1.48, 0xecac64, Math.PI * 0.63, 74);
+    if (!mobileTier) makeHudArc(3.34, 1.84, 0x799ba7, Math.PI * 1.25, 68);
+  }
+
+  // A slender optical light sweeps the geometry at reveal. Each line has
+  // only two vertices, rendered inside the existing composited WebGL canvas.
+  var scanningLine = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-2.7, 0, 0.36),
+      new THREE.Vector3(2.7, 0, 0.36)
+    ]),
+    new THREE.LineBasicMaterial({
+      color: 0x8fdaf0, transparent: true, opacity: 0, depthWrite: false,
+      blending: THREE.AdditiveBlending
+    })
+  );
+  scanningLine.position.y = 1.28;
+  rig.add(scanningLine);
+
+  // Bespoke glazing highlight: each eye gets a shallow reflected arc.
+  // These are geometry, not a flat photo and not a second renderer.
+  function addLensHighlight(eye, sign) {
+    var points = [];
+    for (var j = 0; j <= 12; j++) {
+      var fraction = j / 12;
+      points.push(new THREE.Vector3(
+        sign * 0.08 + (fraction - 0.5) * 1.25,
+        0.43 + Math.sin(fraction * Math.PI) * 0.17,
+        0.08
+      ));
+    }
+    var material = new THREE.LineBasicMaterial({
+      color: 0xaedce7, transparent: true, opacity: 0.33,
+      depthWrite: false, blending: THREE.AdditiveBlending
+    });
+    var highlight = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material);
+    eye.add(highlight);
+  }
+  addLensHighlight(eyeL, -1);
+  addLensHighlight(eyeR, 1);
+
 
   function updateOffset() {
     rig.position.x = window.innerWidth > 900 ? 4.2 : 0;
@@ -173,7 +247,7 @@
   var idleStarted = false;
   function playEntrance() {
     if (!window.SG.hasGSAP) {
-      entranceCameraBias = 0;
+      cameraDolly.z = 0;
       pMatOpacityFallback(); startIdle(); return;
     }
     var gsap = window.gsap;
@@ -186,12 +260,20 @@
     templeL.rotation.y = templeL.userData.foldAngle;
     templeR.rotation.y = templeR.userData.foldAngle;
     coreLight.intensity = 0;
+    hudLines.forEach(function (line) { line.material.opacity = 0; line.scale.setScalar(1.36); });
+    scanningLine.material.opacity = 0;
+    scanningLine.position.y = 1.22;
 
-    var tl = gsap.timeline({ onComplete: startIdle });
+    entranceTimeline = gsap.timeline({ onComplete: startIdle });
+    var tl = entranceTimeline;
     tl.to(revealRoot.position, { z: 0, y: 0, duration: 1.85, ease: "power3.out" }, 0.1)
       .to(revealRoot.rotation, { y: 0.05, x: 0.01, z: 0, duration: 2.1, ease: "power3.out" }, 0.12)
       .to(revealRoot.scale, { x: 1, y: 1, z: 1, duration: 1.75, ease: "power3.out" }, 0.12)
-      .to({ zoom: 1.3 }, { zoom: 0, duration: 2, ease: "power3.out", onUpdate: function () { entranceCameraBias = this.targets()[0].zoom; } }, 0.15)
+      .to(cameraDolly, { z: 0, duration: 2.15, ease: "power3.out" }, 0.1)
+      .to(hudLines.map(function (l) { return l.scale; }), { x: 1, y: 1, z: 1, duration: 2.2, ease: "power3.out" }, 0.12)
+      .to(hudLines.map(function (l) { return l.material; }), { opacity: leanMode ? 0.18 : 0.30, duration: 1.2, ease: "sine.out" }, 0.3)
+      .to(scanningLine.position, { y: -1.35, duration: 1.65, ease: "power2.inOut" }, 0.9)
+      .to(scanningLine.material, { opacity: leanMode ? 0.16 : 0.55, duration: 0.38, yoyo: true, repeat: 1, ease: "sine.inOut" }, 0.98)
       .to(particleProgress, { t: 1, duration: 1.4, ease: "power2.out" }, 0)
       .to(pMat, { opacity: 0.6, duration: 0.5 }, 0)
       .to(eyeL.scale, { x: 1, y: 1, z: 1, duration: 0.9, ease: "back.out(1.6)" }, 0.5)
@@ -205,7 +287,13 @@
       .to(blueRim, { intensity: 1.7, duration: 1.4, ease: "sine.out" }, 1.15);
   }
   function pMatOpacityFallback() { pMat.opacity = 0.5; particleProgress.t = 1; }
+  var entranceTimeline = null;
   var idleTimelines = [];
+  var sectionOnscreen = false;
+  function syncMotion() {
+    if (entranceTimeline) entranceTimeline.paused(!sectionOnscreen || document.hidden);
+    idleTimelines.forEach(function (tl) { tl.paused(!sectionOnscreen || document.hidden); });
+  }
   function startIdle() {
     if (idleStarted || !window.SG.hasGSAP) return;
     idleStarted = true;
@@ -214,6 +302,7 @@
     idleTimelines.push(gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: "sine.inOut" } }).to(coreLight, { intensity: 2.65, duration: 3.3 }));
     idleTimelines.push(gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: "sine.inOut" } }).to(revealRoot.rotation, { y: 0.105, x: -0.035, duration: 5.6 }));
     idleTimelines.push(gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: "sine.inOut" } }).to(edgeMat, { opacity: 0.49, duration: 4.1 }));
+    syncMotion();
   }
   var entranceIo = new IntersectionObserver(function (entries) {
     if (!entries.some(function (e) { return e.isIntersecting; })) return;
@@ -223,22 +312,31 @@
   entranceIo.observe(section);
 
   var clockT = 0;
+  var lastParticleProgress = -1;
   director.registerScene("newsletter", {
     scene: scene,
     camera: camera,
     onResize: function () { updateOffset(); },
     onFrame: function (dt) {
       clockT += dt;
-      var pos = pGeo.attributes.position.array;
+      // Upload particle geometry only while the reveal actually changes it.
       var tt = particleProgress.t;
-      for (var i = 0; i < count; i++) {
-        pos[i * 3] = THREE.MathUtils.lerp(starts[i].x, targets[i].x, tt);
-        pos[i * 3 + 1] = THREE.MathUtils.lerp(starts[i].y, targets[i].y, tt) + Math.sin(clockT * 0.6 + i) * 0.01;
-        pos[i * 3 + 2] = THREE.MathUtils.lerp(starts[i].z, targets[i].z, tt);
+      if (Math.abs(tt - lastParticleProgress) > 0.0004) {
+        var pos = pGeo.attributes.position.array;
+        for (var i = 0; i < count; i++) {
+          pos[i * 3] = THREE.MathUtils.lerp(starts[i].x, targets[i].x, tt);
+          pos[i * 3 + 1] = THREE.MathUtils.lerp(starts[i].y, targets[i].y, tt);
+          pos[i * 3 + 2] = THREE.MathUtils.lerp(starts[i].z, targets[i].z, tt);
+        }
+        pGeo.attributes.position.needsUpdate = true;
+        lastParticleProgress = tt;
       }
-      pGeo.attributes.position.needsUpdate = true;
+      opticalHud.rotation.z = Math.sin(clockT * 0.16) * (leanMode ? 0.015 : 0.06);
+      if (!leanMode && lastParticleProgress > 0.99) {
+        opticalHud.rotation.y = Math.sin(clockT * 0.26) * 0.085;
+      }
       blueRim.position.y = Math.sin(clockT * 0.5) * 0.4;
-      camera.position.z = baseCameraZ - 0.6 - scrollProgress * 1.4 + entranceCameraBias;
+      camera.position.z = baseCameraZ - 0.6 - scrollProgress * 1.4 + cameraDolly.z;
       rig.rotation.x = scrollProgress * -0.08;
       camera.lookAt(rig.position.x * 0.4, 0, 0);
     },
@@ -247,6 +345,7 @@
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) { if (Array.isArray(obj.material)) obj.material.forEach(function (m) { m.dispose(); }); else obj.material.dispose(); }
       });
+      if (entranceTimeline) entranceTimeline.kill();
       idleTimelines.forEach(function (tl) { tl.kill(); });
     }
   });
@@ -254,11 +353,19 @@
   var sectionIo = new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
       director.reportVisibility("newsletter", entry.intersectionRatio, mount);
+      sectionOnscreen = entry.intersectionRatio > 0.04;
+      section.classList.toggle("sg-optical-active", sectionOnscreen);
+      syncMotion();
     });
   }, { threshold: [0, 0.04, 0.08, 0.15, 0.3, 0.5, 0.7, 0.9, 1] });
   sectionIo.observe(section);
+  document.addEventListener("visibilitychange", syncMotion, { passive: true });
 
-  addEventListener("pagehide", function () { idleTimelines.forEach(function (tl) { tl.kill(); }); }, { once: true });
+  addEventListener("pagehide", function () {
+    sectionIo.disconnect();
+    if (entranceTimeline) entranceTimeline.kill();
+    idleTimelines.forEach(function (tl) { tl.kill(); });
+  }, { once: true });
 })();
 
 export {};
