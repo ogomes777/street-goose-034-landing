@@ -100,10 +100,10 @@ section.querySelector("[data-push]").addEventListener("click",async e=>{const b=
 // Pointer-driven, GPU-composited. Touch stays scrollable; no WebGL loop.
 const passStage = section.querySelector('.sg-install-pass-stage');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-let passFrame = 0, passPoint = null, tapReset = 0;
+let passFrame = 0, passPoint = null, tapReset = 0, passBounds = null;
 function resetPass() {
   cancelAnimationFrame(passFrame);
-  passFrame = 0; passPoint = null;
+  passFrame = 0; passPoint = null; passBounds = null;
   passStage.classList.remove('is-tracking');
   passStage.style.removeProperty('--sg-card-tilt-x');
   passStage.style.removeProperty('--sg-card-tilt-y');
@@ -113,7 +113,7 @@ function resetPass() {
 function movePass(event) {
   if (reducedMotion.matches || document.hidden || !passStage.isConnected) return;
   if (event.pointerType === 'touch' && event.buttons === 0) return;
-  const bounds = passStage.getBoundingClientRect();
+  const bounds = passBounds || (passBounds = passStage.getBoundingClientRect());
   if (!bounds.width || !bounds.height) return;
   const x = Math.max(-1, Math.min(1, (event.clientX - bounds.left) / bounds.width * 2 - 1));
   const y = Math.max(-1, Math.min(1, (event.clientY - bounds.top) / bounds.height * 2 - 1));
@@ -129,7 +129,8 @@ function movePass(event) {
     passStage.style.setProperty('--shine-y', `${(passPoint.y + 1) * 50}%`);
   });
 }
-passStage.addEventListener('pointerdown', movePass, {passive:true});
+passStage.addEventListener('pointerenter', () => { passBounds = passStage.getBoundingClientRect(); }, {passive:true});
+passStage.addEventListener('pointerdown', event => { passBounds = passStage.getBoundingClientRect(); movePass(event); }, {passive:true});
 passStage.addEventListener('pointermove', movePass, {passive:true});
 passStage.addEventListener('pointerup', event => {
   if (event.pointerType === 'touch' && !reducedMotion.matches) {
@@ -140,6 +141,7 @@ passStage.addEventListener('pointerup', event => {
   resetPass();
 }, {passive:true});
 for (const type of ['pointerleave','pointercancel']) passStage.addEventListener(type, resetPass, {passive:true});
+window.addEventListener('resize', () => { passBounds = null; }, {passive:true});
 reducedMotion.addEventListener('change', resetPass);
 document.addEventListener('visibilitychange', () => { if (document.hidden) resetPass(); });
 if('IntersectionObserver' in window){const motionObserver=new IntersectionObserver(entries=>{for(const entry of entries)entry.target.classList.toggle('sg-motion-paused',!entry.isIntersecting);},{rootMargin:'80px'});for(const panel of document.querySelectorAll('.sg-install,.sg-live-activity'))motionObserver.observe(panel);}
