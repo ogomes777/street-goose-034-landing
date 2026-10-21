@@ -19,8 +19,16 @@ test.describe("SG 034 / Optical Signal premium", () => {
 
   test("pixel respira na area visivel e sem movimentos desnecessarios fora dela", async ({page}) => {
     await page.goto("/", {waitUntil:"domcontentloaded"});
+    // The cinematic intro intentionally fixes the body to avoid background scroll.
+    // Close it using the site's actual skip button before testing intersection.
+    await page.locator("[data-intro-skip]").evaluate((element: HTMLButtonElement) => element.click());
+    await expect.poll(() => page.evaluate(() => document.body.style.position), {timeout:10_000}).not.toBe("fixed");
     const strip = page.locator("#top .trust-strip");
     await strip.evaluate(el => el.scrollIntoView({behavior:"instant",block:"center"}));
+    await expect.poll(() => strip.evaluate(el => {
+      const box = el.getBoundingClientRect();
+      return box.bottom > 0 && box.top < innerHeight;
+    }), {timeout:10_000}).toBe(true);
     await expect(strip).toHaveClass(/sg-trust-active/, {timeout:10_000});
     await expect(strip.locator(".sg-trust-pixels i").first()).toHaveCSS("animation-play-state","running");
     await page.evaluate(() => window.scrollTo({top:0,behavior:"instant"}));
