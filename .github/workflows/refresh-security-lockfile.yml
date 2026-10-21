@@ -1,0 +1,48 @@
+# One-time repair. Only executes on the owner's fixed security PR branch.
+# Remove this workflow from the branch after the dependency lockfile is committed.
+name: Refresh Street Goose security lockfile
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - package.json
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-lockfile:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'security/hardening-20-points-20261021'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          persist-credentials: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Atualizar lockfile sem executar scripts de pacotes
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit fix --package-lock-only --ignore-scripts --no-fund
+      - name: Instalar sem scripts e impedir vulnerabilidades altas
+        run: |
+          npm ci --ignore-scripts --no-fund
+          npm audit --audit-level=high
+      - name: Commit apenas package-lock.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile already current"
+            exit 0
+          fi
+          git commit -m "security(deps): update audited dependency lockfile"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
