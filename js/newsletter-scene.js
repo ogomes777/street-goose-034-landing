@@ -23,13 +23,19 @@
   var baseCameraZ = 9;
   camera.position.set(0, 0, baseCameraZ);
 
-  scene.add(new THREE.AmbientLight(0x3c4650, 1.1));
+  scene.add(new THREE.AmbientLight(0x3c4650, 1.05));
+  scene.add(new THREE.HemisphereLight(0xe5f0ff, 0x262024, 0.38));
   var key = new THREE.DirectionalLight(0xffffff, 0.5);
   key.position.set(2, 3, 5);
   scene.add(key);
 
+  // Camera reveal independent of the scene director and scroll camera.
+  // All meshes remain in the SAME shared WebGL renderer.
+  var revealRoot = new THREE.Group();
+  scene.add(revealRoot);
   var rig = new THREE.Group();
-  scene.add(rig);
+  revealRoot.add(rig);
+  var entranceCameraBias = 1.3;
 
   function lensShape(rx, ry) {
     var shape = new THREE.Shape();
@@ -48,8 +54,8 @@
   }
 
   var RX = 1.05, RY = 0.86, THICK = 0.12, DEPTH = 0.16;
-  var chromeMat = new THREE.MeshStandardMaterial({ color: 0x2b2d30, metalness: 0.85, roughness: 0.3 });
-  var lensMat = new THREE.MeshStandardMaterial({ color: 0x142433, transparent: true, opacity: 0.34, metalness: 0.15, roughness: 0.06, side: THREE.DoubleSide });
+  var chromeMat = new THREE.MeshStandardMaterial({ color: 0x383a3e, metalness: 0.88, roughness: 0.23 });
+  var lensMat = new THREE.MeshStandardMaterial({ color: 0x233441, transparent: true, opacity: 0.39, metalness: 0.18, roughness: 0.07, side: THREE.DoubleSide });
   var edgeMat = new THREE.LineBasicMaterial({ color: 0x9fb7c2, transparent: true, opacity: 0.55 });
 
   function buildEye(mirror) {
@@ -107,7 +113,7 @@
   rig.add(blueRim);
 
   /* ---------------- Partículas convergindo pras bordas ---------------- */
-  var count = window.SG.perfTier === "high" ? 160 : 90;
+  var count = window.SG.perfTier === "high" ? 142 : window.SG.perfTier === "low" ? 44 : 88;
   var targets = [];
   [eyeL, eyeR].forEach(function (eye) {
     for (var i = 0; i < count / 2; i++) {
@@ -166,8 +172,14 @@
   /* ---------------- Entrada cinematográfica ---------------- */
   var idleStarted = false;
   function playEntrance() {
-    if (!window.SG.hasGSAP) { pMatOpacityFallback(); startIdle(); return; }
+    if (!window.SG.hasGSAP) {
+      entranceCameraBias = 0;
+      pMatOpacityFallback(); startIdle(); return;
+    }
     var gsap = window.gsap;
+    gsap.set(revealRoot.scale, { x: 0.74, y: 0.74, z: 0.74 });
+    gsap.set(revealRoot.position, { z: -2.3, y: -0.28 });
+    gsap.set(revealRoot.rotation, { y: -0.48, x: 0.15, z: -0.08 });
     gsap.set([eyeL.scale, eyeR.scale], { x: 0.001, y: 0.001, z: 0.001 });
     gsap.set(bridge.scale, { x: 0.001, y: 0.001, z: 0.001 });
     gsap.set([eyeL.userData.lens.material, eyeR.userData.lens.material], { opacity: 0 });
@@ -176,7 +188,11 @@
     coreLight.intensity = 0;
 
     var tl = gsap.timeline({ onComplete: startIdle });
-    tl.to(particleProgress, { t: 1, duration: 1.4, ease: "power2.out" }, 0)
+    tl.to(revealRoot.position, { z: 0, y: 0, duration: 1.85, ease: "power3.out" }, 0.1)
+      .to(revealRoot.rotation, { y: 0.05, x: 0.01, z: 0, duration: 2.1, ease: "power3.out" }, 0.12)
+      .to(revealRoot.scale, { x: 1, y: 1, z: 1, duration: 1.75, ease: "power3.out" }, 0.12)
+      .to({ zoom: 1.3 }, { zoom: 0, duration: 2, ease: "power3.out", onUpdate: function () { entranceCameraBias = this.targets()[0].zoom; } }, 0.15)
+      .to(particleProgress, { t: 1, duration: 1.4, ease: "power2.out" }, 0)
       .to(pMat, { opacity: 0.6, duration: 0.5 }, 0)
       .to(eyeL.scale, { x: 1, y: 1, z: 1, duration: 0.9, ease: "back.out(1.6)" }, 0.5)
       .to(eyeR.scale, { x: 1, y: 1, z: 1, duration: 0.9, ease: "back.out(1.6)" }, 0.62)
@@ -184,8 +200,9 @@
       .to(templeL.rotation, { y: 0, duration: 0.8, ease: "power3.out" }, 1.15)
       .to(templeR.rotation, { y: 0, duration: 0.8, ease: "power3.out" }, 1.2)
       .to([eyeL.userData.lens.material, eyeR.userData.lens.material], { opacity: 0.34, duration: 0.7, ease: "power2.out" }, 1.4)
-      .to(coreLight, { intensity: 2, duration: 0.5, ease: "power2.out" }, 1.6)
-      .to(camera.position, { z: baseCameraZ - 0.6, duration: 1.6, ease: "power2.inOut" }, 1.6);
+      .to(coreLight, { intensity: 2.25, duration: 0.9, ease: "sine.out" }, 1.5)
+      .to(edgeMat, { opacity: 0.74, duration: 1.2, ease: "sine.out" }, 1.35)
+      .to(blueRim, { intensity: 1.7, duration: 1.4, ease: "sine.out" }, 1.15);
   }
   function pMatOpacityFallback() { pMat.opacity = 0.5; particleProgress.t = 1; }
   var idleTimelines = [];
@@ -194,7 +211,9 @@
     idleStarted = true;
     var gsap = window.gsap;
     idleTimelines.push(gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: "sine.inOut" } }).to(rig.position, { y: "+=0.14", duration: 3.4 }));
-    idleTimelines.push(gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: "sine.inOut" } }).to(coreLight, { intensity: 2.6, duration: 2.1 }));
+    idleTimelines.push(gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: "sine.inOut" } }).to(coreLight, { intensity: 2.65, duration: 3.3 }));
+    idleTimelines.push(gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: "sine.inOut" } }).to(revealRoot.rotation, { y: 0.105, x: -0.035, duration: 5.6 }));
+    idleTimelines.push(gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: "sine.inOut" } }).to(edgeMat, { opacity: 0.49, duration: 4.1 }));
   }
   var entranceIo = new IntersectionObserver(function (entries) {
     if (!entries.some(function (e) { return e.isIntersecting; })) return;
@@ -219,7 +238,7 @@
       }
       pGeo.attributes.position.needsUpdate = true;
       blueRim.position.y = Math.sin(clockT * 0.5) * 0.4;
-      camera.position.z = baseCameraZ - 0.6 - scrollProgress * 1.4;
+      camera.position.z = baseCameraZ - 0.6 - scrollProgress * 1.4 + entranceCameraBias;
       rig.rotation.x = scrollProgress * -0.08;
       camera.lookAt(rig.position.x * 0.4, 0, 0);
     },
