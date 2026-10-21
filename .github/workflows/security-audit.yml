@@ -61,4 +61,18 @@ jobs:
             echo "::error::Gitleaks CLI nao localizada; auditoria do historico incompleta."
             exit 1
           fi
-          "$binary" detect --source "." --log-opts="--all" --redact --no-banner --exit-code=1 --log-level=error
+          report="${RUNNER_TEMP}/sg-security-history.json"
+          "$binary" detect --source "." --log-opts="--all" --redact --no-banner \
+            --exit-code=0 --log-level=error --report-format=json --report-path="$report"
+          if [ ! -f "$report" ]; then
+            echo "::error::Varredura historica nao produziu relatorio."
+            exit 1
+          fi
+          count="$(jq 'length' "$report")"
+          rm -f "$report"
+          if [ "$count" -gt 0 ]; then
+            echo "::error::Gitleaks detectou $count potencial(is) segredo(s) no historico Git. Revisar e rotacionar credenciais antes de liberar a auditoria."
+            exit 1
+          fi
+          echo "Historico Git auditado: nenhuma credencial identificada."
+
