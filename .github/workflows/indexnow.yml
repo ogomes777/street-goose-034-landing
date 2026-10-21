@@ -36,7 +36,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Obter codigo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Configurar Node
         uses: actions/setup-node@v4
         with:
