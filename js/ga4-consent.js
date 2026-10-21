@@ -5,6 +5,10 @@
 
   const MEASUREMENT_ID = "G-XPZWPBGLDN";
   const STORAGE_KEY = "sg034_analytics_consent_v1";
+  // A propriedade GA4 oficial deve receber apenas acessos ao domínio da loja.
+  // Previews Vercel, localhost e homologação não contaminam os relatórios reais.
+  const PRODUCTION_HOSTS = new Set(["www.streetgoose034.com.br", "streetgoose034.com.br"]);
+  const isProductionDomain = PRODUCTION_HOSTS.has(window.location.hostname.toLowerCase());
   let loaded = false;
   let panel = null;
 
@@ -101,6 +105,7 @@
   }
 
   function loadAnalytics() {
+    if (!isProductionDomain) return;
     if (loaded || document.querySelector("script[data-sg034-ga4]")) return;
     loaded = true;
     startWebVitals();
