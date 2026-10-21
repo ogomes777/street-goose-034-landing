@@ -22,8 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: npm
@@ -32,17 +32,20 @@ jobs:
       - name: Bloquear vulnerabilidades high e critical em producao
         run: npm audit --omit=dev --audit-level=high
       - name: Bloquear vulnerabilidades critical inclusive no ambiente de build
-        run: npm audit --audit-level=critical
+        run: npm audit --audit-level=high
 
   secret-scan:
     name: Segredos - historico e codigo
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+          GITLEAKS_ENABLE_SUMMARY: 'false'
