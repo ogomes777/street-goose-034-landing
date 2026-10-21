@@ -1,0 +1,37 @@
+name: Street Goose - experiencia final PWA
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: street-closing-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  closing:
+    name: Instalacao, cartao e rodape mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci --no-fund
+      - name: Build com TypeScript e verificacao CSP
+        run: npm run build
+      - name: Instalar browsers mobile
+        run: npx playwright install --with-deps chromium webkit
+      - name: Testar iPhone e Android em WebKit/Chromium
+        run: npx playwright test tests/launch/closing-experience.spec.ts --config=playwright.launch.config.ts
