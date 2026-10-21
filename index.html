@@ -71,7 +71,12 @@
       var introVideo = document.querySelector("[data-intro-video]");
       var introAudio = document.querySelector("[data-intro-audio]");
       if (!intro || !skip) return;
-      var introShouldShow = window.location.pathname === "/";
+      // A abertura cinematografica toca uma vez por sessao de navegacao.
+      // Ao voltar do login, compartilhar ou abrir a mesma aba no Safari,
+      // nunca reiniciar um video ja visto ou recuperar frames incompletos.
+      var introAlreadySeen = false;
+      try { introAlreadySeen = sessionStorage.getItem("sgIntroSeen") === "1"; } catch (_) {}
+      var introShouldShow = window.location.pathname === "/" && !introAlreadySeen;
       // The intro ships with preload="none" and no autoplay, so nothing is
       // fetched before this decides: on the landing, one file sized for the
       // screen starts right away; a direct link to another page (/termos,
@@ -88,8 +93,11 @@
         if (introShouldShow) introAudio.preload = "metadata";
         else introAudio.removeAttribute("src");
       }
-      window.addEventListener('pageshow', function(event){
-        if(event.persisted && window.matchMedia('(pointer: coarse)').matches) window.location.reload();
+      // pageshow/BFCache on iOS is NOT a new navigation. Forcing reload here
+      // replayed the intro and recreated/suspended the audio output after login.
+      // The active modules handle media resumption without remounting the page.
+      window.addEventListener("pageshow", function (event) {
+        if (event.persisted) document.dispatchEvent(new CustomEvent("sg:pageshow-restored"));
       });
       if (introShouldShow) {
         var introScrollY = window.scrollY || window.pageYOffset || 0;
