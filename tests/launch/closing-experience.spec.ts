@@ -52,4 +52,23 @@ test.describe("Street Goose / experiencia final de instalacao", () => {
     await stage.evaluate(el => el.dispatchEvent(new PointerEvent("pointerleave", {bubbles: true})));
     await expect.poll(async () => stage.evaluate(el => el.style.getPropertyValue("--sg-card-tilt-x"))).toBe("");
   });
+  test("TikTok: explica como sair do navegador interno sem marcar app como instalado", async ({page}) => {
+    await page.addInitScript(() => {
+      const original = navigator.userAgent;
+      Object.defineProperty(navigator, "userAgent", {configurable:true, get:() => original + " TikTok"});
+    });
+    await page.goto("/", {waitUntil:"domcontentloaded"});
+    const install = page.locator(".sg-install [data-install]");
+    await expect(install).toBeVisible({timeout:20_000});
+    await install.evaluate((node: HTMLButtonElement) => node.click());
+    const dialog = page.locator("dialog.sg-install-dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("Abra a Street no navegador");
+    await expect(dialog).toContainText("Safari ou Chrome");
+    await expect(dialog.locator("[data-guide-done]")).toHaveCount(0);
+    await expect(dialog.locator("[data-guide-copy]")).toHaveCount(1);
+    await dialog.locator("[data-guide-later]").click();
+    await expect(install).toBeVisible();
+  });
+
 });
