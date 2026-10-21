@@ -1,4 +1,5 @@
 import { announceAuthRequest } from "./auth-send-notice.js";
+import { trustedAvatarUrl } from "../src/lib/security-guards.ts";
 import "./auth-modal.css";
 /* Street Goose 034 — modal de autenticação + gate de ação pendente.
    window.SG.auth.requireAuth(action) é o gate: se AuthService não está
@@ -46,7 +47,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
       // foto escolhida no perfil (sg_avatar_url; "none" = tirou de propósito),
       // senão a do login social, senão a inicial
       var photo = meta.sg_avatar_url === "none" ? null
-        : [meta.sg_avatar_url, meta.avatar_url, meta.picture].filter(function (u) { return typeof u === "string" && /^https:\/\//.test(u); })[0] || null;
+        : [meta.sg_avatar_url, meta.avatar_url, meta.picture].map(trustedAvatarUrl).filter(Boolean)[0] || null;
       label.textContent = first;
       if (photo) {
         avatar.innerHTML = '<img src="' + window.SG.esc(photo) + '" alt="" referrerpolicy="no-referrer">';

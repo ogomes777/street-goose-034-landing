@@ -7,6 +7,7 @@
    vêm da 0108 — sem ela no banco, essas chamadas só respondem "indisponível"
    e o resto do feed segue igual. */
 import { applyPhotoFilter } from "../lib/photo-filter";
+import { isSafeAvatarBlob, isSupportedCommunityImage } from "../lib/security-guards";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 export type PostStatus = "pending" | "approved" | "rejected";
@@ -111,7 +112,6 @@ type Result<T = object> = ({ ok: true } & T) | { ok: false; reason?: string; mes
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // limite do bucket (0010)
 const MAX_ORIGINAL_BYTES = 30 * 1024 * 1024; // foto de celular grande: a gente reduz antes
 const MAX_EDGE = 1800; // nítido no visualizador em tela cheia, leve no feed
-const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 interface FeedRow {
   id: string;
@@ -179,9 +179,6 @@ async function signUrls(paths: string[]): Promise<Map<string, string>> {
   return urls;
 }
 
-function isAccepted(file: File): boolean {
-  return ACCEPTED_TYPES.includes(file.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
-}
 
 async function decode(file: File): Promise<{ source: CanvasImageSource; width: number; height: number; release: () => void } | null> {
   try {
@@ -275,7 +272,7 @@ export const CommunityService = {
   },
 
   validateFile(file: File): { ok: true } | { ok: false; message: string } {
-    if (!isAccepted(file)) return { ok: false, message: "Formato não aceito. Envie JPG, PNG, WEBP ou HEIC." };
+    if (!isSupportedCommunityImage(file)) return { ok: false, message: "Foto inválida, vazia, grande demais ou em formato não aceito. Envie JPG, PNG, WEBP ou HEIC." };
     if (file.size > MAX_ORIGINAL_BYTES) return { ok: false, message: "Foto maior que 30MB. Escolha outra." };
     return { ok: true };
   },
@@ -381,6 +378,7 @@ export const CommunityService = {
     if (!supabase) return { ok: false, message: "Indisponível agora." };
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return { ok: false, reason: "auth_required", message: PROFILE_ERRORS.auth_required };
+    if (!(await isSafeAvatarBlob(blob))) return { ok: false, reason: "invalid_image", message: "Foto inválida ou maior que 2 MB. Tente outra imagem." };
     const ext = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
     const path = auth.user.id + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
     const { error } = await supabase.storage.from("avatars").upload(path, blob, { upsert: false, contentType: blob.type || "image/jpeg", cacheControl: "31536000" });

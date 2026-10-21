@@ -29,6 +29,8 @@ jobs:
           cache: npm
       - name: Instalar do lockfile sem executar scripts
         run: npm ci --ignore-scripts --no-fund
+      - name: Validar regras de seguranca de avatares e arquivos
+        run: npm test -- src/lib/security-guards.test.ts
       - name: Bloquear vulnerabilidades high e critical em producao
         run: npm audit --omit=dev --audit-level=high
       - name: Bloquear vulnerabilidades critical inclusive no ambiente de build
