@@ -53,7 +53,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          binary="$(find /tmp -maxdepth 2 -type f -name gitleaks -perm -u+x -print -quit)"
+          binary=""
+          for candidate in /tmp/gitleaks-*/gitleaks; do
+            if [ -x "$candidate" ]; then binary="$candidate"; break; fi
+          done
           if [ -z "$binary" ]; then
             echo "::error::Gitleaks CLI nao localizada; auditoria do historico incompleta."
             exit 1
