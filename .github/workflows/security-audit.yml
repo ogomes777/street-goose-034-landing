@@ -1,0 +1,82 @@
+name: Street Goose - seguranca e dependencias
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "20 11 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-audit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-audit:
+    name: Dependencias - vulnerabilidades conhecidas
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Instalar do lockfile sem executar scripts
+        run: npm ci --ignore-scripts --no-fund
+      - name: Bloquear vulnerabilidades high e critical em producao
+        run: npm audit --omit=dev --audit-level=high
+      - name: Bloquear vulnerabilidades critical inclusive no ambiente de build
+        run: npm audit --audit-level=high
+
+  secret-scan:
+    name: Segredos - historico e codigo
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+          GITLEAKS_ENABLE_SUMMARY: 'false'
+      - name: Auditar todo o historico Git sem expor os segredos
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary=""
+          for candidate in /tmp/gitleaks-*/gitleaks; do
+            if [ -x "$candidate" ]; then binary="$candidate"; break; fi
+          done
+          if [ -z "$binary" ]; then
+            echo "::error::Gitleaks CLI nao localizada; auditoria do historico incompleta."
+            exit 1
+          fi
+          report="${RUNNER_TEMP}/sg-security-history.json"
+          "$binary" detect --source "." --log-opts="--all" --redact --no-banner \
+            --exit-code=0 --log-level=error --report-format=json --report-path="$report"
+          if [ ! -f "$report" ]; then
+            echo "::error::Varredura historica nao produziu relatorio."
+            exit 1
+          fi
+          count="$(jq 'length' "$report")"
+          if [ "$count" -gt 0 ]; then
+            # Apenas regra, caminho e hash de commit: nunca logar payload/segredo.
+            jq -r '.[] | "TIPO=\(.RuleID) ARQUIVO=\(.File) COMMIT=\((.Commit // "")[0:12])"' "$report" | sort -u
+          fi
+          rm -f "$report"
+          if [ "$count" -gt 0 ]; then
+            echo "::error::Gitleaks detectou $count potencial(is) segredo(s) no historico Git. Revisar e rotacionar credenciais antes de liberar a auditoria."
+            exit 1
+          fi
+          echo "Historico Git auditado: nenhuma credencial identificada."
+
