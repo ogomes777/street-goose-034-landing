@@ -1,0 +1,16 @@
+title = "Street Goose 034 - deteccao de segredos"
+
+[extend]
+useDefault = true
+
+# O token IndexNow de validacao de propriedade do dominio e propositalmente
+# publico em public/<token>.txt. Nao e credencial de acesso ao Supabase,
+# GitHub, Vercel, Bing ou qualquer API administrativa.
+# Excecao EXATA somente para o valor especifico e arquivo especifico.
+[[rules]]
+id = "generic-api-key"
+  [[rules.allowlists]]
+  description = "Chave publica de validacao IndexNow, publicada por design"
+  condition = "AND"
+  paths = ['''^scripts/indexnow-notify\\.mjs$''']
+  regexes = ['''^989f03f4d0umc4d1eb85921719848c87c$''']
