@@ -14,41 +14,72 @@ type StreetGooseWindow = Window &
 
 async function bootstrap() {
   void import('../js/landing-refinement.js').catch(() => {});
-  // The character chapter sits below the hero: render it (and fetch its art)
-  // on the first scroll or once the boot is idle, whichever comes first, so it
-  // never competes with the first paint. (Its root is empty until then, so a
-  // viewport observer would fire immediately.)
+  // The character lives right after the hero. Reserve its height in
+  // perf-budget.css, then mount it during idle time instead of during a
+  // touch-scroll frame (that previously caused a large layout jump).
   const heroRoot = document.getElementById("interactive-character-root");
-  let renderCharacter = () => {};
+  let requestCharacter = () => {};
   if (heroRoot) {
     let requested = false;
-    renderCharacter = () => {
+    let quietTimer = 0;
+    let lastScroll = 0;
+
+    const mountCharacter = () => {
       if (requested) return;
       requested = true;
-      window.removeEventListener("scroll", renderCharacter);
-      // A cena e seu CSS ficam num chunk carregado apenas quando necessário.
-      // Antes, o import estático incluía tudo no grafo inicial do site, mesmo
-      // que a renderização React só acontecesse após o primeiro scroll/idle.
-      // React is only needed for this below-fold chapter. Do not make its
-      // vendor bundle block first paint of the cinematic intro and category.
+      window.removeEventListener("scroll", onScroll);
       void Promise.all([
         import("./components/interactive-character/InteractiveCharacterHero"),
         import("react"),
         import("react-dom/client"),
       ]).then(([{ InteractiveCharacterHero }, { createElement, StrictMode }, { createRoot }]) => {
-          createRoot(heroRoot).render(
-            createElement(StrictMode, null, createElement(InteractiveCharacterHero)),
-          );
-          // O capítulo passa a ter altura: recalcular os gatilhos de scroll.
-          requestAnimationFrame(() => requestAnimationFrame(() => (window as StreetGooseWindow).ScrollTrigger?.refresh()));
-        })
-        .catch((error) => {
-          console.error("Street Goose interactive character failed", error);
-          requested = false;
-          window.addEventListener("scroll", renderCharacter, { passive: true });
-        });
+        createRoot(heroRoot).render(
+          createElement(StrictMode, null, createElement(InteractiveCharacterHero)),
+        );
+        requestAnimationFrame(() => requestAnimationFrame(() => (window as StreetGooseWindow).ScrollTrigger?.refresh()));
+      }).catch((error) => {
+        console.error("Street Goose interactive character failed", error);
+        requested = false;
+        window.addEventListener("scroll", onScroll, { passive: true });
+      });
     };
-    window.addEventListener("scroll", renderCharacter, { passive: true });
+
+    const scheduleWhenQuiet = () => {
+      if (requested) return;
+      window.clearTimeout(quietTimer);
+      quietTimer = window.setTimeout(() => {
+        const blocked = () => document.hidden ||
+          document.body.classList.contains("sg-entry-popup-open") ||
+          document.body.classList.contains("category-page-open");
+        if (blocked() || performance.now() - lastScroll < 230) {
+          scheduleWhenQuiet();
+          return;
+        }
+        // Idle callbacks don't guarantee a quiet page at callback time:
+        // check again before parsing React and decoding the character art.
+        const run = () => {
+          if (requested) return;
+          if (blocked() || performance.now() - lastScroll < 230) {
+            scheduleWhenQuiet();
+            return;
+          }
+          mountCharacter();
+        };
+        if ("requestIdleCallback" in window) window.requestIdleCallback(run, { timeout: 1700 });
+        else window.setTimeout(run, 80);
+      }, 300);
+    };
+
+    const onScroll = () => {
+      lastScroll = performance.now();
+      if (!requested && heroRoot.getBoundingClientRect().top < window.innerHeight + 850)
+        scheduleWhenQuiet();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    requestCharacter = () => {
+      if (heroRoot.getBoundingClientRect().top < window.innerHeight + 850)
+        scheduleWhenQuiet();
+    };
   }
 
   const [{ gsap }, { ScrollTrigger }] = await Promise.all([import("gsap"), import("gsap/ScrollTrigger")]);
@@ -67,13 +98,10 @@ async function bootstrap() {
   // A intro é um vídeo prioritário. Não competir pelo decoder/rede com
   // a seção React até que o visitante tenha saído da abertura.
   const scheduleCharacter = () => {
-    // Em aparelhos touch, a intro acaba de liberar vídeo e áudio.
-    // Não baixar React, o personagem e seus shaders no mesmo instante:
-    // o primeiro scroll já chama renderCharacter (listener acima).
-    // Desktop mantém o carregamento antecipado em idle.
-    if (window.matchMedia("(pointer: coarse)").matches) return;
-    if ("requestIdleCallback" in window) requestIdleCallback(renderCharacter, { timeout: 1500 });
-    else setTimeout(renderCharacter, 300);
+    // Give the video/audio decoder a breather after the cinematic intro.
+    // On phones, do not start React work in the middle of the first swipe.
+    const delay = window.matchMedia("(pointer: coarse)").matches ? 1300 : 400;
+    window.setTimeout(requestCharacter, delay);
   };
   const introDone = (window as unknown as { SG?: { introComplete?: boolean } }).SG?.introComplete;
   if (introDone) scheduleCharacter();
