@@ -34,7 +34,7 @@
   var DUCK_MS = 300;
   var FADE_MS = 600;
   var SAFETY_MS = 30000; // vídeo tem ~18.4s — folga generosa, nunca deve disparar em uso normal
-  var STALL_MS = 6000; // vídeo nunca começou a tocar (rede/arquivo com problema)
+  var STALL_MS = 12000; // folga para a troca Safari/PWA e aparelhos lentos
 
   function notifyComplete() {
     if (window.SG.introComplete) return; // script inline já avisou
@@ -113,12 +113,15 @@
   var cueFired = false;
   var rvfcHandle = null;
   var rafCueHandle = null;
+  var waitingForGesture = false;
+  var recoveryInFlight = false;
 
   lockIntroScroll();
 
   function finish() {
     if (finished) return;
     finished = true;
+    waitingForGesture = false;
     clearTimeout(safetyTimer);
     clearTimeout(stallTimer);
     stopCueMonitor();
@@ -302,6 +305,12 @@
   }
   function onFirstPlaying() {
     clearTimeout(stallTimer);
+    waitingForGesture = false;
+    recoveryInFlight = false;
+    // Never hide a sound CTA unless the audio really is available.
+    if (soundBtn && introAudio && !introAudio.paused && !introAudio.muted) {
+      soundBtn.hidden = true;
+    }
   }
   function onEnded() {
     // regra: toca uma única vez, do início ao fim — nunca reinicia/faz loop
@@ -331,6 +340,21 @@
   // evento nunca mais dispara de novo (já tocando). Por isso o clear de
   // verdade usa a Promise do NOSSO play(), que resolve mesmo se o vídeo já
   // estava tocando — não depende de pegar o evento no momento certo.
+  // Low Power Mode, installed Safari webviews and some in-app browsers can
+  // reject even muted autoplay. Keep a real gesture CTA instead of silently
+  // dismissing the intro after a rejected play promise.
+  function needGestureToStartVideo() {
+    if (finished || video.error) { finish(); return; }
+    waitingForGesture = true;
+    clearTimeout(stallTimer);
+    if (soundBtn) {
+      soundBtn.hidden = false;
+      soundBtn.textContent = "Tocar abertura e som";
+      soundBtn.setAttribute("aria-label", "Tocar a abertura Street Goose e ativar som");
+    }
+    attachGlobalAudioUnlock();
+  }
+
   function fallbackToMuted() {
     video.muted = true;
     video.volume = 0;
@@ -344,7 +368,7 @@
     if (p && p.then) p.then(function () {
       clearTimeout(stallTimer);
       if (introAudio) introAudio.play().catch(function () {});
-    }, finish); // nem mudo tocou — libera a landing
+    }, needGestureToStartVideo); // iOS Low Power Mode: user gesture required
   }
 
   function tryPlayWithSound() {
@@ -390,6 +414,7 @@
   function onGlobalUnlock() {
     detachGlobalAudioUnlock();
     if (finished) return;
+    waitingForGesture = false;
     if (soundBtn) {
       soundBtn.textContent = "Ativando som…";
       soundBtn.hidden = false;
@@ -403,7 +428,7 @@
       if (audioPlay && audioPlay.catch) audioPlay.catch(attachGlobalAudioUnlock);
     }
     var p = video.play();
-    if (p && p.catch) p.catch(function () {});
+    if (p && p.then) p.then(onFirstPlaying, needGestureToStartVideo);
     if (window.SG.music && window.SG.music.retryIfBlocked) window.SG.music.retryIfBlocked();
     // Safari/iOS pode aceitar audio.play() mas manter WebAudio suspenso.
     // Não esconder o único botão que permite ao visitante repetir um
@@ -441,7 +466,47 @@
   }
 
   safetyTimer = setTimeout(finish, SAFETY_MS);
-  stallTimer = setTimeout(finish, STALL_MS);
+  stallTimer = setTimeout(function () {
+    if (finished) return;
+    // If autoplay never progressed, wait for an explicit gesture with a
+    // visible CTA; the global safety timer still releases broken media.
+    if (video.currentTime < 0.35 && (video.paused || video.readyState < 3)) {
+      needGestureToStartVideo();
+      return;
+    }
+    finish();
+  }, STALL_MS);
+
+  function resumeAfterForeground() {
+    if (finished || document.hidden || !video || video.ended || recoveryInFlight) return;
+    if (video.paused) {
+      recoveryInFlight = true;
+      var resumed;
+      try { resumed = video.play(); } catch (_) { recoveryInFlight = false; needGestureToStartVideo(); return; }
+      Promise.resolve(resumed).then(function () {
+        recoveryInFlight = false;
+        onVideoResumed();
+      }, function () {
+        recoveryInFlight = false;
+        needGestureToStartVideo();
+      });
+    } else {
+      onVideoResumed();
+    }
+    if (window.SG.music && window.SG.music.refreshOutputStatus) {
+      window.SG.music.refreshOutputStatus();
+    }
+  }
+  document.addEventListener("sg:pageshow-restored", resumeAfterForeground);
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      if (introAudio && !introAudio.paused) introAudio.pause();
+    } else {
+      // Media decoders are re-created by iOS when returning from a background
+      // login or after adding the app to the home screen.
+      resumeAfterForeground();
+    }
+  });
 
   tryPlayWithSound();
   startCueMonitor();

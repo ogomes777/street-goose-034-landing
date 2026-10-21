@@ -85,6 +85,7 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
   var mediaError = false;
   var playWatchdog = null;
   var playRequestId = 0;
+  var foregroundRecoveryTimer = null;
 
   function hideIcon(icon, hidden) {
     if (!icon) return;
@@ -179,6 +180,10 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
     playWatchdog = null;
     // Não confundir som suspenso com som desbloqueado.
     if (!mixer || mixer.isRunning()) autoplayBlocked = false;
+    if (foregroundRecoveryTimer) {
+      clearTimeout(foregroundRecoveryTimer);
+      foregroundRecoveryTimer = null;
+    }
     syncUI();
   });
   audio.addEventListener("waiting", function () { buffering = true; syncUI(); });
@@ -353,12 +358,49 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
     unlockForIntro();
   }
 
+  // Returning from OAuth login, a PWA launch or iOS BFCache may preserve
+  // audio.paused=false while the hardware output has become suspended.
+  // Show an accurate sound CTA; try normal media playback only if the user
+  // did not explicitly pause/mute, and never reset the song position.
+  function refreshOutputStatus() {
+    if (document.hidden) return;
+    if (foregroundRecoveryTimer) clearTimeout(foregroundRecoveryTimer);
+    syncUI();
+    if (!cueTriggered || userPaused || userWantsMuted) return;
+    if (audio.paused && !playPending) {
+      attemptPlay(true);
+      return;
+    }
+    if (mixer && mixer.ready() && !mixer.isRunning()) {
+      autoplayBlocked = true;
+      syncUI();
+      return;
+    }
+    // A media element can report "playing" on iOS while the decoder has
+    // been interrupted after tab/PWA switching. Check whether time moves.
+    var sample = Number(audio.currentTime) || 0;
+    foregroundRecoveryTimer = setTimeout(function () {
+      foregroundRecoveryTimer = null;
+      if (document.hidden || userPaused || userWantsMuted || audio.paused ||
+          buffering || playPending || audio.ended || !cueTriggered) return;
+      if (Math.abs((Number(audio.currentTime) || 0) - sample) < 0.08) {
+        autoplayBlocked = true;
+        syncUI();
+      } else {
+        autoplayBlocked = false;
+        syncUI();
+      }
+    }, 2100);
+  }
   document.addEventListener("visibilitychange", function () {
-    // iOS pode suspender o contexto durante bloqueio de tela/alternância.
-    // Não retomar à força sem gesto: mostrar "Ativar som" e preservar
-    // o desejo de pausa do visitante.
-    if (!document.hidden) syncUI();
+    if (document.hidden) {
+      if (foregroundRecoveryTimer) clearTimeout(foregroundRecoveryTimer);
+      foregroundRecoveryTimer = null;
+    } else {
+      refreshOutputStatus();
+    }
   });
+  document.addEventListener("sg:pageshow-restored", refreshOutputStatus);
 
   window.SG.music = {
     audio: audio,
@@ -368,6 +410,7 @@ import {createMobileAudioMixer} from './mobile-audio-mixer.js';
     pauseForResync: pauseForResync,
     resumeFromResync: resumeFromResync,
     retryIfBlocked: retryIfBlocked,
+    refreshOutputStatus: refreshOutputStatus,
     mobilePlayback: mobilePlayback,
     isOutputRunning: function () { return !mixer || !mixer.ready() || mixer.isRunning(); },
     setIntroVolume: function(value){if(mixer)mixer.setIntroVolume(value);else {var track=document.querySelector('[data-intro-audio]');if(track)track.volume=value;}},

@@ -1,0 +1,51 @@
+name: Street Goose - Intro PWA e som iOS
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "js/intro-loader.js"
+      - "js/music-player.js"
+      - "tests/launch/intro-pwa-recovery.spec.ts"
+      - ".github/workflows/intro-pwa-recovery.yml"
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "js/intro-loader.js"
+      - "js/music-player.js"
+      - "tests/launch/intro-pwa-recovery.spec.ts"
+      - ".github/workflows/intro-pwa-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: street-intro-audio-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  recovery:
+    name: Intro, login, Safari e PWA Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install reproducible dependencies
+        run: npm ci --no-fund
+      - name: Verify build / TypeScript
+        run: npm run build
+      - name: Regression unit tests for intro and audio
+        run: npx vitest run src/lib/intro-music-regression.test.ts src/lib/mobile-audio-mixer.test.ts
+      - name: Install mobile browser engines
+        run: npx playwright install --with-deps chromium webkit
+      - name: Test iPhone and Android media restoration
+        run: npx playwright test tests/launch/intro-pwa-recovery.spec.ts --config=playwright.optical.config.ts --project=iphone-webkit --project=android-chromium
