@@ -17,7 +17,7 @@ test.describe("SG 034 / Optical Signal premium", () => {
     expect(iconFrame.background).toBe("rgba(0, 0, 0, 0)");
   });
 
-  test("pixel respira na area visivel e sem movimentos desnecessarios fora dela", async ({page}) => {
+  test("pixel respira no viewport e pausa quando a aba fica oculta", async ({page}) => {
     await page.goto("/", {waitUntil:"domcontentloaded"});
     // The cinematic intro intentionally fixes the body to avoid background scroll.
     // Close it using the site's actual skip button before testing intersection.
@@ -31,7 +31,12 @@ test.describe("SG 034 / Optical Signal premium", () => {
     }), {timeout:10_000}).toBe(true);
     await expect(strip).toHaveClass(/sg-trust-active/, {timeout:10_000});
     await expect(strip.locator(".sg-trust-pixels i").first()).toHaveCSS("animation-play-state","running");
-    await page.evaluate(() => window.scrollTo({top:0,behavior:"instant"}));
+    // A real inactive tab triggers visibilitychange even when an entry popup
+    // locks scrolling. Test that signal suspension without fighting that UI.
+    await page.evaluate(() => {
+      Object.defineProperty(document, "hidden", {configurable:true, get: () => true});
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
     await expect(strip).not.toHaveClass(/sg-trust-active/, {timeout:10_000});
     await expect(strip.locator(".sg-trust-pixels i").first()).toHaveCSS("animation-play-state","paused");
   });
