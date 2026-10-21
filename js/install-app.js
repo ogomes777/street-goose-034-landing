@@ -25,6 +25,8 @@ section.querySelector('[data-push]').insertAdjacentHTML('afterbegin',
 const INSTALL_FLAG = 'sg034_install_confirmed_v2';
 function alreadyConfirmed() { try { return localStorage.getItem(INSTALL_FLAG) === 'yes'; } catch (_) { return false; } }
 function storeInstalledChoice() { try { localStorage.setItem(INSTALL_FLAG, 'yes'); } catch (_) { /* storage disabled */ } }
+// Embedded social browsers generally cannot install PWA shortcuts directly.
+const inAppBrowser = /TikTok|musical_ly|BytedanceWebview|Instagram|FBAN|FBAV/i.test(navigator.userAgent || '');
 const platform = (() => {
   const ua = navigator.userAgent || '';
   if (/iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return 'ios';
@@ -41,17 +43,38 @@ const tutorial = {
   desktop: ['Abra o menu do Chrome ou Edge (três pontos na barra do navegador).', 'Procure Instalar Street Goose, Instalar aplicativo ou Apps e confirme.', 'Abra o aplicativo pelo ícone criado no computador.']
 };
 function showGuide() {
-  const heading = platform === 'ios' ? 'Sua Street no iPhone.' : platform === 'android' ? 'Sua Street no Android.' : 'Sua Street no computador.';
+  const heading = inAppBrowser ? 'Abra a Street no navegador.' :
+    platform === 'ios' ? 'Sua Street no iPhone.' : platform === 'android' ? 'Sua Street no Android.' : 'Sua Street no computador.';
+  const instructions = inAppBrowser ? [
+    'No TikTok ou Instagram, abra o menu de opções deste site e escolha Abrir no navegador, Safari ou Chrome, se disponível.',
+    'Se não aparecer essa opção, copie o endereço da Street Goose e abra manualmente no Safari ou Chrome.',
+    'Já no navegador, toque em Adicionar à tela inicial e siga as instruções de instalação.'
+  ] : tutorial[platform];
   guide.innerHTML = '<div class="sg-install-dialog-inner"><div class="sg-install-dialog-top"><span>STREET GOOSE / 034</span><button class="sg-install-dialog-close" type="button" data-guide-close aria-label="Fechar tutorial">×</button></div>' +
    '<h3>' + heading + '</h3><p>Por segurança, o navegador controla a instalação. Siga estes passos para criar o ícone:</p>' +
-   '<ol class="sg-install-dialog-steps">' + tutorial[platform].map(step => '<li>' + step + '</li>').join('') + '</ol>' +
-   '<button type="button" class="sg-install-dialog-action" data-guide-done>Já adicionei à tela inicial</button>' +
-   '<button type="button" class="sg-install-dialog-secondary" data-guide-later>Vou fazer depois</button></div>';
+   '<ol class="sg-install-dialog-steps">' + instructions.map(step => '<li>' + step + '</li>').join('') + '</ol>' +
+   (inAppBrowser ? '<button type="button" class="sg-install-dialog-action" data-guide-copy>Copiar endereço da Street Goose</button>' :
+    '<button type="button" class="sg-install-dialog-action" data-guide-done>Já adicionei à tela inicial</button>') +
+   '<button type="button" class="sg-install-dialog-secondary" data-guide-later>Vou fazer depois</button><p data-guide-status role="status" aria-live="polite"></p></div>';
   guide.querySelector('[data-guide-close]').addEventListener('click', () => guide.close());
   guide.querySelector('[data-guide-later]').addEventListener('click', () => guide.close());
-  guide.querySelector('[data-guide-done]').addEventListener('click', () => {
-    storeInstalledChoice(); guide.close(); refresh();
-  });
+  if (inAppBrowser) {
+    guide.querySelector('[data-guide-copy]').addEventListener('click', async () => {
+      const status = guide.querySelector('[data-guide-status]');
+      const url = 'https://www.streetgoose034.com.br/';
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard indisponível');
+        await navigator.clipboard.writeText(url);
+        status.textContent = 'Endereço copiado. Abra o Safari ou Chrome e cole na barra de endereço.';
+      } catch (_) {
+        status.textContent = 'Abra este endereço no Safari ou Chrome: ' + url;
+      }
+    });
+  } else {
+    guide.querySelector('[data-guide-done]').addEventListener('click', () => {
+      storeInstalledChoice(); guide.close(); refresh();
+    });
+  }
   if (!guide.open) guide.showModal();
 }
 const helpButton = document.createElement('button');
@@ -74,6 +97,9 @@ function refresh() {
 section.querySelector('[data-install]').addEventListener('click', async () => {
   const status = section.querySelector('[data-install-status]');
   if (standalone()) { refresh(); return; }
+  // Social-app webviews may expose prompt hooks that never complete.
+  // Do not mark installed or invoke them here: hand off to a real browser.
+  if (inAppBrowser) { showGuide(); return; }
   if (installPrompt) {
     const prompt = installPrompt; installPrompt = null;
     try {
