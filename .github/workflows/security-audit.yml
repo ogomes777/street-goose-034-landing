@@ -49,3 +49,13 @@ jobs:
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
           GITLEAKS_ENABLE_COMMENTS: 'false'
           GITLEAKS_ENABLE_SUMMARY: 'false'
+      - name: Auditar todo o historico Git sem expor os segredos
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$(find /tmp -maxdepth 2 -type f -name gitleaks -perm -u+x -print -quit)"
+          if [ -z "$binary" ]; then
+            echo "::error::Gitleaks CLI nao localizada; auditoria do historico incompleta."
+            exit 1
+          fi
+          "$binary" detect --source "." --log-opts="--all" --redact --no-banner --exit-code=1 --log-level=error
