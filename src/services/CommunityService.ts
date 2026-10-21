@@ -7,6 +7,7 @@
    vêm da 0108 — sem ela no banco, essas chamadas só respondem "indisponível"
    e o resto do feed segue igual. */
 import { applyPhotoFilter } from "../lib/photo-filter";
+import { isSafeAvatarBlob } from "../lib/security-guards";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 export type PostStatus = "pending" | "approved" | "rejected";
@@ -381,6 +382,7 @@ export const CommunityService = {
     if (!supabase) return { ok: false, message: "Indisponível agora." };
     const { data: auth } = await supabase.auth.getUser();
     if (!auth.user) return { ok: false, reason: "auth_required", message: PROFILE_ERRORS.auth_required };
+    if (!(await isSafeAvatarBlob(blob))) return { ok: false, reason: "invalid_image", message: "Foto inválida ou maior que 2 MB. Tente outra imagem." };
     const ext = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
     const path = auth.user.id + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
     const { error } = await supabase.storage.from("avatars").upload(path, blob, { upsert: false, contentType: blob.type || "image/jpeg", cacheControl: "31536000" });
