@@ -7,6 +7,7 @@ if (supabase) {
  const anchor=document.querySelector('.sg-install')||document.querySelector('body > footer');if(anchor)anchor.before(section);else document.body.append(section);
  const list=section.querySelector('[data-live-list]'),connection=section.querySelector('[data-connection]'),checkbox=section.querySelector('[data-share]'),status=section.querySelector('[data-share-status]');
  const scope=section.querySelector('[data-share-scope]');
+ connection.dataset.state='offline';
  const icons={cart:'↗',favorite:'♡',community:'✦',purchase:'✓',contact:'↗',profile:'✦',login:'↗'};let events=[],loading=false,disposed=false,generation=0,lastSignature="",refreshTimer;
  function render(){list.replaceChildren();if(!events.length){const li=document.createElement('li');li.className='sg-live-empty';li.innerHTML='<div class="sg-live-orbit" aria-hidden="true"><i></i><i></i><span>034</span></div><div><span class="sg-live-label">O PRÓXIMO MOMENTO COMEÇA COM VOCÊ</span><strong>A Street ganha vida a cada escolha.</strong><p>As próximas atividades reais da comunidade aparecem aqui.</p></div>'; list.append(li);return;}
   for(const event of events){const li=document.createElement('li'),icon=document.createElement('span'),link=document.createElement('a'),title=document.createElement('strong'),body=document.createElement('span'),time=document.createElement('time');icon.className='sg-live-symbol';icon.textContent=icons[event.kind]||'✦';icon.setAttribute('aria-hidden','true');link.href=(event.href?.startsWith('/#')||event.href==='/comunidade')?event.href:'/#colecao';title.textContent=event.title;body.textContent=event.body;time.dateTime=event.occurred_at;time.textContent=new Date(event.occurred_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});link.append(title,body);li.append(icon,link,time);list.append(li);}}
@@ -17,7 +18,7 @@ if (supabase) {
  async function record(event){const {kind,productId}=event.detail||{};if(!['cart','favorite'].includes(kind)||typeof productId!=='string')return;try{await supabase.rpc('record_store_activity',{p_kind:kind,p_product:productId});}catch(_){/* Never interrupt shopping for a feed failure. */}}
  document.addEventListener('sg:store-intent',record);
  function scheduleRefresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(refresh,350);}
- const channel=supabase.channel('street-public-pulse').on('postgres_changes',{event:'INSERT',schema:'public',table:'store_live_events'},scheduleRefresh).subscribe(state=>{connection.textContent=state==='SUBSCRIBED'?'Conectado ao vivo':'Atualização periódica';if(state==='SUBSCRIBED')refresh();});
+ const channel=supabase.channel('street-public-pulse').on('postgres_changes',{event:'INSERT',schema:'public',table:'store_live_events'},scheduleRefresh).subscribe(state=>{connection.dataset.state=state==='SUBSCRIBED'?'online':'offline';connection.textContent=state==='SUBSCRIBED'?'Conectado ao vivo':'Atualização periódica';if(state==='SUBSCRIBED')refresh();});
  const auth=supabase.auth.onAuthStateChange(()=>{setTimeout(preference,0);});
  const timer=setInterval(refresh,60000);document.addEventListener('visibilitychange',refresh);window.addEventListener('online',refresh);
  // Private messages are fetched with the current session and remain separate from the public feed.
