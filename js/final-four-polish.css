@@ -52,7 +52,11 @@
 .sg-install .sg-install-pass .sg-pass-dust{animation:none}
 .sg-install .sg-install-pass-stage:before{inset:18% 7%;opacity:.47}
 @media(max-width:700px){
-  .sg-install .sg-install-pass-stage{padding:8px 5px 12px;max-width:390px}
+  /* The outer frames used 24+20px padding on each side, starving the card.
+     Recover width without overflow; the card retains its real 1.586 aspect. */
+  .sg-install{margin-left:12px;margin-right:12px;padding:16px}
+  .sg-install .sg-install-actions{padding:14px}
+  .sg-install .sg-install-pass-stage{padding:8px 2px 12px;max-width:390px}
   .sg-install .sg-install-pass{width:min(100%,360px);height:auto;min-height:0;padding:clamp(13px,3.7vw,18px)}
   .sg-install .sg-install-pass>b{font-size:clamp(46px,13vw,68px)}
   .sg-install .sg-install-pass .sg-pass-chip{right:clamp(13px,4vw,19px);bottom:clamp(12px,3.6vw,18px)}
