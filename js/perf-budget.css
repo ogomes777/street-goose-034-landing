@@ -26,3 +26,18 @@
 .sg-perf-low .sg-atmosphere__haze,
 .sg-perf-low .sg-atmosphere__ring,
 .sg-perf-low .intro-loader-stars { animation: none !important; }
+
+
+/* React arrives after the intro / on idle. Without a reserved slot the
+   character would insert ~one whole screen during the first mobile scroll,
+   jerking the viewport and all ScrollTrigger positions. */
+#interactive-character-root {
+  min-height: max(142svh, 860px);
+  background: #030303;
+}
+@media (max-width: 760px) {
+  #interactive-character-root { min-height: max(134svh, 760px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #interactive-character-root { min-height: max(100svh, 620px); }
+}
