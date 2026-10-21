@@ -42,6 +42,21 @@
     return "";
   }
 
+  // Render the real concierge link immediately; it must remain usable even
+  // if the optional payment-methods module or WebGL is delayed.
+    waSlot.innerHTML =
+      WHATSAPP_MARK +
+      '<div><span class="payment-whatsapp-overline">CONCIERGE / STREET GOOSE 034</span><p class="payment-whatsapp-title">' + t("paymentTerminal.whatsappTitle") + '</p>' +
+      '<p class="payment-whatsapp-copy">' + t("paymentTerminal.whatsappCopy") + "</p></div>" +
+      '<a class="btn btn-ghost payment-whatsapp-cta" href="#" data-whatsapp-cta>' + t("paymentTerminal.whatsappCta") + "</a>";
+    var waLink = waSlot.querySelector("[data-whatsapp-cta]");
+    if (waLink && window.SG.waLink) {
+      waLink.href = window.SG.waLink(t("paymentTerminal.whatsappMessage"));
+      waLink.target = "_blank";
+      waLink.rel = "noopener";
+    }
+
+
   import("../src/services/PaymentService.ts").then(function (mod) {
     var methods = mod.PaymentService.listMethods().filter(function (m) { return m.id !== "whatsapp"; });
     var chips = [];
@@ -56,18 +71,6 @@
       orbit.appendChild(chip);
       chips.push(chip);
     });
-
-    waSlot.innerHTML =
-      WHATSAPP_MARK +
-      '<div><span class="payment-whatsapp-overline">CONCIERGE / STREET GOOSE 034</span><p class="payment-whatsapp-title">' + t("paymentTerminal.whatsappTitle") + '</p>' +
-      '<p class="payment-whatsapp-copy">' + t("paymentTerminal.whatsappCopy") + "</p></div>" +
-      '<a class="btn btn-ghost payment-whatsapp-cta" href="#" data-whatsapp-cta>' + t("paymentTerminal.whatsappCta") + "</a>";
-    var waLink = waSlot.querySelector("[data-whatsapp-cta]");
-    if (waLink && window.SG.waLink) {
-      waLink.href = window.SG.waLink(t("paymentTerminal.whatsappMessage"));
-      waLink.target = "_blank";
-      waLink.rel = "noopener";
-    }
 
     // handoff pra cena 3D: ela decide posição/profundidade/entrada de cada
     // chip. Se ela nunca chegar a assumir (reduced-motion, sem WebGL, perf
