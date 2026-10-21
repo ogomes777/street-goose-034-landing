@@ -32,12 +32,13 @@
    character would insert ~one whole screen during the first mobile scroll,
    jerking the viewport and all ScrollTrigger positions. */
 #interactive-character-root {
+  min-height: 860px;
   min-height: max(142svh, 860px);
   background: #030303;
 }
 @media (max-width: 760px) {
-  #interactive-character-root { min-height: max(134svh, 760px); }
+  #interactive-character-root { min-height: 760px; min-height: max(134svh, 760px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  #interactive-character-root { min-height: max(100svh, 620px); }
+  #interactive-character-root { min-height: 620px; min-height: max(100svh, 620px); }
 }
