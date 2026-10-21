@@ -34,4 +34,4 @@ jobs:
       - name: Instalar browsers mobile
         run: npx playwright install --with-deps chromium webkit
       - name: Testar iPhone e Android em WebKit/Chromium
-        run: npx playwright test tests/launch/closing-experience.spec.ts --config=playwright.launch.config.ts
+        run: npx playwright test tests/launch/closing-experience.spec.ts --config=playwright.launch.config.ts --workers=1
