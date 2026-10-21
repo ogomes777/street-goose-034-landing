@@ -71,7 +71,7 @@ jobs:
           count="$(jq 'length' "$report")"
           if [ "$count" -gt 0 ]; then
             # Apenas regra, caminho e hash de commit: nunca logar payload/segredo.
-            jq -r '.[] | "TIPO=\\(.RuleID) ARQUIVO=\\(.File) COMMIT=\\((.Commit // "")[0:12])"' "$report" | sort -u
+            jq -r '.[] | "TIPO=\(.RuleID) ARQUIVO=\(.File) COMMIT=\((.Commit // "")[0:12])"' "$report" | sort -u
           fi
           rm -f "$report"
           if [ "$count" -gt 0 ]; then
