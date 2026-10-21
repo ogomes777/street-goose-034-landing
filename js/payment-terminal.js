@@ -59,7 +59,7 @@
 
     waSlot.innerHTML =
       WHATSAPP_MARK +
-      '<div><p class="payment-whatsapp-title">' + t("paymentTerminal.whatsappTitle") + '</p>' +
+      '<div><span class="payment-whatsapp-overline">CONCIERGE / STREET GOOSE 034</span><p class="payment-whatsapp-title">' + t("paymentTerminal.whatsappTitle") + '</p>' +
       '<p class="payment-whatsapp-copy">' + t("paymentTerminal.whatsappCopy") + "</p></div>" +
       '<a class="btn btn-ghost payment-whatsapp-cta" href="#" data-whatsapp-cta>' + t("paymentTerminal.whatsappCta") + "</a>";
     var waLink = waSlot.querySelector("[data-whatsapp-cta]");
