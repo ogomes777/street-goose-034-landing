@@ -172,3 +172,19 @@ body>footer.sg-footer-premium{
   .sg-footer-premium .sg-footer-link-group a{transition:none}
 }
 .sg-motion-paused .sg-install-pass,.sg-motion-paused .sg-steps-bell{animation-play-state:paused!important}
+
+.sg-install button[data-push]{
+  display:inline-flex;align-items:center;justify-content:center;gap:12px;
+}
+.sg-push-button-icon{
+  width:23px;height:23px;flex:0 0 23px;
+  fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;
+  transform-origin:50% 12%;
+}
+.sg-install:not(.sg-motion-paused) button[data-push]:hover .sg-push-button-icon,
+.sg-install:not(.sg-motion-paused) button[data-push]:focus-visible .sg-push-button-icon{
+  animation:sg-bell-ring .55s ease-in-out 1;
+}
+@media(prefers-reduced-motion:reduce){
+  .sg-push-button-icon,.sg-install button[data-push]:hover .sg-push-button-icon{animation:none!important}
+}
