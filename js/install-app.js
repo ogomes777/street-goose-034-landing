@@ -3,6 +3,8 @@ import {PushService} from "../src/services/PushService.ts";
 import './install-app.css';
 import './live-activity.js';
 import './closing-premium.css';
+import './final-four-polish.css';
+import './final-four-interactions.js';
 let installPrompt;
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 let registration;
