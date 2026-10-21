@@ -7,7 +7,7 @@
    vêm da 0108 — sem ela no banco, essas chamadas só respondem "indisponível"
    e o resto do feed segue igual. */
 import { applyPhotoFilter } from "../lib/photo-filter";
-import { isSafeAvatarBlob } from "../lib/security-guards";
+import { isSafeAvatarBlob, isSupportedCommunityImage } from "../lib/security-guards";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 export type PostStatus = "pending" | "approved" | "rejected";
@@ -276,7 +276,7 @@ export const CommunityService = {
   },
 
   validateFile(file: File): { ok: true } | { ok: false; message: string } {
-    if (!isAccepted(file)) return { ok: false, message: "Formato não aceito. Envie JPG, PNG, WEBP ou HEIC." };
+    if (!isSupportedCommunityImage(file)) return { ok: false, message: "Foto inválida, vazia, grande demais ou em formato não aceito. Envie JPG, PNG, WEBP ou HEIC." };
     if (file.size > MAX_ORIGINAL_BYTES) return { ok: false, message: "Foto maior que 30MB. Escolha outra." };
     return { ok: true };
   },
