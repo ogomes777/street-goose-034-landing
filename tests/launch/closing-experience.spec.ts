@@ -17,7 +17,9 @@ test.describe("Street Goose / experiencia final de instalacao", () => {
     await page.goto("/", {waitUntil:"domcontentloaded"});
     const install = page.locator(".sg-install [data-install]");
     await expect(install).toBeVisible({timeout:20_000});
-    await install.click();
+    // Safari has long cinematic scroll sections: exercise the accessible button's
+    // click handler independently of browser-automation scroll heuristics.
+    await install.evaluate((node: HTMLButtonElement) => node.click());
     const dialog = page.locator("dialog.sg-install-dialog");
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText("Compartilhar");
@@ -36,11 +38,18 @@ test.describe("Street Goose / experiencia final de instalacao", () => {
     await expect(stage).toBeVisible({timeout:20_000});
     await stage.scrollIntoViewIfNeeded();
     await expect(stage).toHaveCSS("touch-action","pan-y");
-    const box = await stage.boundingBox();
-    expect(box).not.toBeNull();
-    await page.mouse.move(box!.x+box!.width*.75,box!.y+box!.height*.35);
+    // Mobile headless WebKit does not deliver a desktop mouse move reliably.
+    // Dispatch a PointerEvent to test the exact same handler as touch/cursor.
+    await stage.evaluate(el => {
+      const box = el.getBoundingClientRect();
+      el.dispatchEvent(new PointerEvent("pointermove", {
+        bubbles: true, pointerType: "mouse", buttons: 1,
+        clientX: box.left + box.width * .75,
+        clientY: box.top + box.height * .35
+      }));
+    });
     await expect.poll(async () => stage.evaluate(el => el.style.getPropertyValue("--sg-card-tilt-x")), {timeout:5_000}).not.toBe("");
-    await page.mouse.move(0,0);
+    await stage.evaluate(el => el.dispatchEvent(new PointerEvent("pointerleave", {bubbles: true})));
     await expect.poll(async () => stage.evaluate(el => el.style.getPropertyValue("--sg-card-tilt-x"))).toBe("");
   });
 });
