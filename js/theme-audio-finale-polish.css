@@ -186,3 +186,20 @@
     will-change:auto;
   }
 }
+
+/* Compact wordmark: preserve the full accessible DOM label without wasting
+   desktop width on a long caption. No script or layout animation needed. */
+.music-player .music-player-label{
+  font-size:0;
+  letter-spacing:0;
+}
+.music-player .music-player-label::after{
+  content:"SG 034 / SOUND";
+  font:800 9px/1.2 Manrope,Inter,system-ui,sans-serif;
+  letter-spacing:.09em;
+  color:#c8c1b5;
+  white-space:nowrap;
+}
+@media(max-width:410px){
+  .music-player .music-player-label::after{content:"";display:none}
+}
