@@ -23,7 +23,8 @@ void main() {
   vec3 p = vec3(cos(a) * aRadius, aHeight, sin(a) * aRadius);
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
-  float twinkle = 0.94 + 0.06 * sin(uTime * (0.38 + aSeed * 0.8) + aSeed * 61.0);
+  // Gentle spectral life, not a flashing starfield.
+  float twinkle = 0.96 + 0.04 * sin(uTime * (0.29 + aSeed * 0.55) + aSeed * 61.0);
   gl_PointSize = min(9.0, aSize * uScale * twinkle / -mv.z);
   vColor = aColor;
 }`;
@@ -36,7 +37,7 @@ void main() {
   float d = dot(c, c) * 4.0;
   float a = exp(-d * 5.0) + 0.35 * exp(-d * 40.0);
   if (a < 0.004) discard;
-  gl_FragColor = vec4(vColor * a * 0.72 * uReveal, a * 0.67 * uReveal);
+  gl_FragColor = vec4(vColor * a * 0.78 * uReveal, a * 0.73 * uReveal);
 }`;
 
 const STAR_VERT = `
@@ -248,9 +249,10 @@ export async function mountRankingScene(host) {
     const GALAXY = calm ? 2800 : small ? 6300 : 14500, R = 7.2;
     const aRadius = new Float32Array(GALAXY), aAngle = new Float32Array(GALAXY), aHeight = new Float32Array(GALAXY), aSize = new Float32Array(GALAXY), aSeed = new Float32Array(GALAXY), aColor = new Float32Array(GALAXY * 3);
     const core = new THREE.Color('#f4e1bd');
-    const warm = new THREE.Color('#d7aa83');
-    const violet = new THREE.Color('#876da5');
-    const cyan = new THREE.Color('#7db9d3');
+    const warm = new THREE.Color('#ddb58c');
+    const violet = new THREE.Color('#8271ad');
+    const cyan = new THREE.Color('#80b9d4');
+    const starForming = new THREE.Color('#b9d7e9');
     const tmp = new THREE.Color();
     // Recognisable two-arm spiral, compact nucleus and restrained dust lanes.
     // All stellar positions are created once and animated in the GPU shader.
@@ -264,17 +266,27 @@ export async function mountRankingScene(host) {
         size = .016 + rand() * .022;
         color = tmp.copy(core).lerp(warm, Math.min(1, r));
       } else if (kind < .94) {
-        r = .34 + Math.pow(rand(), 1.14) * R;
+        // Cluster some *existing* stars into restrained star-forming regions
+        // along the same two arms. No extra vertices, glow sprites or passes.
+        const stellarKnot = kind > .76 && kind < .88;
+        const knotCenters = [1.75, 3.35, 5.05];
+        r = stellarKnot
+          ? THREE.MathUtils.clamp(knotCenters[Math.floor(rand() * knotCenters.length)] + gauss(rand) * .34, .5, R)
+          : .34 + Math.pow(rand(), 1.14) * R;
         const arm = (i % 2) * Math.PI;
-        const width = .095 + .10 * (r / R);
-        const spread = gauss(rand) * width * (kind > .87 ? 2 : 1);
-        angle = arm + 1.6 * Math.log(r + .55) + spread;
-        h = gauss(rand) * .065 * (1 - .25 * r / R);
-        size = .019 + rand() * .021;
+        const width = (.09 + .085 * (r / R)) * (stellarKnot ? .64 : 1);
+        // Subtle natural bends break the computer-perfect spiral.
+        const spread = gauss(rand) * width;
+        angle = arm + 1.64 * Math.log(r + .55) + .065 * Math.sin(r * 2.2 + arm) + spread;
+        h = gauss(rand) * .062 * (1 - .25 * r / R);
+        size = stellarKnot ? .022 + rand() * .019 : .018 + rand() * .021;
         const t = r / R;
         color = t < .3 ? tmp.copy(warm).lerp(violet, t / .3) :
           tmp.copy(violet).lerp(cyan, Math.min(1, (t - .3) / .7));
-        if (kind > .885 && kind < .915) color.multiplyScalar(.30);
+        if (stellarKnot) color.lerp(starForming, .54 + rand() * .22);
+        // Dark stellar dust is created by dimming some existing points,
+        // rather than throwing a noisy, full-screen nebula on top.
+        if (kind > .89 && kind < .929) color.multiplyScalar(.37);
       } else {
         r = 1.4 + Math.pow(rand(), .72) * R;
         angle = rand() * Math.PI * 2;
@@ -284,7 +296,7 @@ export async function mountRankingScene(host) {
       }
       aRadius[i] = r; aAngle[i] = angle; aHeight[i] = h;
       aSize[i] = size; aSeed[i] = rand();
-      const brightness = .62 + rand() * .38;
+      const brightness = .66 + rand() * .34;
       aColor.set([color.r * brightness, color.g * brightness, color.b * brightness], i * 3);
     }
     const galaxyGeo = new THREE.BufferGeometry();
@@ -294,9 +306,9 @@ export async function mountRankingScene(host) {
     galaxyGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), R + 1);
     const galaxyUniforms = { uTime: { value: 0 }, uScale: { value: 1 }, uReveal: { value: 0 } }; timeUniforms.push(galaxyUniforms.uTime); scaleUniforms.push(galaxyUniforms.uScale);
     const galaxy = new THREE.Points(galaxyGeo, new THREE.ShaderMaterial({ vertexShader: GALAXY_VERT, fragmentShader: POINT_FRAG, uniforms: galaxyUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
-    const galaxyRoot = new THREE.Group(); galaxyRoot.position.set(0, 4.55, -8.5); galaxyRoot.rotation.set(1.12, 0, -.18); galaxyRoot.scale.setScalar(.91); scene.add(galaxyRoot);
+    const galaxyRoot = new THREE.Group(); galaxyRoot.position.set(0, 4.55, -8.5); galaxyRoot.rotation.set(1.22, 0, -.18); galaxyRoot.scale.setScalar(.94); scene.add(galaxyRoot);
     galaxyRoot.add(galaxy);
-    const coreGlow = [glow(0xffddac, .21, 1.5), glow(0x8885bf, .06, 4.2)];
+    const coreGlow = [glow(0xffdbad, .24, 1.55), glow(0x7976b4, .055, 4.0)];
     coreGlow.forEach(s => { s.position.copy(galaxyRoot.position); s.renderOrder = -4; scene.add(s); });
 
     // No planet: the spiral and real leaderboard are the visual focus.
@@ -378,12 +390,15 @@ export async function mountRankingScene(host) {
         gemGlows[i].material.opacity = (.24 + (1 + Math.sin(time * 1.6 + i)) * .05) * reveal;
       });
       pointer.x += (pointer.tx - pointer.x) * Math.min(1, dt * 2.5); pointer.y += (pointer.ty - pointer.y) * Math.min(1, dt * 2.5);
-      camera.position.set(camBase.x + Math.sin(time * .11) * .45 + pointer.x * .5, camBase.y + Math.sin(time * .17) * .16 - pointer.y * .25, camBase.z * camZoom);
+      // Camera drift is almost imperceptible: protect podium readability.
+      camera.position.set(camBase.x + Math.sin(time * .075) * .21 + pointer.x * .4, camBase.y + Math.sin(time * .12) * .085 - pointer.y * .2, camBase.z * camZoom);
       camera.lookAt(lookAt);
-      galaxyRoot.rotation.z = -.18 + Math.sin(time * .06) * .012;
+      galaxyRoot.rotation.z = -.18 + Math.sin(time * .055) * .009;
+      const galBreath = .94 + Math.sin(time * .105) * .006;
+      galaxyRoot.scale.setScalar(galBreath);
       stars.rotation.y = time * .002;
       group.rotation.y = Math.sin(time * .12) * .015;
-      coreGlow[0].material.opacity = (.19 + Math.sin(time * .18) * .02) * reveal;
+      coreGlow[0].material.opacity = (.22 + Math.sin(time * .15) * .014) * reveal;
       placeGems();
     }
     // Time and the floating stones advance on every display frame, so the
