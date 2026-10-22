@@ -29,13 +29,14 @@ void main() {
 }`;
 
 const POINT_FRAG = `
+uniform float uReveal;
 varying vec3 vColor;
 void main() {
   vec2 c = gl_PointCoord - 0.5;
   float d = dot(c, c) * 4.0;
   float a = exp(-d * 5.0) + 0.35 * exp(-d * 40.0);
   if (a < 0.004) discard;
-  gl_FragColor = vec4(vColor * a * 0.72, a * 0.67);
+  gl_FragColor = vec4(vColor * a * 0.72 * uReveal, a * 0.67 * uReveal);
 }`;
 
 const STAR_VERT = `
@@ -239,7 +240,7 @@ export async function mountRankingScene(host) {
     const starGeo = new THREE.BufferGeometry();
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3)); starGeo.setAttribute('aSize', new THREE.BufferAttribute(starSize, 1));
     starGeo.setAttribute('aSeed', new THREE.BufferAttribute(starSeed, 1)); starGeo.setAttribute('aColor', new THREE.BufferAttribute(starColor, 3));
-    const starUniforms = { uTime: { value: 0 }, uScale: { value: 1 } }; timeUniforms.push(starUniforms.uTime); scaleUniforms.push(starUniforms.uScale);
+    const starUniforms = { uTime: { value: 0 }, uScale: { value: 1 }, uReveal: { value: 0 } }; timeUniforms.push(starUniforms.uTime); scaleUniforms.push(starUniforms.uScale);
     const stars = new THREE.Points(starGeo, new THREE.ShaderMaterial({ vertexShader: STAR_VERT, fragmentShader: POINT_FRAG, uniforms: starUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     stars.renderOrder = -5; scene.add(stars);
 
@@ -291,7 +292,7 @@ export async function mountRankingScene(host) {
     [['aRadius', aRadius], ['aAngle', aAngle], ['aHeight', aHeight], ['aSize', aSize], ['aSeed', aSeed]].forEach(([n, a]) => galaxyGeo.setAttribute(n, new THREE.BufferAttribute(a, 1)));
     galaxyGeo.setAttribute('aColor', new THREE.BufferAttribute(aColor, 3));
     galaxyGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), R + 1);
-    const galaxyUniforms = { uTime: { value: 0 }, uScale: { value: 1 } }; timeUniforms.push(galaxyUniforms.uTime); scaleUniforms.push(galaxyUniforms.uScale);
+    const galaxyUniforms = { uTime: { value: 0 }, uScale: { value: 1 }, uReveal: { value: 0 } }; timeUniforms.push(galaxyUniforms.uTime); scaleUniforms.push(galaxyUniforms.uScale);
     const galaxy = new THREE.Points(galaxyGeo, new THREE.ShaderMaterial({ vertexShader: GALAXY_VERT, fragmentShader: POINT_FRAG, uniforms: galaxyUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     const galaxyRoot = new THREE.Group(); galaxyRoot.position.set(0, 4.55, -8.5); galaxyRoot.rotation.set(1.12, 0, -.18); galaxyRoot.scale.setScalar(.91); scene.add(galaxyRoot);
     galaxyRoot.add(galaxy);
@@ -365,6 +366,11 @@ export async function mountRankingScene(host) {
     }
     function pose(time, dt) {
       const reveal = paused ? 1 : Math.min(1, time / 1.2);
+      // Film-style, single-pass fade: the structure of the spiral emerges
+      // slowly without spawning particles or running another renderer.
+      const galaxyPhase = paused ? 1 : Math.min(1, Math.max(0, time / 2.7));
+      galaxyUniforms.uReveal.value = galaxyPhase * galaxyPhase * (3 - 2 * galaxyPhase);
+      starUniforms.uReveal.value = paused ? 1 : Math.min(1, time / 3.5);
       timeUniforms.forEach(u => { u.value = time; });
       floatGems(time);
       anchors.forEach((anchor, i) => {
