@@ -65,3 +65,130 @@
   color: #bca99a;
   text-align:center;
 }
+
+/* SG034 / PRIVATE DISTRICT — premium access treatment.
+   Visual lock only; account password, TOTP and database policies authorize. */
+.sg-admin-lock {
+  --sg-metal: #dfa36f;
+  --sg-metal-light: #ffd1a0;
+  width: min(calc(100% - 24px), 510px);
+  padding: clamp(24px, 5.2vw, 45px);
+  margin: clamp(20px, 6.5vh, 76px) auto;
+  border-radius: 19px;
+  border: 1px solid rgba(221, 166, 111, .48);
+  background:
+    radial-gradient(ellipse 56% 34% at 50% 0%, rgba(223,144,81,.21), transparent 100%),
+    linear-gradient(156deg, #26201b 0%, #131314 36%, #090909 83%, #1a1614 100%);
+  box-shadow:
+    0 38px 115px rgba(0,0,0,.4),
+    0 0 0 4px rgba(140, 92, 49, .04),
+    inset 0 1px 0 rgba(255, 228, 197, .14),
+    inset 0 -1px 0 rgba(218, 151, 96, .12);
+  text-align: center;
+}
+.sg-admin-lock::before {
+  width: 340px;
+  height: 240px;
+  top: -154px;
+  background: radial-gradient(ellipse, rgba(228,145,70,.29), transparent 70%);
+}
+.sg-admin-lock::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(238, 198, 154, .045);
+  pointer-events: none;
+  z-index: -1;
+}
+.sg-admin-lock__topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 31px;
+  font: 700 9px/1.3 "Manrope", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .17em;
+}
+.sg-admin-lock__serial { color: #bc9980; font-variant-numeric: tabular-nums; }
+.sg-admin-lock__restricted { color: #e0b186; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.sg-admin-lock__dot { width: 6px; height: 6px; background: #e4a473; border-radius: 50%; box-shadow: 0 0 0 4px rgba(226,160,106,.09),0 0 12px rgba(230,163,113,.4); }
+.sg-admin-lock__orbit {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  margin: 0 auto 25px;
+  border: 1px solid rgba(234,179,125,.66);
+  background: radial-gradient(circle at 50% 30%,rgba(201,128,69,.16),rgba(14,12,11,.48) 65%);
+  box-shadow: 0 0 0 8px rgba(209,145,91,.038),0 0 0 16px rgba(209,145,91,.015),0 0 48px rgba(219,133,66,.16),inset 0 0 22px rgba(217,140,81,.08);
+  color: #ffd1a0;
+  font-size: 26px;
+  text-shadow: 0 2px 22px rgba(250,183,114,.35);
+}
+.sg-admin-lock__orbit::after {
+  position: absolute;
+  inset: -5px;
+  content: "";
+  border-radius: 50%;
+  border: 1px dashed rgba(232,177,119,.24);
+  pointer-events: none;
+}
+.sg-admin-lock__eyebrow {color: #daa575;letter-spacing: .23em;font-size: 9px;margin-bottom: 11px}
+.sg-admin-lock h2 {font-size: clamp(29px, 5vw, 39px);font-weight: 660; letter-spacing: -.052em;max-width: 13ch;margin: 0 auto 15px;}
+.sg-admin-lock__desc {max-width: 38ch;color: #c1b6ac;font-size: 12px;line-height: 1.85;margin-bottom: 24px;}
+.sg-admin-lock__steps {display:flex;align-items:center;justify-content:center;gap:11px;margin: 0 auto 20px;font: 750 9px/1.4 "Manrope",sans-serif;letter-spacing: .14em;color:#8f8175}
+.sg-admin-lock__steps span:not(.sg-admin-lock__steps-line) {display:inline-flex;align-items:center;gap:7px;white-space:nowrap;transition:color .2s ease}
+.sg-admin-lock__steps .is-current {color:#ffcd9a}
+.sg-admin-lock__steps i {display:inline-block;width:4px;height:4px;border-radius:100%;background:currentColor}
+.sg-admin-lock__steps-line {width:22px;height:1px;background:linear-gradient(90deg,rgba(228,174,113,.7),rgba(228,174,113,.12))}
+.sg-admin-lock__instruction {max-width:none;min-height:28px;font-size:11px;line-height:1.7;color:#bdae9f;margin-bottom:15px}
+.sg-admin-lock form {gap:9px}
+.sg-admin-lock label {margin-top:7px;text-transform:uppercase;color:#d9beaa;font-size:10px;letter-spacing:.14em}
+.sg-admin-lock [name="adminPassword"],.sg-admin-lock [name="adminPhrase"] {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 54px;
+  background: linear-gradient(180deg,rgba(18,17,17,.96),rgba(26,22,19,.96));
+  color:#fff6ee;
+  font:500 15px/1.4 "Manrope",sans-serif;
+  letter-spacing:.06em;
+  text-align:left;
+  border:1px solid rgba(224,166,113,.30);
+  border-radius:9px;
+  padding: 0 16px;
+  outline: none;
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.sg-admin-lock [name="adminPassword"]::placeholder,.sg-admin-lock [name="adminPhrase"]::placeholder {color:#7e7168;font-size:12px;letter-spacing:.01em}
+.sg-admin-lock input:focus {border-color:#f1b77f;box-shadow:0 0 0 3px rgba(234,166,100,.13),inset 0 0 18px rgba(224,157,91,.05)}
+.sg-admin-lock__button {
+  min-height:53px;
+  margin-top:11px;
+  border-radius:8px;
+  border:1px solid #efb885;
+  background:linear-gradient(135deg,#f4c18e 0%,#d59156 52%,#bd7846 100%);
+  color:#201309;
+  letter-spacing:.09em;
+  font-size:10px;
+  font-weight:850;
+  box-shadow:0 9px 25px rgba(193,111,55,.14),inset 0 1px rgba(255,255,255,.37);
+}
+.sg-admin-lock__button:hover {background:linear-gradient(135deg,#ffe0ad,#eaa56b 70%,#d28956);box-shadow:0 12px 30px rgba(193,111,55,.23)}
+.sg-admin-lock__help {margin:7px auto 0;max-width:43ch;color:#a99b90;line-height:1.7;font-size:10px}
+.sg-admin-lock__status {font-size:11px;line-height:1.65}
+.sg-admin-lock__footer {margin-top:12px;padding-top:17px;border-top:1px solid rgba(237,187,137,.13);color:#aa876c}
+.sg-admin-lock__qr {box-shadow:0 12px 30px rgba(0,0,0,.17)}
+@media(max-width:440px){
+  .sg-admin-lock{width:calc(100% - 18px);padding:23px 19px 25px;margin:19px auto 34px}
+  .sg-admin-lock__topline{margin-bottom:26px;font-size:8px;letter-spacing:.10em}
+  .sg-admin-lock__orbit{width:82px;height:82px;margin-bottom:20px;font-size:24px}
+  .sg-admin-lock__steps{gap:7px;font-size:8px;letter-spacing:.08em}
+  .sg-admin-lock__steps-line{width:12px}
+  .sg-admin-lock h2{font-size:30px}
+  .sg-admin-lock__button{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+ .sg-admin-lock__steps span,.sg-admin-lock input,.sg-admin-lock__button{transition:none}
+}
