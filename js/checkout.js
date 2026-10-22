@@ -1,4 +1,5 @@
 import { checkoutFieldErrors } from "./checkout-validation.js";
+import { buildOrderWhatsAppMessage } from "./checkout-message.js";
 
 /* Street Goose 034 — checkout foundation.
    Sem gateway de pagamento conectado ainda: a etapa final é um handoff
@@ -30,8 +31,13 @@ import { checkoutFieldErrors } from "./checkout-validation.js";
           "<b data-price-for=\"" + r.product.id + "\">" + money(r.product) + "</b></div>"
         );
       }).join("") +
-      '<div class="checkout-summary-total"><span>Total</span><b data-cart-subtotal>' +
-      window.SG.subtotalLabel(rows) + "</b></div></div>"
+      '<div class="checkout-summary-total"><span>Subtotal</span><b data-cart-subtotal>' +
+      window.SG.subtotalLabel(rows) + "</b></div>" +
+      (window.SG.promo && window.SG.promo.quote(rows).discount > 0 ?
+        '<div class="sg-promo-summary" data-promo-summary><b>2 LUPAS POR R$ 290</b>' +
+        '<p>Promoção estimada: −' + window.SG.formatPrice(window.SG.promo.quote(rows).discount) + '</p>' +
+        '<p><strong>Total previsto: ' + window.SG.formatPrice(window.SG.promo.quote(rows).total) + '</strong></p>' +
+        '<small>O atendimento confirma o valor e o frete.</small></div>' : "") + '</div>'
     );
   }
 
@@ -57,18 +63,8 @@ import { checkoutFieldErrors } from "./checkout-validation.js";
     );
   }
 
-  function buildWhatsAppMessage(rows, data) {
-    var lines = ["Olá! Quero fechar esse pedido Street Goose 034:", ""];
-    rows.forEach(function (r) {
-      lines.push("• " + r.product.name + " (" + r.qty + "x) — " + money(r.product));
-    });
-    lines.push("");
-    lines.push("Nome: " + data.name);
-    lines.push("Telefone: " + data.phone);
-    lines.push("E-mail: " + data.email);
-    lines.push("Endereço: " + data.street + ", " + data.number + (data.complement ? " - " + data.complement : "") +
-      " — " + data.neighborhood + ", " + data.city + "/" + data.state.toUpperCase() + " — CEP " + data.cep);
-    return lines.join("\n");
+  function buildWhatsAppMessage(rows,data) {
+    return buildOrderWhatsAppMessage(rows,data);
   }
 
   function render() {
@@ -145,6 +141,12 @@ import { checkoutFieldErrors } from "./checkout-validation.js";
     });
   }
 
+  document.addEventListener("sg:promo-change", function () {
+    if (window.SG.closeCheckout && body && body.querySelector("[data-checkout-summary]")) {
+      // Redesenho completo evita exibir desconto de uma promoção recém-desativada.
+      render();
+    }
+  });
   window.SG.startCheckout = function () {
     render();
     if (window.SG.openCheckout) window.SG.openCheckout();
