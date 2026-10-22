@@ -203,3 +203,29 @@
 @media(max-width:410px){
   .music-player .music-player-label::after{content:"";display:none}
 }
+
+/* The 'Sistema' theme removes data-theme from <html>; honor a light OS
+   preference with the same contrast as the explicit Claro mode. */
+@media(prefers-color-scheme:light){
+  :root:not([data-theme]) #top .newsletter{
+    background:radial-gradient(ellipse at 68% 48%,#e7dfd2 0%,#f5f1e9 48%,#ebe4d9 100%);
+    color:#171917;border-color:#b79d793e;
+  }
+  :root:not([data-theme]) #top .newsletter .newsletter-copy h2{
+    color:#1d201f;text-shadow:none;
+  }
+  :root:not([data-theme]) #top .newsletter .kicker{color:#835726}
+  :root:not([data-theme]) #top .newsletter input[type=email]{
+    background:#fffcf6;color:#171b1c;border-color:#9d907b;
+  }
+  :root:not([data-theme]) #top .newsletter input[type=email]::placeholder{
+    color:#6f706b;opacity:1;
+  }
+  :root:not([data-theme]) #top .final-act{
+    background:radial-gradient(ellipse at 50% 40%,#e7ded2 0%,#f3eee6 46%,#e9e2d8 100%);
+    color:#171a1c;
+  }
+  :root:not([data-theme]) #top .final-act .final-act-copy h2{color:#1b1d1f;text-shadow:none}
+  :root:not([data-theme]) #top .final-act .final-act-glow{opacity:.48}
+  :root:not([data-theme]) #top .final-act .final-act-sweep{mix-blend-mode:multiply}
+}
