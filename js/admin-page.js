@@ -189,7 +189,9 @@ export function mountAdminPage(root, _params, onClose) {
     // require an AAL2 session as well (see matching database migration).
     var mfaModule = await import("./admin-mfa-gate.js");
     var mfaGate = await mfaModule.mountAdminMfaGate(bodyEl, function () {
-      if (!destroyed) gate();
+      if (destroyed) return;
+      if (disposeMfa) { disposeMfa(); disposeMfa = null; }
+      renderShell();
     });
     if (destroyed) { mfaGate.dispose(); return; }
     if (!mfaGate.authorized) { disposeMfa = mfaGate.dispose; return; }
