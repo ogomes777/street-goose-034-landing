@@ -15,10 +15,6 @@ export async function mountAdminMfaGate(container, onUnlock) {
   let busy = false;
   let enrolledImage = "";
   let passwordConfirmed = false;
-  let captcha = null;
-  let captchaEnabled = false;
-  let captchaReady = false;
-  let captchaFailed = false;
   const factors = await supabase.auth.mfa.listFactors();
   if (factors.error) throw factors.error;
   const verified = (factors.data?.totp || []).find(f => f.status === "verified");
@@ -36,11 +32,8 @@ export async function mountAdminMfaGate(container, onUnlock) {
       '<form data-admin-password-form novalidate>' +
         '<label for="sg-admin-phrase">Senha do painel</label>' +
         '<input id="sg-admin-phrase" name="adminPhrase" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" maxlength="32" required placeholder="Insira a chave privada" />' +
-        '<label for="sg-admin-password">Senha individual da conta</label>' +
-        '<input id="sg-admin-password" name="adminPassword" type="password" autocomplete="current-password" maxlength="256" required placeholder="Confirme sua senha" />' +
-        '<div class="sg-admin-lock__captcha" data-admin-password-captcha></div>' +
         '<button class="sg-admin-lock__button" type="submit">CONTINUAR PARA AUTENTICADOR <span aria-hidden="true">↗</span></button>' +
-        '<p class="sg-admin-lock__help">A chave do painel é uma etapa visual. A segurança real exige sua senha pessoal e o autenticador da sua própria conta.</p>' +
+        '<p class="sg-admin-lock__help">Somente contas autorizadas podem usar este painel. A segurança real depende do login e do aplicativo autenticador.</p>' +
       '</form>' +
       '<div class="sg-admin-lock__qr" data-mfa-qr hidden><img data-mfa-qr-image alt="QR code de configuração do autenticador" /></div>' +
       '<button type="button" data-mfa-enroll class="sg-admin-lock__button" hidden>Ativar proteção no celular <span aria-hidden="true">↗</span></button>' +
@@ -55,11 +48,9 @@ export async function mountAdminMfaGate(container, onUnlock) {
 
   const enrollButton = container.querySelector("[data-mfa-enroll]");
   const passwordForm = container.querySelector("[data-admin-password-form]");
-  const passwordInput = passwordForm.querySelector("[name=adminPassword]");
   const phraseInput = passwordForm.querySelector("[name=adminPhrase]");
   const stepOne = container.querySelector("[data-step-one]");
   const stepTwo = container.querySelector("[data-step-two]");
-  const captchaContainer = container.querySelector("[data-admin-password-captcha]");
   const form = container.querySelector("[data-mfa-form]");
   const status = container.querySelector("[data-mfa-status]");
   const instruction = container.querySelector("[data-mfa-instruction]");
@@ -77,7 +68,6 @@ export async function mountAdminMfaGate(container, onUnlock) {
     enrollButton.disabled = value;
     input.disabled = value;
     form.querySelector("button").disabled = value;
-    passwordInput.disabled = value;
     phraseInput.disabled = value;
     passwordForm.querySelector("button").disabled = value;
   }
@@ -92,7 +82,7 @@ export async function mountAdminMfaGate(container, onUnlock) {
     qr.hidden = !passwordConfirmed || !enrolledImage;
     if (enrolledImage && passwordConfirmed) qrImage.src = enrolledImage;
     instruction.textContent = !passwordConfirmed
-      ? "ETAPA 01 / 02 — Informe a chave do painel e confirme sua senha individual."
+      ? "ETAPA 01 / 02 — Informe a senha de acesso do painel."
       : enrolledImage
         ? "ETAPA 02 / 02 — Escaneie o QR Code no aplicativo autenticador e confirme com os seis números."
         : hasFactor
@@ -158,91 +148,28 @@ export async function mountAdminMfaGate(container, onUnlock) {
     }
   }
 
-  async function confirmPassword(event) {
+  function confirmPassword(event) {
     event.preventDefault();
     if (busy || disposed || passwordConfirmed) return;
-    const password = passwordInput.value;
-    // The requested "777 admin" is a convenience gate, NOT a secret or
-    // an authorization check. This value is inspectable in public JavaScript.
-    // Real protection is the account password + server-verified AAL2 + RLS.
+    // Decorative shared phrase requested by the client. It is inspectable in
+    // JavaScript and MUST NOT be trusted for API authorization. Access is
+    // enforced by Supabase account login, verified TOTP and database AAL2/RLS.
     if (phraseInput.value !== "777 admin") {
       phraseInput.value = "";
-      message("Chave do painel incorreta.", true);
+      message("Senha do painel incorreta.", true);
       phraseInput.focus();
       return;
     }
-    if (!password) {
-      message("Informe a senha da conta autorizada.", true);
-      return;
-    }
-    if (!captchaReady || captchaFailed || (captchaEnabled && !captcha?.getToken())) {
-      message("Conclua a verificação de segurança para confirmar a senha.", true);
-      return;
-    }
-
-    lock(true);
-    message("Confirmando sua identidade…");
-    try {
-      // Supabase Auth validates the password and any CAPTCHA server-side.
-      // No PIN, shared password, hash or service-role key is stored in the UI.
-      const { data: existing, error: existingError } = await supabase.auth.getUser();
-      if (existingError || !existing?.user?.id || !existing.user.email) {
-        throw new Error("Session invalid");
-      }
-      const expectedUserId = existing.user.id;
-      const token = captcha?.getToken();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: existing.user.email,
-        password,
-        options: token ? { captchaToken: token } : undefined
-      });
-      if (error || !data?.user || data.user.id !== expectedUserId) {
-        // If credentials somehow selected another account, never unlock it.
-        if (data?.user && data.user.id !== expectedUserId) {
-          await supabase.auth.signOut();
-        }
-        throw error || new Error("Identity mismatch");
-      }
-      if (disposed) return;
-      passwordConfirmed = true;
-      message("");
-      paint();
-    } catch (_) {
-      message("Não foi possível confirmar a senha. Verifique a senha da sua conta e tente novamente.", true);
-      if (!disposed) passwordInput.focus();
-    } finally {
-      passwordInput.value = "";
-      phraseInput.value = "";
-      captcha?.reset();
-      lock(false);
-    }
+    phraseInput.value = "";
+    passwordConfirmed = true;
+    message("");
+    paint();
   }
 
   passwordForm.addEventListener("submit", confirmPassword);
   enrollButton.addEventListener("click", enroll);
   form.addEventListener("submit", verify);
   paint();
-  // The store uses Cloudflare Turnstile for password sign-in. Honor exactly
-  // the same protection when asking for the password again inside the CRM.
-  void import("../src/lib/captcha.ts").then(async ({ mountCaptcha, captchaEnabled: enabled }) => {
-    captchaEnabled = enabled;
-    if (!enabled || disposed) { captchaReady = true; return; }
-    try {
-      const handle = await mountCaptcha(captchaContainer);
-      if (disposed) { handle?.destroy(); return; }
-      if (!handle) throw new Error("Turnstile unavailable");
-      captcha = handle;
-      captchaReady = true;
-    } catch (_) {
-      if (disposed) return;
-      captchaFailed = true;
-      message("A proteção contra tentativas automáticas não carregou. Reabra o painel e tente novamente.", true);
-    }
-  }).catch(() => {
-    if (disposed) return;
-    captchaFailed = true;
-    message("Não foi possível carregar a verificação de segurança.", true);
-  });
   return {
     authorized: false,
     dispose() {
@@ -250,8 +177,6 @@ export async function mountAdminMfaGate(container, onUnlock) {
       enrollButton.removeEventListener("click", enroll);
       passwordForm.removeEventListener("submit", confirmPassword);
       form.removeEventListener("submit", verify);
-      captcha?.destroy();
-      passwordInput.value = "";
       phraseInput.value = "";
       if (qrImage) qrImage.removeAttribute("src");
     }
