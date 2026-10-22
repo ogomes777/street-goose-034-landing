@@ -73,6 +73,29 @@ begin
 end;
 $$;
 
+-- Community comment functions also accept admin privileges but don't call
+-- assert_admin(). Require the same second factor only for their admin path.
+do $mfa_community$
+declare
+  function_id oid;
+  definition text;
+begin
+  for function_id in
+    select p.oid from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in ('community_comments', 'community_delete_comment')
+  loop
+    definition := pg_get_functiondef(function_id);
+    if position('public.is_admin()' in definition) = 0 then
+      raise exception 'Unexpected SG034 community RPC shape; review MFA migration';
+    end if;
+    execute replace(definition, 'public.is_admin()',
+      '(public.is_admin() and public.sg_admin_mfa_verified())');
+  end loop;
+end;
+$mfa_community$;
+
 -- Helper has no sensitive information and must be callable by an RLS policy
 -- for every role subject to those policies.
 grant execute on function public.sg_admin_mfa_verified() to anon, authenticated;
