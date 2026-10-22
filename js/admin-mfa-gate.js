@@ -26,17 +26,21 @@ export async function mountAdminMfaGate(container, onUnlock) {
 
   container.innerHTML =
     '<section class="sg-admin-lock" aria-labelledby="sg-admin-lock-title">' +
+      '<div class="sg-admin-lock__topline"><span class="sg-admin-lock__serial">S.G. / 034</span><span class="sg-admin-lock__restricted"><span class="sg-admin-lock__dot"></span> ACESSO RESTRITO</span></div>' +
       '<div class="sg-admin-lock__orbit" aria-hidden="true"><span>7</span><span>7</span><span>7</span></div>' +
-      '<p class="sg-admin-lock__eyebrow">STREET GOOSE 034 / ACESSO PRIVADO</p>' +
-      '<h2 id="sg-admin-lock-title">Confirme sua identidade.</h2>' +
-      '<p class="sg-admin-lock__desc">Uma camada extra de proteção para a operação da loja. Seu acesso é individual.</p>' +
+      '<p class="sg-admin-lock__eyebrow">THE PRIVATE DISTRICT / 034</p>' +
+      '<h2 id="sg-admin-lock-title">O acesso é exclusivo.</h2>' +
+      '<p class="sg-admin-lock__desc">Confirme sua credencial e finalize a verificação no autenticador para entrar no painel da loja.</p>' +
+      '<div class="sg-admin-lock__steps" aria-hidden="true"><span class="is-current" data-step-one>01 <i></i> CHAVE</span><span class="sg-admin-lock__steps-line"></span><span data-step-two>02 <i></i> AUTENTICADOR</span></div>' +
       '<p class="sg-admin-lock__instruction" data-mfa-instruction></p>' +
       '<form data-admin-password-form novalidate>' +
-        '<label for="sg-admin-password">Senha da sua conta</label>' +
+        '<label for="sg-admin-phrase">Senha do painel</label>' +
+        '<input id="sg-admin-phrase" name="adminPhrase" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" maxlength="32" required placeholder="Insira a chave privada" />' +
+        '<label for="sg-admin-password">Senha individual da conta</label>' +
         '<input id="sg-admin-password" name="adminPassword" type="password" autocomplete="current-password" maxlength="256" required placeholder="Confirme sua senha" />' +
         '<div class="sg-admin-lock__captcha" data-admin-password-captcha></div>' +
-        '<button class="sg-admin-lock__button" type="submit">Confirmar identidade <span aria-hidden="true">→</span></button>' +
-        '<p class="sg-admin-lock__help">Use sua senha individual de acesso, não o código do autenticador. A equipe e o proprietário usam contas diferentes.</p>' +
+        '<button class="sg-admin-lock__button" type="submit">CONTINUAR PARA AUTENTICADOR <span aria-hidden="true">↗</span></button>' +
+        '<p class="sg-admin-lock__help">A chave do painel é uma etapa visual. A segurança real exige sua senha pessoal e o autenticador da sua própria conta.</p>' +
       '</form>' +
       '<div class="sg-admin-lock__qr" data-mfa-qr hidden><img data-mfa-qr-image alt="QR code de configuração do autenticador" /></div>' +
       '<button type="button" data-mfa-enroll class="sg-admin-lock__button" hidden>Ativar proteção no celular <span aria-hidden="true">↗</span></button>' +
@@ -52,6 +56,9 @@ export async function mountAdminMfaGate(container, onUnlock) {
   const enrollButton = container.querySelector("[data-mfa-enroll]");
   const passwordForm = container.querySelector("[data-admin-password-form]");
   const passwordInput = passwordForm.querySelector("[name=adminPassword]");
+  const phraseInput = passwordForm.querySelector("[name=adminPhrase]");
+  const stepOne = container.querySelector("[data-step-one]");
+  const stepTwo = container.querySelector("[data-step-two]");
   const captchaContainer = container.querySelector("[data-admin-password-captcha]");
   const form = container.querySelector("[data-mfa-form]");
   const status = container.querySelector("[data-mfa-status]");
@@ -71,25 +78,28 @@ export async function mountAdminMfaGate(container, onUnlock) {
     input.disabled = value;
     form.querySelector("button").disabled = value;
     passwordInput.disabled = value;
+    phraseInput.disabled = value;
     passwordForm.querySelector("button").disabled = value;
   }
   function paint() {
     if (disposed) return;
     const hasFactor = Boolean(factorId);
     passwordForm.hidden = passwordConfirmed;
+    stepOne.classList.toggle("is-current", !passwordConfirmed);
+    stepTwo.classList.toggle("is-current", passwordConfirmed);
     enrollButton.hidden = !passwordConfirmed || hasFactor;
     form.hidden = !passwordConfirmed || !hasFactor;
     qr.hidden = !passwordConfirmed || !enrolledImage;
     if (enrolledImage && passwordConfirmed) qrImage.src = enrolledImage;
     instruction.textContent = !passwordConfirmed
-      ? "ETAPA 01 / 02 — Confirme a senha individual da conta autorizada."
+      ? "ETAPA 01 / 02 — Informe a chave do painel e confirme sua senha individual."
       : enrolledImage
         ? "ETAPA 02 / 02 — Escaneie o QR Code no aplicativo autenticador e confirme com os seis números."
         : hasFactor
           ? "ETAPA 02 / 02 — Abra o aplicativo autenticador vinculado à sua conta e informe o código temporário."
           : "ETAPA 02 / 02 — Ative a verificação no celular e confirme com o código temporário.";
     if (passwordConfirmed && hasFactor) input.focus();
-    else if (!passwordConfirmed) passwordInput.focus();
+    else if (!passwordConfirmed) phraseInput.focus();
   }
 
   async function enroll() {
@@ -152,6 +162,15 @@ export async function mountAdminMfaGate(container, onUnlock) {
     event.preventDefault();
     if (busy || disposed || passwordConfirmed) return;
     const password = passwordInput.value;
+    // The requested "777 admin" is a convenience gate, NOT a secret or
+    // an authorization check. This value is inspectable in public JavaScript.
+    // Real protection is the account password + server-verified AAL2 + RLS.
+    if (phraseInput.value !== "777 admin") {
+      phraseInput.value = "";
+      message("Chave do painel incorreta.", true);
+      phraseInput.focus();
+      return;
+    }
     if (!password) {
       message("Informe a senha da conta autorizada.", true);
       return;
@@ -193,6 +212,7 @@ export async function mountAdminMfaGate(container, onUnlock) {
       if (!disposed) passwordInput.focus();
     } finally {
       passwordInput.value = "";
+      phraseInput.value = "";
       captcha?.reset();
       lock(false);
     }
@@ -232,6 +252,7 @@ export async function mountAdminMfaGate(container, onUnlock) {
       form.removeEventListener("submit", verify);
       captcha?.destroy();
       passwordInput.value = "";
+      phraseInput.value = "";
       if (qrImage) qrImage.removeAttribute("src");
     }
   };
