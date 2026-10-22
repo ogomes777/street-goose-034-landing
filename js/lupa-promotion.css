@@ -20,3 +20,12 @@
   .sg-promo-summary{padding:13px;border-radius:13px;margin:12px 0}
   .admin-promo-toggle{font-size:11px}
 }
+
+.sg-promo-product-badge{
+  display:inline-flex;width:max-content;max-width:100%;
+  border:1px solid #ba86569c;border-radius:999px;
+  padding:5px 9px;margin:0 0 10px;
+  font:800 9px/1.1 Manrope,Inter,sans-serif;
+  letter-spacing:.08em;color:#e6b875;
+  background:#3c230f45;
+}
