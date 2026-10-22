@@ -3,6 +3,7 @@
    URL's route as soon as it loads (/checkout reads window.SG.cart on mount). */
 import './analytics.js';
 import './price-sync.js';
+import './lupa-promotion.js';
 import './cart.js';
 import './wishlist.js';
 import './category-portals.js';
