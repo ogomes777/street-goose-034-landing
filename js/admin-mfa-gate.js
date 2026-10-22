@@ -156,7 +156,7 @@ export async function mountAdminMfaGate(container, onUnlock) {
       message("Informe a senha da conta autorizada.", true);
       return;
     }
-    if (captchaFailed || (captchaEnabled && (!captchaReady || !captcha?.getToken()))) {
+    if (!captchaReady || captchaFailed || (captchaEnabled && !captcha?.getToken())) {
       message("Conclua a verificação de segurança para confirmar a senha.", true);
       return;
     }
