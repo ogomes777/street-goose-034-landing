@@ -22,7 +22,8 @@
 
   scene.add(new THREE.AmbientLight(0x2a3540, 1.1));
 
-  var RING_COUNT = window.SG.perfTier === "high" ? 18 : 12;
+  var lowTier = window.SG.perfTier === "low";
+  var RING_COUNT = lowTier ? 8 : window.SG.perfTier === "high" ? 18 : 12;
   var TUNNEL_DEPTH = 38;
   var rings = [];
   var tunnel = new THREE.Group();
@@ -33,16 +34,17 @@
     var z = -t * TUNNEL_DEPTH;
     var rx = 3.2 + Math.sin(t * 3.1) * 0.35;
     var ry = rx * 0.86;
-    var isChrome = i % 5 === 0;
+    var isChrome = !lowTier && i % 5 === 0;
     var pts = [];
-    for (var a = 0; a <= 72; a++) {
-      var ang = (a / 72) * Math.PI * 2;
+    var segmentCount = lowTier ? 40 : 72;
+    for (var a = 0; a <= segmentCount; a++) {
+      var ang = (a / segmentCount) * Math.PI * 2;
       pts.push(new THREE.Vector3(Math.cos(ang) * rx, Math.sin(ang) * ry, 0));
     }
     var ring;
     if (isChrome) {
       var curve = new THREE.CatmullRomCurve3(pts, true);
-      var geo = new THREE.TubeGeometry(curve, 96, 0.028, 8, true);
+      var geo = new THREE.TubeGeometry(curve, 72, 0.028, 6, true);
       var mat = new THREE.MeshStandardMaterial({ color: 0x9fb7c2, metalness: 0.85, roughness: 0.22, emissive: 0x0a1218, emissiveIntensity: 0.4 });
       ring = new THREE.Mesh(geo, mat);
     } else {
@@ -54,13 +56,15 @@
     ring.position.z = z;
     ring.userData.baseZ = z;
     ring.userData.t = t;
+    ring.userData.chrome = isChrome;
     tunnel.add(ring);
     rings.push(ring);
   }
 
   // linhas de topologia conectando os aros em alguns pontos (sensação de
   // "trilho" percorrendo o túnel, como as hastes de um óculos gigante)
-  var railAngles = [0.3, 1.9, 3.4, 5.1];
+  var railAngles = lowTier ? [0.3, 3.4] : [0.3, 1.9, 3.4, 5.1];
+  var rails = [];
   railAngles.forEach(function (ang) {
     var pts = rings.map(function (r) {
       var rx = 3.2 + Math.sin(r.userData.t * 3.1) * 0.35, ry = rx * 0.86;
@@ -68,7 +72,9 @@
     });
     var geo = new THREE.BufferGeometry().setFromPoints(pts);
     var mat = new THREE.LineBasicMaterial({ color: 0xff8a3d, transparent: true, opacity: 0.14 });
-    tunnel.add(new THREE.Line(geo, mat));
+    var rail = new THREE.Line(geo, mat);
+    tunnel.add(rail);
+    rails.push(rail);
   });
 
   var travelLight = new THREE.PointLight(0xff8a3d, 3, 9);
@@ -78,7 +84,7 @@
   blueFill.position.set(0, 0, -8);
   tunnel.add(blueFill);
 
-  var particleCount = window.SG.perfTier === "high" ? 260 : 140;
+  var particleCount = lowTier ? 45 : window.SG.perfTier === "high" ? 200 : 110;
   var pPos = new Float32Array(particleCount * 3);
   for (var p = 0; p < particleCount; p++) {
     var rad = Math.random() * 2.6;
@@ -140,19 +146,81 @@
   }, { threshold: 0.15 });
   entranceIo.observe(section);
 
+  /* Dark = bronze and electric cyan; Light = titanium and warm copper.
+     A very slow wave changes the lens tunnel colors in BOTH modes. Updating
+     materials is throttled to ~8 Hz; no new renderers, effects or timers. */
+  var paletteColors = {
+    dark: {
+      steel:new THREE.Color(0xbfd7ea), ringA:new THREE.Color(0x316a91),
+      ringB:new THREE.Color(0xa97547), rails:new THREE.Color(0xb37c58),
+      particles:new THREE.Color(0xc2dcf3), key:new THREE.Color(0xdd8c55),
+      fill:new THREE.Color(0x448bdb)
+    },
+    light: {
+      steel:new THREE.Color(0x61778a), ringA:new THREE.Color(0x3b6275),
+      ringB:new THREE.Color(0xb07841), rails:new THREE.Color(0x856c56),
+      particles:new THREE.Color(0x7b9aa3), key:new THREE.Color(0xc88a52),
+      fill:new THREE.Color(0x5989b2)
+    }
+  };
+  var colorBlend = document.documentElement.getAttribute("data-theme") === "light" ? 1 : 0;
+  var colorBlendTarget = colorBlend;
+  var themeToken = 0;
+  var paletteFrame = 0;
+  var mixColor = new THREE.Color();
+  function updatePalette(force) {
+    paletteFrame++;
+    // 8 refreshes/s on 60 Hz, adequate for lighting and chroma shifts.
+    if (!force && paletteFrame % (lowTier ? 12 : 7) !== 0) return;
+    var pulse = Math.sin(clockT * (lowTier ? 0.3 : 0.43)) * 0.5 + 0.5;
+    rings.forEach(function (r) {
+      if (!r.material || !r.material.color) return;
+      if (r.userData.chrome) {
+        r.material.color.copy(paletteColors.dark.steel).lerp(paletteColors.light.steel, colorBlend);
+        if (r.material.emissive) {
+          r.material.emissive.setRGB(0.04 + .09 * pulse,0.055 + .04 * pulse,0.07 + .07 * (1-pulse));
+        }
+      } else {
+        mixColor.copy(paletteColors.dark.ringA).lerp(paletteColors.dark.ringB, pulse * .5);
+        r.material.color.copy(mixColor);
+        mixColor.copy(paletteColors.light.ringA).lerp(paletteColors.light.ringB, pulse * .58);
+        r.material.color.lerp(mixColor, colorBlend);
+        r.material.opacity = (0.68 - r.userData.t * .28) * (0.85 + pulse * .15);
+      }
+    });
+    rails.forEach(function (rail) {
+      rail.material.color.copy(paletteColors.dark.rails).lerp(paletteColors.light.rails,colorBlend);
+    });
+    pMat.color.copy(paletteColors.dark.particles).lerp(paletteColors.light.particles,colorBlend);
+    travelLight.color.copy(paletteColors.dark.key).lerp(paletteColors.light.key,colorBlend);
+    blueFill.color.copy(paletteColors.dark.fill).lerp(paletteColors.light.fill,colorBlend);
+  }
+  function onThemeChange(e) {
+    var chosen = e && e.detail ? e.detail.effective : document.documentElement.getAttribute("data-theme");
+    colorBlendTarget = chosen === "light" ? 1 : 0;
+    themeToken++;
+  }
+  document.addEventListener("sg:theme-change", onThemeChange);
   var clockT = 0;
   director.registerScene("final-act", {
     scene: scene,
     camera: camera,
     onFrame: function (dt) {
       clockT += dt;
-      camera.position.z = 5 - scrollProgress * 16;
+      if (colorBlend !== colorBlendTarget) {
+        var distance = colorBlendTarget - colorBlend;
+        colorBlend += distance * Math.min(1, dt * 4.5);
+        if (Math.abs(colorBlendTarget - colorBlend) < 0.003) colorBlend = colorBlendTarget;
+      }
+      updatePalette(false);
+      camera.position.z = 5 - scrollProgress * (lowTier ? 10 : 16);
       var lightZ = ((clockT * 2.4) % (TUNNEL_DEPTH + 8)) - 4;
       travelLight.position.z = -lightZ;
       blueFill.position.z = camera.position.z - 9;
       tunnel.rotation.z = Math.sin(clockT * 0.12) * 0.02;
     },
     dispose: function () {
+      document.removeEventListener("sg:theme-change", onThemeChange);
       scene.traverse(function (obj) {
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) { if (Array.isArray(obj.material)) obj.material.forEach(function (m) { m.dispose(); }); else obj.material.dispose(); }
