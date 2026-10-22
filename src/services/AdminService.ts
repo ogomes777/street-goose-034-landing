@@ -274,8 +274,14 @@ export const AdminService = {
   /** false para visitante, cliente comum e qualquer erro — o gate da UI. */
   async isAdmin(): Promise<boolean> {
     if (!supabase) return false;
-    const { data, error } = await supabase.rpc("is_admin");
-    return !error && data === true;
+    // Identity check must remain available before a user verifies MFA.
+    // is_admin() is privileged after the matching DB migration.
+    const { data, error } = await supabase.rpc("is_admin_identity");
+    if (!error) return data === true;
+    // Compatibility during rollout, before the DB migration exists.
+    if (error.code !== "PGRST202") return false;
+    const legacy = await supabase.rpc("is_admin");
+    return !legacy.error && legacy.data === true;
   },
 
   overview(): Promise<AdminResult<AdminOverview>> {
