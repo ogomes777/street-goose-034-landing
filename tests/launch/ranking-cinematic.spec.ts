@@ -19,6 +19,7 @@ test.describe("Street Goose / clean cinematic galaxy", () => {
     page.on("pageerror",error=>errors.push(error.message));
     await page.goto("/ranking",{waitUntil:"domcontentloaded"});
     await expect(page.locator(".ranking-page-head h1")).toContainText("Ranking Street Goose",{timeout:20_000});
+    await expect(page.locator("[data-ranking-stage], .ranking-empty").first()).toBeVisible({timeout:22_000});
     const stage=page.locator("[data-ranking-stage]");
     // Ranking data is remote; if unavailable during CI, the page still
     // shows a truthful reload prompt and the CSS is checked in the fixture.
@@ -35,28 +36,12 @@ test.describe("Street Goose / clean cinematic galaxy", () => {
     expect(errors.filter(x=>/ranking-scene|webgl|cannot read properties/i.test(x))).toEqual([]);
   });
 
-  test("rank visual fallback stays legible even without WebGL", async ({page}) => {
-    await page.goto("/",{waitUntil:"domcontentloaded"});
-    const values=await page.evaluate(()=>{
-      const el=document.createElement("section");
-      el.className="is-ranking";
-      el.innerHTML='<div class="ranking-stage"><div class="ranking-stage-fallback"><div class="ranking-plinth">1</div></div><div class="ranking-stage-leaders"><div class="ranking-stage-member"><b>Participante</b></div></div></div>';
-      document.body.appendChild(el);
-      return import("/js/ranking-cinematic.css").then(()=>{
-        const stage=el.querySelector(".ranking-stage")!;
-        const result={background:getComputedStyle(stage).backgroundImage,
-          after:getComputedStyle(stage,"::after").display,
-          visible:getComputedStyle(el.querySelector(".ranking-stage-fallback")!).display};
-        el.remove();
-        return result;
-      });
-    }).catch(()=>null);
-    // Vite's production CSS may not be importable via a raw path. The actual
-    // ranked route above validates loaded styles when the data is available.
-    if (values) {
-      expect(values.background).toContain("gradient");
-      expect(values.after).toBe("none");
-      expect(values.visible).not.toBe("none");
-    }
+  test("fallback supplies a dark readable composition without another animation", () => {
+    const css=readFileSync("js/ranking-cinematic.css","utf8");
+    expect(css).toContain(".ranking-stage:not(.has-webgl)");
+    expect(css).toContain(".ranking-stage-fallback{z-index:1}");
+    expect(css).toContain(".ranking-stage::after{display:none");
+    expect(css).not.toContain("animation:infinite");
   });
+
 });
