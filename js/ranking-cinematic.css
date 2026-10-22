@@ -1,0 +1,61 @@
+/* SG034 / The Quiet Galaxy
+   Dark negative space lets the two stellar arms and real winners read.
+   No large live blur, no duplicated orbits, no extra GPU layers. */
+.is-ranking .ranking-page-body::before{
+  background:linear-gradient(155deg,#080912 5%,#0a0c16 60%,#07090e 100%);
+}
+.is-ranking .ranking-galaxy{
+  background:none!important;
+  opacity:.07;
+}
+.is-ranking .ranking-stage{
+  background:radial-gradient(ellipse at 52% 42%,#141b2d 0%,#090c18 53%,#05070f 100%);
+  border:1px solid rgba(164,174,200,.18);
+  box-shadow:0 20px 62px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.06);
+  contain:layout paint;
+}
+/* Remove the giant glowing orbit and repeated faux stars that covered the
+   actual 3D galaxy. */
+.is-ranking .ranking-stage::before,
+.is-ranking .ranking-stage::after{display:none!important;animation:none!important}
+.is-ranking .ranking-stage-leaders::before{
+  background:linear-gradient(180deg,transparent,#080a1280 40%,#080a12df);
+}
+.is-ranking .ranking-stage-live::before{
+  box-shadow:none;
+  background:#9db8bc;
+}
+.is-ranking .ranking-stage-top,
+.is-ranking .ranking-stage-bottom{color:#b2adbf}
+.is-ranking .ranking-stage-bottom button{
+  color:#d4cce1;min-height:32px;
+  text-underline-offset:3px;
+}
+.is-ranking .ranking-stage-bottom button:focus-visible{
+  outline:2px solid #c8ae85;
+  outline-offset:3px;
+  border-radius:3px;
+}
+/* WebGL is optional. Preserve the podium and a gentle galaxy suggestion on
+   old browsers or motion-reduced devices, instead of an empty black square. */
+.is-ranking .ranking-stage:not(.has-webgl){
+  background:
+    radial-gradient(ellipse at 49% 24%,#b29a715a 0 1%,#57618c25 7%,transparent 30%),
+    radial-gradient(ellipse at 48% 26%,#30365a66,transparent 55%),
+    linear-gradient(#080a17,#060810);
+}
+.is-ranking .ranking-stage-fallback{z-index:1}
+@media(max-width:760px){
+  .is-ranking .ranking-stage{
+    border-radius:20px;
+    box-shadow:0 12px 34px #0005,inset 0 1px #fff1;
+  }
+  .is-ranking .ranking-stage-leaders{
+    left:5%;right:5%;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .is-ranking .ranking-stage *,
+  .is-ranking .ranking-stage::before,
+  .is-ranking .ranking-stage::after{animation:none!important}
+}
