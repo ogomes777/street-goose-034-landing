@@ -112,7 +112,11 @@ import { QualityGovernor } from "../src/components/ranking-crystal/crystal-quali
   // continuaria renderizando escondida atrás, competindo por GPU com o vídeo
   // em scrub da categoria
   var overlayOpen = document.body.classList.contains("category-page-open");
-  window.addEventListener("sg:overlay", function (e) { overlayOpen = !!(e.detail && e.detail.open); });
+  window.addEventListener("sg:overlay", function (e) {
+    overlayOpen = !!(e.detail && e.detail.open);
+    if (overlayOpen) suspend();
+    else refreshForeground();
+  });
 
   // The loop only exists while a scene is active.
   var clock = new THREE.Clock();
@@ -135,7 +139,7 @@ import { QualityGovernor } from "../src/components/ranking-crystal/crystal-quali
     renderer.render(s.scene, s.camera);
   }
   function run() {
-    if (document.hidden || contextLost || !activeId || raf) return;
+    if (document.hidden || contextLost || overlayOpen || !activeId || raf) return;
     clock.getDelta();
     governor.reset();
     raf = requestAnimationFrame(tick);
@@ -156,7 +160,7 @@ import { QualityGovernor } from "../src/components/ranking-crystal/crystal-quali
     raf = 0;
   }
   function refreshForeground() {
-    if (document.hidden || contextLost) return;
+    if (document.hidden || contextLost || overlayOpen) return;
     var previous = Object.keys(visibility);
     previous.forEach(function (id) {
       var v = visibility[id];
