@@ -183,9 +183,14 @@ export function mountCheckoutPage(root, _params, onClose) {
     if (formData.payment === "whatsapp") {
       return '<div class="app-page-empty"><h2>Pedido preparado para o WhatsApp.</h2>' +
         (orderId ? '<p>Pedido <strong>#' + orderId.slice(0, 8).toUpperCase() + '</strong> salvo na sua conta.</p>' : "") +
-        (orderSummary && orderSummary.couponCode && orderSummary.discountCents > 0
-          ? "<p>Cupom <b>" + window.SG.esc(orderSummary.couponCode) + "</b> aplicado: −" + window.SG.formatPrice(orderSummary.discountCents) + ".</p>"
-          : (coupon && orderId ? "<p>O cupom não pôde ser aplicado no pedido. a equipe confere no atendimento.</p>" : "")) +
+        (orderSummary && orderSummary.promoDiscountCents > 0
+          ? "<p><b>Promoção 2 lupas por R$ 290 confirmada.</b> Economia: −" + window.SG.formatPrice(orderSummary.promoDiscountCents) + ".</p>" : "") +
+        (orderSummary && orderSummary.couponCode && orderSummary.discountCents > (orderSummary.promoDiscountCents||0)
+          ? "<p>Cupom <b>" + window.SG.esc(orderSummary.couponCode) + "</b> aplicado: −" +
+              window.SG.formatPrice(orderSummary.discountCents-(orderSummary.promoDiscountCents||0)) + ".</p>"
+          : (coupon && orderId && (!orderSummary || !orderSummary.couponCode)
+              ? "<p>O cupom não pôde ser confirmado; a equipe confere no atendimento.</p>" : "")) +
+        (orderSummary ? "<p>Total dos produtos: <strong>" + window.SG.formatPrice(orderSummary.totalCents) + "</strong></p>" : "") +
         '<p>A equipe Street Goose confirma disponibilidade e fecha o pagamento por lá.</p>' +
         (handoffUrl ? '<p><a class="btn btn-primary" target="_blank" rel="noopener noreferrer" href="' + window.SG.esc(handoffUrl) + '">Abrir conversa no WhatsApp</a></p>' : "") +
         '<a class="text-link" href="/">' + t("cart.continueShopping") + "</a></div>";
