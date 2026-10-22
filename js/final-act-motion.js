@@ -24,22 +24,28 @@
   var gsap = window.gsap;
   var reducedMotion = window.SG.prefersReducedMotion();
   var isDesktop = window.innerWidth > 900;
+  var lowTier = window.SG.perfTier === "low";
   var isPointerFine = window.SG.perfTier !== "low" && matchMedia("(hover:hover) and (pointer:fine)").matches;
 
   /* ---------------- Entrada ---------------- */
   if (reducedMotion) {
     gsap.set(product, { opacity: 1, scale: 1, y: 0, rotateX: 0, filter: "blur(0px)" });
   } else {
-    gsap.set(product, { opacity: 0, scale: 0.72, y: 62, rotateX: 6, filter: "blur(14px)", transformPerspective: 800 });
+    // Never animate CSS blur on low-end phones. It forces a raster repaint
+    // on every frame during scroll and can stall Safari's media compositor.
+    gsap.set(product, isDesktop && !lowTier ?
+      { opacity: 0, scale: 0.72, y: 62, rotateX: 6, filter: "blur(7px)", transformPerspective: 800 } :
+      { opacity: 0, scale: 0.78, y: 26, rotateX: 0, transformPerspective: 800 });
 
     var entrance = gsap.timeline({
       scrollTrigger: { trigger: section, start: "top 75%", once: true },
       onComplete: startIdle
     });
-    entrance.to(product, {
-      opacity: 1, scale: 1, y: 0, rotateX: 0, filter: "blur(0px)",
-      duration: isDesktop ? 1.15 : 0.95, ease: "power3.out"
-    });
+    entrance.to(product, Object.assign({
+      opacity: 1, scale: 1, y: 0, rotateX: 0,
+      duration: isDesktop ? 1.15 : 0.82, ease: "power3.out",
+      clearProps: "willChange"
+    }, isDesktop && !lowTier ? { filter: "blur(0px)" } : {}));
   }
 
   /* ---------------- Idle: flutuação + reflexo periódico ---------------- */
@@ -98,10 +104,20 @@
   }
 
   /* ---------------- Limpeza ---------------- */
-  addEventListener("pagehide", function () {
+  // A Safari BFCache restore reuses this DOM and these GSAP timelines.
+  // Killing on every pagehide left the foreground picture motionless.
+  addEventListener("pagehide", function (event) {
+    if (event.persisted) {
+      if (idleTimeline) idleTimeline.pause();
+      if (sweepTimeline) sweepTimeline.pause();
+      return;
+    }
     if (idleTimeline) idleTimeline.kill();
     if (sweepTimeline) sweepTimeline.kill();
-  }, { once: true });
+  });
+  addEventListener("pageshow", function (event) {
+    if (event.persisted) syncLoops();
+  });
 })();
 
 export {};

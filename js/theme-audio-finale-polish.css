@@ -1,0 +1,231 @@
+/* Street Goose / final four production polish.
+   Four requests: light theme legibility, compact Sound Dock,
+   smooth final-act mobile, reactive optical palette desktop + mobile.
+   No external font/image, no scrolling repaint loops. */
+
+/* DROP LIST: give each theme its own legible, deliberate palette.
+   The WebGL scene remains transparent and never paints on top of text. */
+:root[data-theme="dark"] #top .newsletter{
+  background:radial-gradient(ellipse at 70% 50%,#142535 0%,#111113 49%,#08090a 100%);
+  color:#f5f3ee;
+}
+:root[data-theme="light"] #top .newsletter{
+  background:radial-gradient(ellipse at 68% 48%,#e7dfd2 0%,#f5f1e9 48%,#ebe4d9 100%);
+  color:#171917;
+  border-color:#b79d793e;
+}
+:root[data-theme="light"] #top .newsletter:before{
+  border-color:#a58b6640;
+  background:linear-gradient(118deg,transparent 10%,#ae85551a 42%,transparent 68%);
+}
+:root[data-theme="light"] #top .newsletter .newsletter-copy h2{
+  color:#1d201f;
+  text-shadow:none;
+}
+:root[data-theme="light"] #top .newsletter .kicker{
+  color:#835726;
+}
+:root[data-theme="light"] #top .newsletter .newsletter-form-wrap{
+  color:#292824;
+}
+:root[data-theme="light"] #top .newsletter input[type=email]{
+  background:#fffcf6;
+  color:#171b1c;
+  border:1px solid #9d907b;
+  box-shadow:0 6px 20px #715c3d13;
+}
+:root[data-theme="light"] #top .newsletter input[type=email]::placeholder{
+  color:#6f706b;
+  opacity:1;
+}
+:root[data-theme="light"] #top .newsletter input[type=email]:focus-visible{
+  outline:2px solid #a45c1b;
+  outline-offset:2px;
+}
+:root[data-theme="light"] #top .newsletter .newsletter-msg:not(.is-error){color:#37543d}
+:root[data-theme="light"] #top .newsletter .newsletter-msg.is-error{color:#9f281b}
+:root[data-theme="light"] #top .newsletter [data-newsletter-canvas]{opacity:.68}
+:root[data-theme="dark"] #top .newsletter [data-newsletter-canvas]{opacity:1}
+#top .newsletter .newsletter-copy,
+#top .newsletter .newsletter-form-wrap{
+  position:relative;z-index:3;
+}
+#top .newsletter [data-newsletter-canvas]{z-index:1;pointer-events:none}
+#top .newsletter input[type=email]{min-width:0}
+
+/* SOUND DOCK: small, crisp, accessible on touch; dark independent of theme. */
+.music-player{
+  right:clamp(10px,1.5vw,22px);
+  bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  max-width:calc(100vw - 20px);
+  color:#f7f2e9;
+  -webkit-tap-highlight-color:transparent;
+}
+.music-player .music-panel{
+  display:flex;align-items:center;justify-content:center;
+  width:max-content;max-width:calc(100vw - 20px);
+  box-sizing:border-box;
+  gap:8px;
+  min-height:48px;
+  padding:5px 8px 5px 14px;
+  border:1px solid #cfb18546;
+  border-radius:16px;
+  background:rgba(19,19,20,.96);
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+  box-shadow:0 10px 24px #0006,inset 0 1px 0 #fff1;
+}
+.music-player .music-player-label{
+  display:flex;align-items:center;gap:7px;
+  font:700 9px/1.2 Manrope,Inter,system-ui,sans-serif;
+  letter-spacing:.13em;color:#c8c1b5;
+  margin-inline:2px 6px;
+}
+.music-player .music-player-label i{
+  width:5px;height:5px;flex:none;
+  background:#cf9657;
+  box-shadow:none;
+}
+.music-player[data-music-state="playing"] .music-player-label i{background:#59c494}
+.music-player .music-panel button{
+  display:inline-grid;place-items:center;
+  width:36px;height:36px;min-width:36px;min-height:36px;
+  padding:0;
+  border:1px solid transparent;
+  border-radius:11px;
+  background:transparent;
+  color:#eee9e1;
+  cursor:pointer;
+  transition:background .16s ease,border-color .16s ease;
+}
+.music-player .music-panel button:hover,
+.music-player .music-panel button:focus-visible{
+  background:#f8eee215;border-color:#dbc39a32;
+}
+.music-player .music-panel button:focus-visible{
+  outline:2px solid #ebb66b;outline-offset:2px;
+}
+.music-player .music-panel button svg{width:16px;height:16px}
+.music-player .music-panel .music-playpause{
+  display:inline-flex!important;align-items:center;justify-content:center;
+  width:auto!important;min-width:86px;min-height:36px;
+  border-color:#cdb2894a;
+  border-radius:10px;
+  background:#f5eee90e;
+  padding:0 10px;gap:6px;
+}
+.music-player .music-panel .music-playpause.is-cta{border-color:#c88d42;background:#e7ae401c}
+.music-player .music-playpause span{
+  font:700 10px/1 Manrope,Inter,sans-serif;
+  letter-spacing:.01em;
+}
+.music-player .music-panel .music-minimize{font-size:16px}
+.music-player .music-panel [data-music-volume]{
+  appearance:none;-webkit-appearance:none;
+  width:62px;height:3px;flex:none;margin:0 3px;
+  border-radius:8px;background:linear-gradient(90deg,#d79d5f,#8a7a67);
+  accent-color:#d79d5f;
+  cursor:pointer;
+}
+.music-player .music-panel [data-music-volume]::-webkit-slider-thumb{
+  appearance:none;-webkit-appearance:none;
+  width:13px;height:13px;border:2px solid #141414;border-radius:50%;
+  background:#f6e9d7;box-shadow:0 0 0 1px #9f947e;
+}
+.music-player .music-panel [data-music-volume]::-moz-range-thumb{
+  width:11px;height:11px;border:2px solid #141414;border-radius:50%;background:#f6e9d7;
+}
+.music-player .music-orb{
+  width:44px;height:44px;border:1px solid #bd8e5280!important;
+  border-radius:15px!important;
+  box-shadow:0 5px 18px #0006;
+  background:#191816!important;
+}
+@media(max-width:670px){
+  .music-player{right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));left:auto;width:auto}
+  .music-player .music-panel{gap:5px;padding:5px 7px;min-height:46px;border-radius:14px}
+  .music-player .music-player-label{margin:0 5px 0 4px;font-size:8px;letter-spacing:.08em}
+  .music-player .music-panel .music-playpause{min-width:82px;min-height:35px;padding:0 8px}
+  .music-player .music-panel button{width:34px;height:35px;min-height:35px;min-width:34px}
+  .music-player .music-panel [data-music-volume]{width:43px}
+}
+@media(max-width:410px){
+  .music-player .music-player-label{font-size:0;letter-spacing:0;margin:0 2px}
+  .music-player .music-player-label i{width:7px;height:7px}
+  .music-player .music-panel [data-music-volume]{width:40px}
+}
+@media(prefers-reduced-motion:reduce){
+  .music-player .music-panel button{transition:none}
+}
+
+/* FINAL ACT: deliberate light/dark contrast behind the optical scene. */
+:root[data-theme="dark"] #top .final-act{
+  background:radial-gradient(ellipse at 50% 42%,#28150d 0%,#100c0a 49%,#06080a 100%);
+  color:#f9f5ef;
+}
+:root[data-theme="light"] #top .final-act{
+  background:radial-gradient(ellipse at 50% 40%,#e7ded2 0%,#f3eee6 46%,#e9e2d8 100%);
+  color:#171a1c;
+}
+:root[data-theme="light"] #top .final-act .final-act-copy h2,
+:root[data-theme="light"] #top .final-act .kicker{color:#1b1d1f;text-shadow:none}
+:root[data-theme="light"] #top .final-act .final-act-glow{opacity:.48}
+:root[data-theme="light"] #top .final-act .final-act-sweep{mix-blend-mode:multiply}
+#top .final-act{
+  transition:background-color .45s ease,color .25s ease;
+}
+#top .final-act [data-final-act-product]{
+  transform:translateZ(0);
+  backface-visibility:hidden;
+}
+/* No large animated filter/blur; on phones the asset gets a stable shadow. */
+@media(max-width:700px){
+  #top .final-act{min-height:480px}
+  #top .final-act [data-final-act-product]{
+    filter:drop-shadow(0 12px 25px #0008);
+    will-change:auto;
+  }
+}
+
+/* Compact wordmark: preserve the full accessible DOM label without wasting
+   desktop width on a long caption. No script or layout animation needed. */
+.music-player .music-player-label{
+  font-size:0;
+  letter-spacing:0;
+}
+.music-player .music-player-label::after{
+  content:"SG / SOUND";
+  font:800 9px/1.2 Manrope,Inter,system-ui,sans-serif;
+  letter-spacing:.09em;
+  color:#c8c1b5;
+  white-space:nowrap;
+}
+@media(max-width:410px){
+  .music-player .music-player-label::after{content:"";display:none}
+}
+
+/* The 'Sistema' theme removes data-theme from <html>; honor a light OS
+   preference with the same contrast as the explicit Claro mode. */
+@media(prefers-color-scheme:light){
+  :root:not([data-theme]) #top .newsletter{
+    background:radial-gradient(ellipse at 68% 48%,#e7dfd2 0%,#f5f1e9 48%,#ebe4d9 100%);
+    color:#171917;border-color:#b79d793e;
+  }
+  :root:not([data-theme]) #top .newsletter .newsletter-copy h2{
+    color:#1d201f;text-shadow:none;
+  }
+  :root:not([data-theme]) #top .newsletter .kicker{color:#835726}
+  :root:not([data-theme]) #top .newsletter input[type=email]{
+    background:#fffcf6;color:#171b1c;border-color:#9d907b;
+  }
+  :root:not([data-theme]) #top .newsletter input[type=email]::placeholder{
+    color:#6f706b;opacity:1;
+  }
+  :root:not([data-theme]) #top .final-act{
+    background:radial-gradient(ellipse at 50% 40%,#e7ded2 0%,#f3eee6 46%,#e9e2d8 100%);
+    color:#171a1c;
+  }
+  :root:not([data-theme]) #top .final-act .final-act-copy h2{color:#1b1d1f;text-shadow:none}
+  :root:not([data-theme]) #top .final-act .final-act-glow{opacity:.48}
+  :root:not([data-theme]) #top .final-act .final-act-sweep{mix-blend-mode:multiply}
+}

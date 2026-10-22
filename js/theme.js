@@ -43,7 +43,12 @@
   }
 
   mq.addEventListener("change", function () {
-    if (current() === "system") apply("system");
+    if (current() === "system") {
+      apply("system");
+      document.dispatchEvent(new CustomEvent("sg:theme-change", {
+        detail: { mode:"system",effective:effective() }
+      }));
+    }
   });
 
   apply(current());
