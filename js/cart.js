@@ -106,6 +106,20 @@
 
     if (footer) {
       footer.style.display = items.length ? "" : "none";
+      var existing = footer.querySelector("[data-cart-promo]");
+      if(existing) existing.remove();
+      var quote = window.SG.promo && window.SG.promo.quote(window.SG.cart ? window.SG.cart.getItems() : items.map(function (row) {
+        return { product:findProduct(row.id),qty:row.qty };
+      }).filter(function (row){ return row.product; }));
+      if (quote && quote.discount > 0) {
+        var box = document.createElement("div");
+        box.className = "sg-promo-summary";
+        box.setAttribute("data-cart-promo","");
+        box.innerHTML = '<b>2 LUPAS POR R$ 290</b><p>' + quote.pairs + ' combo(s) · Economia de ' +
+          window.SG.formatPrice(quote.discount) + '</p><p><strong>Total dos produtos: ' +
+          window.SG.formatPrice(quote.total) + '</strong></p>';
+        footer.insertBefore(box,footer.firstChild);
+      }
     }
     document.dispatchEvent(new CustomEvent("sg:cart-change"));
   }
@@ -166,6 +180,8 @@
 
   // produto renomeado/ocultado no painel: a gaveta reflete na hora
   window.addEventListener("sg:catalog", render);
+  document.addEventListener("sg:promo-change", render);
+  window.addEventListener("sg:prices", render);
 
   render();
 })();
