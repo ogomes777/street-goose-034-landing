@@ -9,7 +9,8 @@
   opacity:.07;
 }
 .is-ranking .ranking-stage{
-  background:radial-gradient(ellipse at 52% 42%,#141b2d 0%,#090c18 53%,#05070f 100%);
+  /* A quiet deep-space falloff frames the arms without faking another halo. */
+  background:radial-gradient(ellipse at 51% 40%,#1b1c30 0%,#0b0d1a 49%,#05070f 100%);
   border:1px solid rgba(164,174,200,.18);
   box-shadow:0 20px 62px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.06);
   contain:layout paint;

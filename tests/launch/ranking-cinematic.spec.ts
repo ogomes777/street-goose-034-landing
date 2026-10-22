@@ -5,7 +5,14 @@ test.describe("Street Goose / clean cinematic galaxy", () => {
   test("procedural scene retains real podium but drops distracting effects", () => {
     const scene=readFileSync("js/ranking-scene.js","utf8");
     expect(scene).toContain("const GALAXY = calm ? 2800 : small ? 6300 : 14500");
-    expect(scene).toContain("1.6 * Math.log(r + .55)");
+    expect(scene).toContain("1.64 * Math.log(r + .55)");
+    expect(scene).toContain("const stellarKnot = kind > .76 && kind < .88");
+    expect(scene).toContain("const knotCenters = [1.75, 3.35, 5.05]");
+    expect(scene).toContain("starForming");
+    expect(scene).toContain("galaxyRoot.scale.setScalar(galBreath)");
+    // Quality budget is unchanged; extra stars and additional render passes
+    // would be a regression for the iPhone.
+    expect(scene).not.toContain("const GALAXY = calm ? 2800 : small ? 6300 : 25000");
     expect(scene).toContain("const STARS = calm ? 95 : small ? 230 : 520");
     expect(scene).not.toContain("const planet = new THREE.Group()");
     expect(scene).not.toContain("streakStart");
