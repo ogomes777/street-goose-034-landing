@@ -201,6 +201,7 @@ export interface NewsletterSubscriber {
 }
 
 export interface AdminPrice {
+  promo_lupa_eligible: boolean;
   product_id: string;
   price_cents: number;
   updated_at: string;
@@ -534,7 +535,7 @@ export const AdminService = {
   // ---------- preços (migration 0101: escrita só admin) ----------
   async listPrices(): Promise<AdminResult<Record<string, AdminPrice>>> {
     if (!supabase) return fail("not_configured");
-    const { data, error } = await supabase.from("product_prices").select("product_id, price_cents, updated_at").range(0, 4999);
+    const { data, error } = await supabase.from("product_prices").select("product_id, price_cents, promo_lupa_eligible, updated_at").range(0, 4999);
     if (error) return fromError(error);
     const byId: Record<string, AdminPrice> = {};
     for (const row of (data ?? []) as AdminPrice[]) byId[row.product_id] = row;
@@ -552,6 +553,19 @@ export const AdminService = {
       .select("product_id");
     if (error) return fromError(error);
     if ((data ?? []).length !== rows.length) return fail("forbidden");
+    return { ok: true, data: null };
+  },
+
+  /** Mark a model as eligible without changing its price; admin RLS enforces access. */
+  async setLupaPromoEligible(productId: string, eligible: boolean): Promise<AdminResult<null>> {
+    if (!supabase) return fail("not_configured");
+    if (!/^lupa-[a-z0-9-]+$/i.test(productId)) return fail("forbidden");
+    const { data, error } = await supabase.from("product_prices")
+      .update({ promo_lupa_eligible: eligible })
+      .eq("product_id", productId).not("price_cents","is",null)
+      .select("product_id");
+    if (error) return fromError(error);
+    if ((data ?? []).length !== 1) return fail("forbidden", "Cadastre o preço desta lupa antes de ativar a promoção.");
     return { ok: true, data: null };
   },
 
