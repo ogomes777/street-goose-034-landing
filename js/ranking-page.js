@@ -1,4 +1,5 @@
 import { gemHtml, gemPosterSrc, levelGem, liveGems, medalHtml, PODIUM_GEM_LEVELS } from './level-gems.js';
+import './ranking-cinematic.css';
 import { mountRankingScene } from './ranking-scene.js';
 import { mountRankingNumbers } from './ranking-numbers.js';
 
