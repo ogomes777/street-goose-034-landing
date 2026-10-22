@@ -194,7 +194,7 @@
   letter-spacing:0;
 }
 .music-player .music-player-label::after{
-  content:"SG 034 / SOUND";
+  content:"SG / SOUND";
   font:800 9px/1.2 Manrope,Inter,system-ui,sans-serif;
   letter-spacing:.09em;
   color:#c8c1b5;
