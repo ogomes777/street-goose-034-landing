@@ -48,3 +48,20 @@
 .sg-admin-lock [hidden]{display:none!important}
 @media (max-width:440px){.sg-admin-lock{width:calc(100% - 18px);padding:26px 20px;border-radius:17px}.sg-admin-lock__orbit{width:72px;height:72px;margin-bottom:22px}}
 @media (prefers-reduced-motion:reduce){.sg-admin-lock__button{transition:none}}
+
+/* Account-specific password step. The 777 monogram is decorative, never a PIN. */
+.sg-admin-lock [name="adminPassword"] {
+  text-align: left;
+  font-size: 17px;
+  letter-spacing: .06em;
+  font-variant-numeric: normal;
+}
+.sg-admin-lock__captcha {display:flex;align-items:center;justify-content:center;min-height:4px}
+.sg-admin-lock__captcha:empty {min-height:0}
+.sg-admin-lock__help {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.65;
+  color: #bca99a;
+  text-align:center;
+}
