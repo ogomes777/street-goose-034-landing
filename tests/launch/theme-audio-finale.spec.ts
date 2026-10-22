@@ -32,6 +32,15 @@ test.describe("SG034 | Light Drop List, Sound Dock and responsive optical finale
     expect((await read()).color).toBe(dark.color);
   });
 
+  test("Sistema follows OS light and dark preferences without resetting the scene", async ({page}) => {
+    await page.emulateMedia({colorScheme:"light"});
+    await page.evaluate(() => (window as any).SG.theme.set("system"));
+    await expect(page.locator("html")).not.toHaveAttribute("data-theme",/light|dark/);
+    await expect.poll(() => page.locator(".newsletter h2").evaluate(node=>getComputedStyle(node).color)).toBe("rgb(29, 32, 31)");
+    await page.emulateMedia({colorScheme:"dark"});
+    await expect.poll(() => page.locator(".newsletter h2").evaluate(node=>getComputedStyle(node).color)).not.toBe("rgb(29, 32, 31)");
+  });
+
   test("Sound Dock stays compact and mute remains keyboard/touch accessible", async ({page}) => {
     const dock=page.locator("[data-music-player]");
     await expect(dock).toBeVisible({timeout:20_000});
