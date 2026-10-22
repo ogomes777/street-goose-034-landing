@@ -18,6 +18,8 @@ export interface OrderSummary {
   id: string;
   subtotalCents: number;
   discountCents: number;
+  promoDiscountCents: number;
+  promotionCode: string | null;
   totalCents: number;
   couponCode: string | null;
 }
@@ -57,7 +59,7 @@ export const OrderService = {
     if (!supabase) return null;
     const { data, error } = await supabase
       .from("orders")
-      .select("id, subtotal_cents, discount_cents, total_cents, coupon_code")
+      .select("id, subtotal_cents, discount_cents, promo_discount_cents, promotion_code, total_cents, coupon_code")
       .eq("id", orderId)
       .maybeSingle();
     if (error || !data) return null;
@@ -65,6 +67,8 @@ export const OrderService = {
       id: data.id,
       subtotalCents: data.subtotal_cents,
       discountCents: data.discount_cents ?? 0,
+      promoDiscountCents: data.promo_discount_cents ?? 0,
+      promotionCode: data.promotion_code ?? null,
       totalCents: data.total_cents,
       couponCode: data.coupon_code,
     };

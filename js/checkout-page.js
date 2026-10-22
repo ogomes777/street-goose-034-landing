@@ -4,6 +4,7 @@
    antigo) — os demais aparecem desabilitados até um PSP ser configurado
    (ver PaymentService). Nenhum pagamento é aprovado no cliente. */
 import { checkoutFieldErrors } from "./checkout-validation.js";
+import { buildOrderWhatsAppMessage } from "./checkout-message.js";
 
 export function mountCheckoutPage(root, _params, onClose) {
   function t(key) { return (window.SG.i18n && window.SG.i18n.t(key)) || key; }
@@ -78,6 +79,14 @@ export function mountCheckoutPage(root, _params, onClose) {
     }).join("") + "</div>";
   }
 
+  function promoReviewHtml() {
+    var quote=window.SG.promo && window.SG.promo.quote(rows);
+    if (!quote || !quote.discount) return "";
+    return '<div class="sg-promo-summary" data-promo-summary><p><b>OFERTA STREET GOOSE · 2 LUPAS POR R$ 290</b></p>' +
+      '<p>' + quote.pairs + ' combo(s) · Você economiza <b>−' + window.SG.formatPrice(quote.discount) + '</b></p>' +
+      '<p><strong>Total com a oferta: ' + window.SG.formatPrice(quote.total) + '</strong></p>' +
+      '<small>Oferta conferida no servidor na finalização. Frete à parte.</small></div>';
+  }
   function reviewStepHtml() {
     return (
       '<div class="checkout-review">' +
@@ -86,7 +95,8 @@ export function mountCheckoutPage(root, _params, onClose) {
         '<h3>' + t("checkout.step.payment") + '</h3><p>' + t("checkout.payment." + formData.payment) + "</p>" +
         '<h3>' + t("cart.title") + '</h3>' +
         rows.map(function (r) { return "<p>" + window.SG.esc(r.product.name) + " × " + window.SG.esc(r.qty) + " — <span data-price-for=\"" + window.SG.esc(r.product.id) + "\">" + window.SG.esc(r.product.priceLabel) + "</span></p>"; }).join("") +
-        '<p class="checkout-review-total"><b>Total: <span data-cart-subtotal>' + window.SG.subtotalLabel(rows) + "</span></b></p>" +
+        '<p class="checkout-review-total"><b>Subtotal: ' + window.SG.subtotalLabel(rows) + "</b></p>" +
+        promoReviewHtml() +
         '<div class="checkout-coupon" data-coupon-box>' + couponHtml() + "</div>" +
       "</div>"
     );
@@ -111,7 +121,8 @@ export function mountCheckoutPage(root, _params, onClose) {
   function hasUnpriced() { return rows.some(function (r) { return typeof r.product.price !== "number"; }); }
   function couponDiscount() {
     if (!coupon) return 0;
-    var base = pricedSubtotal();
+    var promo=window.SG.promo && window.SG.promo.quote(rows);
+    var base = Math.max(0,pricedSubtotal()-(promo ? promo.discount:0));
     return coupon.discountPercent ? Math.round(base * coupon.discountPercent / 100) : Math.min(coupon.discountCents || 0, base);
   }
   function couponHtml() {
@@ -120,7 +131,7 @@ export function mountCheckoutPage(root, _params, onClose) {
       return '<p class="checkout-coupon-applied">Cupom <b>' + window.SG.esc(coupon.code) + "</b> aplicado" +
         (d ? " — <span>−" + window.SG.formatPrice(d) + "</span>" : " (o desconto vale sobre itens com preço)") +
         ' <button type="button" class="text-link" data-coupon-remove>Remover</button></p>' +
-        (d ? '<p class="checkout-review-total"><b>Total com desconto: ' + window.SG.formatPrice(Math.max(0, pricedSubtotal() - d)) + (hasUnpriced() ? " + itens a consultar" : "") + "</b></p>" : "");
+        (d ? '<p class="checkout-review-total"><b>Total com desconto: ' + window.SG.formatPrice(Math.max(0, pricedSubtotal() - (window.SG.promo ? window.SG.promo.quote(rows).discount : 0) - d)) + (hasUnpriced() ? " + itens a consultar" : "") + "</b></p>" : "");
     }
     if (!hasSession) return '<p class="checkout-coupon-hint">Tem cupom? <button type="button" class="text-link" data-coupon-login>Entre na sua conta</button> para usar.</p>';
     return '<div class="checkout-coupon-form"><label>Cupom<input name="coupon" autocomplete="off" maxlength="32" placeholder="CÓDIGO" autocapitalize="characters"></label>' +
@@ -172,9 +183,14 @@ export function mountCheckoutPage(root, _params, onClose) {
     if (formData.payment === "whatsapp") {
       return '<div class="app-page-empty"><h2>Pedido preparado para o WhatsApp.</h2>' +
         (orderId ? '<p>Pedido <strong>#' + orderId.slice(0, 8).toUpperCase() + '</strong> salvo na sua conta.</p>' : "") +
-        (orderSummary && orderSummary.couponCode && orderSummary.discountCents > 0
-          ? "<p>Cupom <b>" + window.SG.esc(orderSummary.couponCode) + "</b> aplicado: −" + window.SG.formatPrice(orderSummary.discountCents) + ".</p>"
-          : (coupon && orderId ? "<p>O cupom não pôde ser aplicado no pedido. a equipe confere no atendimento.</p>" : "")) +
+        (orderSummary && orderSummary.promoDiscountCents > 0
+          ? "<p><b>Promoção 2 lupas por R$ 290 confirmada.</b> Economia: −" + window.SG.formatPrice(orderSummary.promoDiscountCents) + ".</p>" : "") +
+        (orderSummary && orderSummary.couponCode && orderSummary.discountCents > (orderSummary.promoDiscountCents||0)
+          ? "<p>Cupom <b>" + window.SG.esc(orderSummary.couponCode) + "</b> aplicado: −" +
+              window.SG.formatPrice(orderSummary.discountCents-(orderSummary.promoDiscountCents||0)) + ".</p>"
+          : (coupon && orderId && (!orderSummary || !orderSummary.couponCode)
+              ? "<p>O cupom não pôde ser confirmado; a equipe confere no atendimento.</p>" : "")) +
+        (orderSummary ? "<p>Total dos produtos: <strong>" + window.SG.formatPrice(orderSummary.totalCents) + "</strong></p>" : "") +
         '<p>A equipe Street Goose confirma disponibilidade e fecha o pagamento por lá.</p>' +
         (handoffUrl ? '<p><a class="btn btn-primary" target="_blank" rel="noopener noreferrer" href="' + window.SG.esc(handoffUrl) + '">Abrir conversa no WhatsApp</a></p>' : "") +
         '<a class="text-link" href="/">' + t("cart.continueShopping") + "</a></div>";
@@ -222,23 +238,9 @@ export function mountCheckoutPage(root, _params, onClose) {
   }
 
   function buildWhatsAppMessage() {
-    var lines = ["Olá! Quero fechar esse pedido Street Goose 034:", ""];
-    if (orderId) { lines[0] = "Olá! Quero fechar o pedido #" + orderId.slice(0, 8).toUpperCase() + " Street Goose 034:"; }
-    rows.forEach(function (r) { lines.push(" " + r.product.name + " (" + r.qty + "x). " + r.product.priceLabel); });
-    if (orderSummary && orderSummary.couponCode && orderSummary.discountCents > 0) {
-      lines.push("Cupom: " + orderSummary.couponCode + " (−" + window.SG.formatPrice(orderSummary.discountCents) + ")");
-      lines.push("Total: " + window.SG.formatPrice(orderSummary.totalCents) + (hasUnpriced() ? " + itens a consultar" : ""));
-    } else {
-      if (coupon) lines.push("Cupom informado: " + coupon.code + " (conferir no atendimento)");
-      lines.push("Total: " + window.SG.subtotalLabel(rows));
-    }
-    lines.push("");
-    lines.push("Nome: " + formData.name);
-    lines.push("Telefone: " + formData.phone);
-    lines.push("E-mail: " + formData.email);
-    lines.push("Endereço: " + formData.street + ", " + formData.number + (formData.complement ? " - " + formData.complement : "") +
-      ". " + formData.neighborhood + ", " + formData.city + "/" + formData.state.toUpperCase() + ". CEP " + formData.cep);
-    return lines.join("\n");
+    return buildOrderWhatsAppMessage(rows, formData, {
+      orderId:orderId,orderSummary:orderSummary,couponCode:coupon && coupon.code
+    });
   }
 
   function collectFields() {
@@ -283,7 +285,10 @@ export function mountCheckoutPage(root, _params, onClose) {
     }
 
     var stepName = STEPS[stepIndex];
-    if (stepName === "review") hasSession = !!(window.SG.auth && await window.SG.auth.getSession());
+    if (stepName === "review") {
+      hasSession = !!(window.SG.auth && await window.SG.auth.getSession());
+      if (window.SG.promo && !window.SG.promo.ready) await window.SG.promo.refresh();
+    }
     var content = "";
     if (stepName === "identification" || stepName === "address") content = fieldsHtml();
     else if (stepName === "payment") content = await paymentStepHtml();

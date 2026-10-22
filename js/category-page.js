@@ -41,6 +41,8 @@ export function mountCategoryPage(root, slug, onRequestClose, prerendered) {
 
   function itemBodyHtml(item) {
     return (
+      ((window.SG.promo && window.SG.promo.isEligible(item.id))
+        ? '<span class="sg-promo-product-badge">2 LUPAS · R$ 290</span>' : '') +
       '<p class="cat-item-name">' + window.SG.esc(item.name) + "</p>" +
       '<p class="cat-item-price">' + item.priceLabel + "</p>" +
       (item.soldOut ? "" : item.consultWhatsApp
@@ -176,6 +178,7 @@ export function mountCategoryPage(root, slug, onRequestClose, prerendered) {
     });
   }
   window.addEventListener("sg:prices", onPrices);
+  document.addEventListener("sg:promo-change", onPrices);
 
   // produto novo/removido/reordenado no painel e o banco respondeu depois de
   // montar (cache antigo): refaz só a grade; hero e vídeo seguem intactos
@@ -196,6 +199,7 @@ export function mountCategoryPage(root, slug, onRequestClose, prerendered) {
     cueBtn.removeEventListener("click", onCue);
     document.removeEventListener("keydown", onKeydown);
     window.removeEventListener("sg:prices", onPrices);
+    document.removeEventListener("sg:promo-change", onPrices);
     window.removeEventListener("sg:catalog", onCatalog);
   }
 

@@ -35,6 +35,11 @@ export function mountCartPage(root, _params, onClose) {
         }).join("") + "</div>" +
         '<div class="cart-page-summary">' +
           '<p class="cart-page-summary-row"><span>' + t("cart.subtotal") + '</span><b data-cart-subtotal>' + window.SG.subtotalLabel(rows) + "</b></p>" +
+          (window.SG.promo && window.SG.promo.quote(rows).discount > 0
+            ? '<div class="sg-promo-summary" data-cart-promo><b>PROMOÇÃO · 2 LUPAS POR R$ 290</b><p>−' +
+              window.SG.formatPrice(window.SG.promo.quote(rows).discount) + ' de desconto</p>' +
+              '<p><strong>Total: ' + window.SG.formatPrice(window.SG.promo.quote(rows).total) + '</strong></p></div>'
+            : '') +
           '<button class="btn btn-primary" data-go-checkout>' + t("cart.checkout") + "</button>" +
           '<a class="text-link" href="/">' + t("cart.continueShopping") + "</a>" +
         "</div>" +
@@ -45,8 +50,8 @@ export function mountCartPage(root, _params, onClose) {
     var row = e.target.closest("[data-cart-item]");
     if (row) {
       var id = row.getAttribute("data-cart-item");
-      if (e.target.closest("[data-qty-plus]")) window.SG.cart.updateQty(id, 1);
-      else if (e.target.closest("[data-qty-minus]")) window.SG.cart.updateQty(id, -1);
+      if (e.target.closest("[data-qty-plus]")) window.SG.cart.updateQty(id, (window.SG.cart.getItems().find(function(r){return r.product.id===id;}) || {qty:0}).qty+1);
+      else if (e.target.closest("[data-qty-minus]")) window.SG.cart.updateQty(id, (window.SG.cart.getItems().find(function(r){return r.product.id===id;}) || {qty:0}).qty-1);
       else if (e.target.closest("[data-remove]")) window.SG.cart.removeItem(id);
       return;
     }
@@ -57,11 +62,15 @@ export function mountCartPage(root, _params, onClose) {
   function onKeydown(e) { if (e.key === "Escape") onClose(); }
   document.addEventListener("keydown", onKeydown);
   document.addEventListener("sg:cart-change", render);
+  document.addEventListener("sg:promo-change", render);
+  window.addEventListener("sg:prices", render);
 
   render();
 
   return function destroy() {
     document.removeEventListener("keydown", onKeydown);
     document.removeEventListener("sg:cart-change", render);
+    document.removeEventListener("sg:promo-change", render);
+    window.removeEventListener("sg:prices", render);
   };
 }

@@ -6,6 +6,15 @@
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 export const PriceService = {
+  /** Only owner-approved lupa product IDs qualify for the two-for-290 offer. */
+  async fetchLupaPromoIds(): Promise<string[] | null> {
+    if (!supabase) return null;
+    const { data, error } = await supabase.from("product_prices")
+      .select("product_id").eq("promo_lupa_eligible", true).range(0, 4999);
+    if (error || !data) return null;
+    return data.map(row => row.product_id).filter(id => /^lupa-[a-z0-9-]+$/i.test(id));
+  },
+
   isConfigured(): boolean {
     return isSupabaseConfigured;
   },

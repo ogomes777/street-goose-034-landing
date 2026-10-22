@@ -1,0 +1,51 @@
+name: Street Goose - Lupas Promo & WhatsApp
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "js/checkout*.js"
+      - "js/lupa-*.js"
+      - "js/lupa-*.css"
+      - "js/cart*.js"
+      - "js/admin-page.js"
+      - "src/services/AdminService.ts"
+      - "src/services/OrderService.ts"
+      - "src/services/PriceService.ts"
+      - "src/lib/lupa-promo-rules.test.ts"
+      - ".github/workflows/lupa-promo-whatsapp.yml"
+  push:
+    branches: [main]
+    paths:
+      - "js/checkout*.js"
+      - "js/lupa-*.js"
+      - "js/lupa-*.css"
+      - "js/cart*.js"
+      - "js/admin-page.js"
+      - "src/services/AdminService.ts"
+      - "src/services/OrderService.ts"
+      - "src/services/PriceService.ts"
+      - "src/lib/lupa-promo-rules.test.ts"
+      - ".github/workflows/lupa-promo-whatsapp.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: sg-lupas-promo-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  commerce:
+    name: Build, promo arithmetic & checkout messaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-fund
+      - run: npm run build
+      - run: npx vitest run src/lib/lupa-promo-rules.test.ts
