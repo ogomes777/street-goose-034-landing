@@ -1,0 +1,46 @@
+name: Street Goose - Galaxia Cinematografica
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "js/ranking-scene.js"
+      - "js/ranking-page.js"
+      - "js/ranking-cinematic.css"
+      - "tests/launch/ranking-cinematic.spec.ts"
+      - ".github/workflows/ranking-cinematic.yml"
+  push:
+    branches: [main]
+    paths:
+      - "js/ranking-scene.js"
+      - "js/ranking-page.js"
+      - "js/ranking-cinematic.css"
+      - "tests/launch/ranking-cinematic.spec.ts"
+      - ".github/workflows/ranking-cinematic.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: street-galaxy-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ranking:
+    name: Galaxia 3D, iPhone, Android e desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install
+        run: npm ci --no-fund
+      - name: Build + TypeScript + CSP
+        run: npm run build
+      - name: Install browser engines
+        run: npx playwright install --with-deps chromium webkit
+      - name: Validate ranking and fallback on 3 browsers
+        run: npx playwright test tests/launch/ranking-cinematic.spec.ts --config=playwright.optical.config.ts --workers=1
