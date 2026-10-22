@@ -32,3 +32,6 @@ $$;
 -- All preexisting policies referencing is_admin() and all assert_admin()
 -- callers consequently fail closed at AAL1 without mass-policy rewrites.
 -- Do not store static admin passwords in frontend or database.
+
+-- Ensure PostgREST immediately exposes the pre-MFA identity RPC.
+NOTIFY pgrst, 'reload schema';
