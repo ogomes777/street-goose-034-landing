@@ -1,0 +1,22 @@
+/* Street Goose / oferta de lupas — consistent order pricing visuals. */
+.sg-promo-summary{
+  border:1px solid rgba(214,163,91,.42);
+  border-radius:16px;
+  background:linear-gradient(135deg,rgba(197,125,39,.11),rgba(100,69,26,.055));
+  padding:16px;
+  margin:14px 0;
+  color:inherit;
+}
+.sg-promo-summary>b,.sg-promo-summary p>b{
+  font:800 11px/1.5 Manrope,Inter,sans-serif;
+  letter-spacing:.055em;
+}
+.sg-promo-summary p{margin:7px 0;color:inherit;line-height:1.5;font-size:13px}
+.sg-promo-summary strong{font-size:16px;letter-spacing:-.02em}
+.sg-promo-summary small{display:block;opacity:.77;font-size:11px;line-height:1.5}
+.admin-promo-toggle{display:flex;align-items:center;gap:7px;font-size:12px;line-height:1.3}
+.admin-promo-toggle input{width:17px;height:17px;accent-color:#df9849}
+@media(max-width:640px){
+  .sg-promo-summary{padding:13px;border-radius:13px;margin:12px 0}
+  .admin-promo-toggle{font-size:11px}
+}
