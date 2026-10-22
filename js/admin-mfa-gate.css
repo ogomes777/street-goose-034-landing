@@ -1,0 +1,50 @@
+/* Street Goose 034 — private management access; visual identity stays within the site. */
+.sg-admin-lock {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: min(100% - 28px, 470px);
+  margin: clamp(22px, 8vh, 88px) auto;
+  padding: clamp(28px, 6vw, 46px);
+  border: 1px solid rgba(205, 146, 90, .36);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(40, 30, 23, .96), rgba(8, 8, 9, .98) 64%);
+  color: #faf4ed;
+  box-shadow: 0 30px 110px rgba(0,0,0,.32), inset 0 1px rgba(255,255,255,.06);
+  text-align: center;
+}
+.sg-admin-lock::before {
+  position: absolute; z-index:-1; content:""; pointer-events:none;
+  width: 350px; height: 350px; top: -210px; left: 50%; transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(194, 111, 54,.27), transparent 65%);
+}
+.sg-admin-lock__orbit {
+  width: 90px; height: 90px; margin: 0 auto 26px;
+  display:flex; align-items:center; justify-content:center; gap:1px;
+  border:1px solid rgba(225,157,96,.45); border-radius: 50%;
+  color:#e2a36d; box-shadow: 0 0 0 9px rgba(225,157,96,.035), 0 0 40px rgba(205,112,55,.10);
+  font: 700 23px/1 "Manrope", sans-serif; letter-spacing:-.11em;
+}
+.sg-admin-lock__orbit span:nth-child(2){transform:translateY(-6px)}
+.sg-admin-lock__eyebrow,.sg-admin-lock__footer{
+  font: 650 10px/1.5 "Manrope",sans-serif;letter-spacing:.18em;text-transform:uppercase
+}
+.sg-admin-lock__eyebrow{color:#d99a65;margin:0 0 13px}
+.sg-admin-lock h2{font-size:clamp(28px,5vw,39px);line-height:1.1;letter-spacing:-.05em;margin:0 0 15px;color:#fff;font-weight:650}
+.sg-admin-lock__desc{font-size:13px;line-height:1.8;color:#c3b9b2;margin:0 auto 24px;max-width:34ch}
+.sg-admin-lock__instruction{font-size:12px;line-height:1.7;color:#cec3bb;max-width:33ch;margin:0 auto 20px}
+.sg-admin-lock__qr{padding:15px;background:#fff;border-radius:15px;width:min(100%,205px);margin:0 auto 20px}
+.sg-admin-lock__qr img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain}
+.sg-admin-lock form{display:flex;flex-direction:column;gap:12px;text-align:left}
+.sg-admin-lock label{font:600 11px/1.4 "Manrope",sans-serif;letter-spacing:.05em;color:#d5c9bd}
+.sg-admin-lock input{width:100%;height:58px;border-radius:10px;border:1px solid rgba(222,170,125,.38);color:#fff;background:#121110;outline:0;padding:0 14px;text-align:center;letter-spacing:.35em;font-size:23px;font-variant-numeric:tabular-nums}
+.sg-admin-lock input:focus{border-color:#e2a36d;box-shadow:0 0 0 3px rgba(226,163,109,.17)}
+.sg-admin-lock__button{width:100%;min-height:48px;margin:0;border:1px solid #c98657;border-radius:9px;background:#d9905d;color:#160f0b;font:750 12px/1.5 "Manrope",sans-serif;letter-spacing:.03em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:background .2s ease,transform .2s ease}
+.sg-admin-lock__button:hover{background:#f0af7e;transform:translateY(-1px)}
+.sg-admin-lock__button:disabled{opacity:.6;cursor:wait;transform:none}
+.sg-admin-lock__status{min-height:34px;display:flex;align-items:center;justify-content:center;font:500 12px/1.5 "Manrope",sans-serif;color:#b8d5c4;margin:8px 0 15px}
+.sg-admin-lock__status.is-error{color:#ffb5a5}
+.sg-admin-lock__footer{display:flex;justify-content:space-between;gap:8px;padding-top:18px;border-top:1px solid rgba(255,255,255,.11);color:#ac8870;letter-spacing:.1em;font-size:9px}
+.sg-admin-lock [hidden]{display:none!important}
+@media (max-width:440px){.sg-admin-lock{width:calc(100% - 18px);padding:26px 20px;border-radius:17px}.sg-admin-lock__orbit{width:72px;height:72px;margin-bottom:22px}}
+@media (prefers-reduced-motion:reduce){.sg-admin-lock__button{transition:none}}
