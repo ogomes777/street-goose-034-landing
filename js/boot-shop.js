@@ -4,6 +4,7 @@
 import './analytics.js';
 import './price-sync.js';
 import './lupa-promotion.js';
+import './lupa-promotion.css';
 import './cart.js';
 import './wishlist.js';
 import './category-portals.js';
