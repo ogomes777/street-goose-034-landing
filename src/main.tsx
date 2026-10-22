@@ -195,7 +195,9 @@ async function bootstrap() {
         (entries) => {
           if (!entries.some((entry) => entry.isIntersecting)) return;
           obs.disconnect();
-          if (lowTier()) return;
+          // Low-tier phones still get the optical finale, with an 8-ring / 45-particle scene.
+          // Other GPU-heavy chapters remain gated to preserve battery.
+          if (lowTier() && selector !== "[data-final-act]") return;
           void ensureDirector().then(loader);
         },
         { rootMargin: "500px 0px" },
