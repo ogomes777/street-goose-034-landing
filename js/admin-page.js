@@ -50,6 +50,7 @@ export function mountAdminPage(root, _params, onClose) {
   var destroyed = false;
   var photoQueue = Promise.resolve();
   var unsubscribeAuth = null;
+  var disposeMfa = null;
   var currentUserId; // undefined = ainda não checado
   var searchTimer = null;
   var seq = {};
@@ -152,6 +153,7 @@ export function mountAdminPage(root, _params, onClose) {
 
   // ---------- gate ----------
   async function gate() {
+    if (disposeMfa) { disposeMfa(); disposeMfa = null; }
     if (disposeAssistant) { disposeAssistant(); disposeAssistant = null; }
     await loadDeps();
     if (destroyed) return;
@@ -183,6 +185,16 @@ export function mountAdminPage(root, _params, onClose) {
         '<a class="btn btn-ghost" href="/">Voltar para a loja</a>');
       return;
     }
+    // This screen is not the authorization boundary. Admin RPCs and policies
+    // require an AAL2 session as well (see matching database migration).
+    var mfaModule = await import("./admin-mfa-gate.js");
+    var mfaGate = await mfaModule.mountAdminMfaGate(bodyEl, function () {
+      if (destroyed) return;
+      if (disposeMfa) { disposeMfa(); disposeMfa = null; }
+      renderShell();
+    });
+    if (destroyed) { mfaGate.dispose(); return; }
+    if (!mfaGate.authorized) { disposeMfa = mfaGate.dispose; return; }
     renderShell();
   }
 
@@ -2087,6 +2099,7 @@ export function mountAdminPage(root, _params, onClose) {
     Object.values(state.photoDraft).forEach(function (photos) { photos.forEach(releasePhoto); });
     clearTimeout(searchTimer);
     if (unsubscribeAuth) unsubscribeAuth();
+    if (disposeMfa) { disposeMfa(); disposeMfa = null; }
     document.removeEventListener("keydown", onKeydown, true);
     root.removeEventListener("click", onClick);
     root.removeEventListener("submit", onSubmit);
