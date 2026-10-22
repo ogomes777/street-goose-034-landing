@@ -8,10 +8,8 @@ export async function mountAdminMfaGate(container, onUnlock) {
 
   const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (assurance.error) throw assurance.error;
-  if (assurance.data?.currentLevel === "aal2") {
-    return { authorized: true, dispose() {} };
-  }
-
+  // Ask for the temporary code on every fresh panel opening, even if the
+  // signed-in user still has an AAL2 Supabase session.
   let disposed = false;
   let factorId = "";
   let busy = false;
