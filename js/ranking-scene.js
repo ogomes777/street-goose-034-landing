@@ -19,12 +19,12 @@ attribute vec3 aColor;
 varying vec3 vColor;
 void main() {
   // Differential rotation: inner orbits turn faster, so the arms slowly wind.
-  float a = aAngle + uTime * 0.16 / (0.45 + aRadius);
+  float a = aAngle + uTime * 0.024 / (0.55 + aRadius);
   vec3 p = vec3(cos(a) * aRadius, aHeight, sin(a) * aRadius);
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mv;
-  float twinkle = 0.82 + 0.18 * sin(uTime * (0.6 + aSeed * 2.4) + aSeed * 61.0);
-  gl_PointSize = min(48.0, aSize * uScale * twinkle / -mv.z);
+  float twinkle = 0.94 + 0.06 * sin(uTime * (0.38 + aSeed * 0.8) + aSeed * 61.0);
+  gl_PointSize = min(9.0, aSize * uScale * twinkle / -mv.z);
   vColor = aColor;
 }`;
 
@@ -35,7 +35,7 @@ void main() {
   float d = dot(c, c) * 4.0;
   float a = exp(-d * 5.0) + 0.35 * exp(-d * 40.0);
   if (a < 0.004) discard;
-  gl_FragColor = vec4(vColor * a, a);
+  gl_FragColor = vec4(vColor * a * 0.72, a * 0.67);
 }`;
 
 const STAR_VERT = `
@@ -48,8 +48,8 @@ varying vec3 vColor;
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mv;
-  float tw = 0.55 + 0.45 * pow(0.5 + 0.5 * sin(uTime * (0.8 + aSeed * 3.1) + aSeed * 97.0), 3.0);
-  gl_PointSize = min(14.0, aSize * uScale * tw / -mv.z);
+  float tw = 0.8 + 0.2 * pow(0.5 + 0.5 * sin(uTime * (0.28 + aSeed) + aSeed * 97.0), 3.0);
+  gl_PointSize = min(4.0, aSize * uScale * tw / -mv.z);
   vColor = aColor * (0.6 + 0.4 * tw);
 }`;
 
@@ -61,39 +61,20 @@ const NEBULA_FRAG = `
 uniform float uTime;
 uniform float uOctaves;
 varying vec2 vUv;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
-  vec2 i = floor(p), f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float noise(vec2 p){
+  vec2 i=floor(p), f=fract(p), w=f*f*(3.0-2.0*f);
+  return mix(mix(hash(i),hash(i+vec2(1.,0.)),w.x),
+    mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),w.x),w.y);
 }
-float fbm(vec2 p) {
-  float v = 0.0, a = 0.5;
-  for (int i = 0; i < 6; i++) {
-    if (float(i) >= uOctaves) break;
-    v += a * noise(p);
-    p = p * 2.02 + vec2(1.7, 9.2);
-    a *= 0.5;
-  }
-  return v;
-}
-void main() {
-  vec2 uv = vUv * vec2(3.4, 2.0);
-  float t = uTime * 0.012;
-  vec2 q = vec2(fbm(uv + vec2(0.0, t)), fbm(uv + vec2(5.2, 1.3) - t));
-  vec2 r = vec2(fbm(uv + 2.4 * q + vec2(1.7, 9.2) + t), fbm(uv + 2.4 * q + vec2(8.3, 2.8)));
-  float n = fbm(uv + 2.6 * r);
-  vec3 col = vec3(0.012, 0.010, 0.032);
-  col = mix(col, vec3(0.19, 0.07, 0.34), smoothstep(0.32, 0.78, n));
-  col = mix(col, vec3(0.62, 0.18, 0.52), smoothstep(0.58, 0.92, n) * r.x);
-  col += vec3(0.08, 0.20, 0.55) * smoothstep(0.45, 0.85, q.y) * 0.55 * n;
-  col += vec3(1.0, 0.72, 0.45) * pow(smoothstep(0.7, 1.0, n), 3.0) * 0.35;
-  float dust = smoothstep(0.52, 0.72, fbm(uv * 1.6 - r * 1.3 + 3.0));
-  col *= 1.0 - 0.62 * dust;
-  // Brighter band behind the galaxy, deep space toward the corners.
-  vec2 c = vUv - vec2(0.5, 0.62);
-  col *= 0.35 + 0.95 * exp(-dot(c * vec2(1.1, 2.2), c * vec2(1.1, 2.2)) * 2.4);
-  gl_FragColor = vec4(col, 1.0);
+void main(){
+  vec2 p=(vUv-vec2(.52,.55))*vec2(1.15,1.55);
+  float haze=exp(-dot(p,p)*6.0);
+  float dust=noise(vUv*vec2(3.6,2.4)+vec2(uTime*.002,0.0));
+  vec3 space=vec3(.004,.006,.014);
+  space+=vec3(.015,.018,.047)*haze;
+  space+=vec3(.013,.009,.022)*haze*dust;
+  gl_FragColor=vec4(space,1.0);
 }`;
 
 // Shows the nebula texture as is (no encoding, no tone mapping), exactly as
@@ -136,14 +117,14 @@ void main() {
   vec2 p = vUv * 2.0 - 1.0;
   float r = length(p);
   if (r > 1.0) discard;
-  float glow = exp(-r * r * 3.2) * 0.55;
+  float glow = exp(-r * r * 3.2) * 0.17;
   float rings = 0.0;
-  for (int i = 1; i <= 4; i++) {
-    float rr = float(i) * 0.22;
-    rings += exp(-pow((r - rr) * 90.0, 2.0)) * (0.35 + 0.1 * sin(uTime * 0.8 + float(i)));
+  for (int i = 1; i <= 2; i++) {
+    float rr = float(i) * 0.43;
+    rings += exp(-pow((r - rr) * 90.0, 2.0)) * 0.11;
   }
-  float edge = exp(-pow((r - 0.985) * 70.0, 2.0)) * 1.2;
-  float sweep = pow(max(0.0, cos(atan(p.y, p.x) - uTime * 0.35)), 24.0) * smoothstep(1.0, 0.2, r) * 0.25;
+  float edge = exp(-pow((r - 0.985) * 70.0, 2.0)) * 0.18;
+  float sweep = 0.0;
   float a = (glow + rings + edge + sweep) * smoothstep(1.0, 0.92, r);
   gl_FragColor = vec4(uColor * a, a);
 }`;
@@ -185,9 +166,9 @@ export async function mountRankingScene(host) {
     // Calm tier: same scene, a fraction of the stars, low resolution, 30 fps.
     const calm = window.SG?.perfTier === 'low';
     let renderer;
-    try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' }); }
+    try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !small, powerPreference: small ? 'low-power' : 'high-performance' }); }
     catch (_) { return; }
-    const pixelRatio = calm ? 1 : Math.min(devicePixelRatio || 1, small ? 1.25 : 1.6);
+    const pixelRatio = calm ? 1 : Math.min(devicePixelRatio || 1, small ? 1.15 : 1.5);
     renderer.setPixelRatio(pixelRatio);
     // Same governor as the crystals: if this device can't hold the frame
     // rate, the resolution steps down (never below 60 %) instead of the
@@ -201,7 +182,7 @@ export async function mountRankingScene(host) {
     renderer.debug.checkShaderErrors = !!import.meta.env.DEV;
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1;
+    renderer.toneMappingExposure = 0.88;
     const rand = mulberry(34);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, 1, .1, 120);
@@ -213,8 +194,8 @@ export async function mountRankingScene(host) {
     // Lights for the polished pedestals.
     scene.add(new THREE.HemisphereLight(0xb9a4ff, 0x0b0814, .9));
     const key = new THREE.DirectionalLight(0xffe2bd, 2.2); key.position.set(-3, 6, 5); scene.add(key);
-    const rim = new THREE.PointLight(0xa070ff, 6, 18); rim.position.set(4, 4, -3); scene.add(rim);
-    const blue = new THREE.PointLight(0x5aa8ff, 3.5, 16); blue.position.set(-5, 2, 1); scene.add(blue);
+    const rim = new THREE.PointLight(0xa070ff, 2.4, 18); rim.position.set(4, 4, -3); scene.add(rim);
+    const blue = new THREE.PointLight(0x5aa8ff, 1.4, 16); blue.position.set(-5, 2, 1); scene.add(blue);
 
     const glowCanvas = document.createElement('canvas'); glowCanvas.width = glowCanvas.height = 128;
     const gctx = glowCanvas.getContext('2d'); const grad = gctx.createRadialGradient(64, 64, 0, 64, 64, 64);
@@ -231,7 +212,7 @@ export async function mountRankingScene(host) {
     // about 1 % per second: it is painted at half resolution into its own
     // texture, refreshed four times a second, and shown stretched (soft
     // clouds look the same), instead of being recomputed on every frame.
-    const nebulaUniforms = { uTime: { value: 0 }, uOctaves: { value: calm ? 3 : small ? 4 : 6 } };
+    const nebulaUniforms = { uTime: { value: 0 }, uOctaves: { value: 1 } };
     const nebulaTarget = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false, stencilBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false });
     const nebulaScene = new THREE.Scene(), nebulaCam = new THREE.OrthographicCamera(-.5, .5, .5, -.5, 0, 1);
     const nebulaPaint = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ vertexShader: NEBULA_VERT, fragmentShader: NEBULA_FRAG, uniforms: nebulaUniforms, depthWrite: false, depthTest: false, toneMapped: false }));
@@ -240,19 +221,19 @@ export async function mountRankingScene(host) {
     nebula.position.z = -90; nebula.renderOrder = -10; camera.add(nebula);
     let nebulaAt = -1;
     function paintNebula(time, force) {
-      if (!force && nebulaAt >= 0 && Math.abs(time - nebulaAt) < .25) return;
+      if (!force && nebulaAt >= 0 && Math.abs(time - nebulaAt) < 1.2) return;
       nebulaAt = time; nebulaUniforms.uTime.value = time;
       renderer.setRenderTarget(nebulaTarget); renderer.render(nebulaScene, nebulaCam); renderer.setRenderTarget(null);
     }
 
     // 2 · Background stars with individual twinkle.
-    const STARS = calm ? 700 : small ? 1600 : 3600;
+    const STARS = calm ? 95 : small ? 230 : 520;
     const starPos = new Float32Array(STARS * 3), starSize = new Float32Array(STARS), starSeed = new Float32Array(STARS), starColor = new Float32Array(STARS * 3);
     const starPalette = [[.75, .82, 1], [1, 1, 1], [1, .9, .75], [.85, .78, 1]];
     for (let i = 0; i < STARS; i++) {
       const theta = (rand() - .5) * 2.4, phi = (rand() - .35) * 1.3, r = 35 + rand() * 25;
       starPos.set([Math.sin(theta) * Math.cos(phi) * r, Math.sin(phi) * r + 4, -Math.cos(theta) * Math.cos(phi) * r], i * 3);
-      starSize[i] = (rand() < .04 ? 0.5 : 0.18 + rand() * 0.2); starSeed[i] = rand();
+      starSize[i] = (rand() < .03 ? 0.30 : 0.11 + rand() * 0.10); starSeed[i] = rand();
       starColor.set(starPalette[i % 4], i * 3);
     }
     const starGeo = new THREE.BufferGeometry();
@@ -263,30 +244,47 @@ export async function mountRankingScene(host) {
     stars.renderOrder = -5; scene.add(stars);
 
     // 3 · Spiral galaxy: two logarithmic arms, bulge, star-forming knots, dust.
-    const GALAXY = calm ? 7000 : small ? 16000 : 46000, R = 7.4;
+    const GALAXY = calm ? 2800 : small ? 6300 : 14500, R = 7.2;
     const aRadius = new Float32Array(GALAXY), aAngle = new Float32Array(GALAXY), aHeight = new Float32Array(GALAXY), aSize = new Float32Array(GALAXY), aSeed = new Float32Array(GALAXY), aColor = new Float32Array(GALAXY * 3);
-    const core = new THREE.Color('#fff0d4'), warm = new THREE.Color('#ffb877'), pink = new THREE.Color('#ff6fbf'), violet = new THREE.Color('#9c6bff'), cyan = new THREE.Color('#62b6ff'), tmp = new THREE.Color();
+    const core = new THREE.Color('#f4e1bd');
+    const warm = new THREE.Color('#d7aa83');
+    const violet = new THREE.Color('#876da5');
+    const cyan = new THREE.Color('#7db9d3');
+    const tmp = new THREE.Color();
+    // Recognisable two-arm spiral, compact nucleus and restrained dust lanes.
+    // All stellar positions are created once and animated in the GPU shader.
     for (let i = 0; i < GALAXY; i++) {
       const kind = rand();
       let r, angle, h, size, color;
-      if (kind < .16) { // bulge
-        r = Math.abs(gauss(rand)) * .75; angle = rand() * Math.PI * 2; h = gauss(rand) * .32 * Math.exp(-r);
-        size = .045 + rand() * .05; color = tmp.copy(core).lerp(warm, Math.min(1, r / .9));
-      } else {
-        r = .35 + Math.pow(rand(), 1.35) * R;
+      if (kind < .095) {
+        r = Math.abs(gauss(rand)) * .46;
+        angle = rand() * Math.PI * 2;
+        h = gauss(rand) * .16 * Math.exp(-r);
+        size = .016 + rand() * .022;
+        color = tmp.copy(core).lerp(warm, Math.min(1, r));
+      } else if (kind < .94) {
+        r = .34 + Math.pow(rand(), 1.14) * R;
         const arm = (i % 2) * Math.PI;
-        const spread = gauss(rand) * (.22 + .1 * r / R) * (kind < .82 ? 1 : 3.2);
-        angle = arm + 2.35 * Math.log(r + .35) + spread;
-        h = gauss(rand) * .1 * (1 - .5 * r / R);
-        size = .028 + rand() * .035;
+        const width = .095 + .10 * (r / R);
+        const spread = gauss(rand) * width * (kind > .87 ? 2 : 1);
+        angle = arm + 1.6 * Math.log(r + .55) + spread;
+        h = gauss(rand) * .065 * (1 - .25 * r / R);
+        size = .019 + rand() * .021;
         const t = r / R;
-        color = t < .22 ? tmp.copy(warm).lerp(pink, t / .22) : t < .55 ? tmp.copy(pink).lerp(violet, (t - .22) / .33) : tmp.copy(violet).lerp(cyan, (t - .55) / .45);
-        if (kind > .965) { size *= 2.6; color = tmp.copy(pink).lerp(new THREE.Color('#ffd3ee'), .4); } // star-forming knots
-        else if (kind > .9) { color = tmp.clone().multiplyScalar(.35); } // dusty, dimmer
+        color = t < .3 ? tmp.copy(warm).lerp(violet, t / .3) :
+          tmp.copy(violet).lerp(cyan, Math.min(1, (t - .3) / .7));
+        if (kind > .885 && kind < .915) color.multiplyScalar(.30);
+      } else {
+        r = 1.4 + Math.pow(rand(), .72) * R;
+        angle = rand() * Math.PI * 2;
+        h = gauss(rand) * .23;
+        size = .012 + rand() * .011;
+        color = tmp.copy(violet).lerp(cyan, rand()).multiplyScalar(.31);
       }
-      aRadius[i] = r; aAngle[i] = angle; aHeight[i] = h; aSize[i] = size; aSeed[i] = rand();
-      const bright = .55 + rand() * .45;
-      aColor.set([color.r * bright, color.g * bright, color.b * bright], i * 3);
+      aRadius[i] = r; aAngle[i] = angle; aHeight[i] = h;
+      aSize[i] = size; aSeed[i] = rand();
+      const brightness = .62 + rand() * .38;
+      aColor.set([color.r * brightness, color.g * brightness, color.b * brightness], i * 3);
     }
     const galaxyGeo = new THREE.BufferGeometry();
     galaxyGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(GALAXY * 3), 3));
@@ -295,17 +293,12 @@ export async function mountRankingScene(host) {
     galaxyGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), R + 1);
     const galaxyUniforms = { uTime: { value: 0 }, uScale: { value: 1 } }; timeUniforms.push(galaxyUniforms.uTime); scaleUniforms.push(galaxyUniforms.uScale);
     const galaxy = new THREE.Points(galaxyGeo, new THREE.ShaderMaterial({ vertexShader: GALAXY_VERT, fragmentShader: POINT_FRAG, uniforms: galaxyUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
-    const galaxyRoot = new THREE.Group(); galaxyRoot.position.set(0, 4.3, -8.5); galaxyRoot.rotation.set(1.08, 0, -.32); scene.add(galaxyRoot);
+    const galaxyRoot = new THREE.Group(); galaxyRoot.position.set(0, 4.55, -8.5); galaxyRoot.rotation.set(1.12, 0, -.18); galaxyRoot.scale.setScalar(.91); scene.add(galaxyRoot);
     galaxyRoot.add(galaxy);
-    const coreGlow = [glow(0xffe1b3, .85, 2.6), glow(0xff9ccc, .35, 6.5), glow(0x8a63ff, .22, 15)];
+    const coreGlow = [glow(0xffddac, .21, 1.5), glow(0x8885bf, .06, 4.2)];
     coreGlow.forEach(s => { s.position.copy(galaxyRoot.position); s.renderOrder = -4; scene.add(s); });
 
-    // 4 · Ringed planet with a lit limb.
-    const planet = new THREE.Group(); planet.position.set(3.9, 4.35, -8); planet.rotation.z = -.35; scene.add(planet);
-    planet.add(new THREE.Mesh(new THREE.SphereGeometry(.62, 40, 24), new THREE.MeshStandardMaterial({ color: 0x15112b, emissive: 0x1f1542, emissiveIntensity: .35, metalness: .2, roughness: .6 })));
-    const planetRing = new THREE.Mesh(new THREE.RingGeometry(.84, 1.3, 96), new THREE.MeshBasicMaterial({ color: 0xc9b8ff, side: THREE.DoubleSide, transparent: true, opacity: .3, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
-    planetRing.rotation.x = 1.2; planet.add(planetRing);
-    const planetHalo = glow(0x8f74ff, .3, 2.8); planetHalo.position.z = -.4; planet.add(planetHalo);
+    // No planet: the spiral and real leaderboard are the visual focus.
 
     // 5 · Podium: polished columns, metal rims, light shafts, floor.
     const group = new THREE.Group(); scene.add(group);
@@ -322,23 +315,17 @@ export async function mountRankingScene(host) {
       const top = new THREE.Mesh(new THREE.CylinderGeometry(.8, .8, .06, 64), metal); top.position.y = h; column.add(top);
       const topGlow = new THREE.Mesh(new THREE.CircleGeometry(.72, 64), new THREE.MeshBasicMaterial({ color: metalColors[i], transparent: true, opacity: .32, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }));
       topGlow.rotation.x = -Math.PI / 2; topGlow.position.y = h + .035; column.add(topGlow);
-      const beamUniforms = { uColor: { value: new THREE.Color(metalColors[i]) }, uOpacity: { value: i === 0 ? .5 : .36 }, uTime: { value: 0 } }; timeUniforms.push(beamUniforms.uTime);
-      const beam = new THREE.Mesh(new THREE.CylinderGeometry(.82, .62, 3.2, 48, 1, true), new THREE.ShaderMaterial({ vertexShader: BEAM_VERT, fragmentShader: BEAM_FRAG, uniforms: beamUniforms, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false }));
+      const beamUniforms = { uColor: { value: new THREE.Color(metalColors[i]) }, uOpacity: { value: i === 0 ? .13 : .075 }, uTime: { value: 0 } }; timeUniforms.push(beamUniforms.uTime);
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(.82, .62, 3.2, 20, 1, true), new THREE.ShaderMaterial({ vertexShader: BEAM_VERT, fragmentShader: BEAM_FRAG, uniforms: beamUniforms, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false }));
       beam.position.y = h + 1.6; column.add(beam); beams.push(beam);
       const anchor = new THREE.Object3D(); anchor.position.y = h + 1.12; column.add(anchor); anchors.push(anchor);
-      const g = glow(new THREE.Color(levelGem(PODIUM_GEM_LEVELS[i]).color), .3, i === 0 ? 2.6 : 2.1); g.position.set(0, h + 1.12, -.35); column.add(g); gemGlows.push(g);
+      const g = glow(new THREE.Color(levelGem(PODIUM_GEM_LEVELS[i]).color), .13, i === 0 ? 1.8 : 1.35); g.position.set(0, h + 1.12, -.35); column.add(g); gemGlows.push(g);
     });
     const floorUniforms = { uColor: { value: new THREE.Color(0xa77bff) }, uTime: { value: 0 } }; timeUniforms.push(floorUniforms.uTime);
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 9.6), new THREE.ShaderMaterial({ vertexShader: NEBULA_VERT, fragmentShader: FLOOR_FRAG, uniforms: floorUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
     floor.rotation.x = -Math.PI / 2; floor.position.y = .005; group.add(floor);
     const base = new THREE.Mesh(new THREE.CylinderGeometry(4.75, 4.85, .08, 96), new THREE.MeshPhysicalMaterial({ color: 0x0e0b18, metalness: .7, roughness: .3, clearcoat: 1 }));
     base.position.y = -.045; group.add(base);
-
-    // 6 · A rare shooting star.
-    const streakUniforms = { uLife: { value: 0 } };
-    const streak = new THREE.Mesh(new THREE.PlaneGeometry(3.2, .035), new THREE.ShaderMaterial({ vertexShader: NEBULA_VERT, fragmentShader: STREAK_FRAG, uniforms: streakUniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
-    streak.visible = false; scene.add(streak);
-    let nextStreak = 6 + rand() * 6, streakStart = -1;
 
     // HTML slots for the podium crystals.
     const gemSlots = [0, 1, 2].map(i => host.querySelector('[data-podium="' + i + '"]'));
@@ -387,22 +374,10 @@ export async function mountRankingScene(host) {
       pointer.x += (pointer.tx - pointer.x) * Math.min(1, dt * 2.5); pointer.y += (pointer.ty - pointer.y) * Math.min(1, dt * 2.5);
       camera.position.set(camBase.x + Math.sin(time * .11) * .45 + pointer.x * .5, camBase.y + Math.sin(time * .17) * .16 - pointer.y * .25, camBase.z * camZoom);
       camera.lookAt(lookAt);
-      planet.rotation.y = time * .12; planet.position.y = 4.35 + Math.sin(time * .35) * .1;
-      stars.rotation.y = time * .006;
-      group.rotation.y = Math.sin(time * .18) * .05;
-      coreGlow[0].material.opacity = (.78 + Math.sin(time * .6) * .07) * reveal;
-      if (!paused) {
-        if (streakStart < 0 && time > nextStreak) {
-          streakStart = time; streak.visible = true;
-          streak.position.set(-3 + rand() * 6, 6.2 + rand() * 1.4, -6); streak.rotation.z = -.35 - rand() * .3;
-        }
-        if (streakStart >= 0) {
-          const life = (time - streakStart) / 1.1;
-          streakUniforms.uLife.value = Math.min(1, life);
-          streak.position.x += dt * 4.2; streak.position.y -= dt * 1.6;
-          if (life >= 1) { streak.visible = false; streakStart = -1; nextStreak = time + 8 + rand() * 7; }
-        }
-      }
+      galaxyRoot.rotation.z = -.18 + Math.sin(time * .06) * .012;
+      stars.rotation.y = time * .002;
+      group.rotation.y = Math.sin(time * .12) * .015;
+      coreGlow[0].material.opacity = (.19 + Math.sin(time * .18) * .02) * reveal;
       placeGems();
     }
     // Time and the floating stones advance on every display frame, so the
@@ -431,7 +406,7 @@ export async function mountRankingScene(host) {
       const ratio = pixelRatio * governor.scale;
       renderer.setPixelRatio(ratio);
       renderer.setSize(width, height, false); camera.aspect = width / height;
-      nebulaTarget.setSize(Math.max(1, Math.ceil(width * ratio * 1.05 * .5)), Math.max(1, Math.ceil(height * ratio * 1.05 * .5)));
+      nebulaTarget.setSize(Math.max(1, Math.ceil(width * ratio * .35)), Math.max(1, Math.ceil(height * ratio * .35)));
       camZoom = 1 / Math.min(1, Math.max(.78, camera.aspect));
       camera.updateProjectionMatrix();
       // Nebula plane fills the frustum at its depth.
