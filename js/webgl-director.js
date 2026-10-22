@@ -36,7 +36,7 @@ import { QualityGovernor } from "../src/components/ranking-crystal/crystal-quali
   var activeId = null;
   var contextLost = false;
 
-  canvas.addEventListener("webglcontextlost", function (e) { e.preventDefault(); contextLost = true; }, false);
+  canvas.addEventListener("webglcontextlost", function (e) { e.preventDefault(); contextLost = true; if (raf) cancelAnimationFrame(raf); raf = 0; }, false);
   // iOS drops WebGL contexts after long sessions or under memory pressure:
   // once restored, the active scene must start drawing again by itself.
   canvas.addEventListener("webglcontextrestored", function () { contextLost = false; sizedFor = null; resize(); run(); }, false);
@@ -119,7 +119,7 @@ import { QualityGovernor } from "../src/components/ranking-crystal/crystal-quali
   var raf = 0;
   function tick() {
     raf = 0;
-    if (!activeId || contextLost) return;
+    if (!activeId || contextLost || document.hidden) return;
     raf = requestAnimationFrame(tick);
     if (overlayOpen) return;
     var s = scenes[activeId];
@@ -134,7 +134,12 @@ import { QualityGovernor } from "../src/components/ranking-crystal/crystal-quali
     if (s.onFrame) s.onFrame(dt);
     renderer.render(s.scene, s.camera);
   }
-  function run() { if (!raf && activeId) { clock.getDelta(); governor.reset(); raf = requestAnimationFrame(tick); } }
+  function run() {
+    if (document.hidden || contextLost || !activeId || raf) return;
+    clock.getDelta();
+    governor.reset();
+    raf = requestAnimationFrame(tick);
+  }
   clock.start();
 
   var resizeTimer;
@@ -143,13 +148,59 @@ import { QualityGovernor } from "../src/components/ranking-crystal/crystal-quali
     resizeTimer = setTimeout(resize, 120);
   }, { passive: true });
 
-  addEventListener("pagehide", function () {
+  // BFCache saves the SAME JS/GL objects: disposing them on pagehide caused
+  // permanently frozen rings when the user returned from OAuth/Safari/PWA.
+  // The OS may also suspend RAF without firing an IO threshold again.
+  function suspend() {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+  }
+  function refreshForeground() {
+    if (document.hidden || contextLost) return;
+    var previous = Object.keys(visibility);
+    previous.forEach(function (id) {
+      var v = visibility[id];
+      if (!v || !v.container || !v.container.isConnected) return;
+      var container = v.container;
+      var owner = container.closest("[data-final-act], [data-payment-terminal], .newsletter");
+      if (!owner) return;
+      var r = owner.getBoundingClientRect();
+      var h = Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
+      v.ratio = r.height ? Math.min(1, h / r.height) : 0;
+    });
+    var bestId = null, bestRatio = MIN_VISIBLE_RATIO;
+    previous.forEach(function (id) {
+      var v = visibility[id];
+      if (v && v.ratio > bestRatio) { bestId = id; bestRatio = v.ratio; }
+    });
+    if (bestId && visibility[bestId]) activate(bestId, visibility[bestId].container);
+    else {
+      activeId = null;
+      suspend();
+    }
+    if (activeId) {
+      sizedFor = null;
+      resize();
+      clock.getDelta();
+      run();
+    }
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) suspend();
+    else refreshForeground();
+  });
+  window.addEventListener("pageshow", function (event) {
+    if (event.persisted) refreshForeground();
+  });
+  window.addEventListener("pagehide", function (event) {
+    suspend();
+    if (event.persisted) return;
     Object.keys(scenes).forEach(function (id) {
       var s = scenes[id];
       if (s && s.dispose) { try { s.dispose(); } catch (e) {} }
     });
     try { renderer.dispose(); } catch (e) {}
-  }, { once: true });
+  });
 
   window.SGDirector = { registerScene: registerScene, activate: activate, deactivate: deactivate, reportVisibility: reportVisibility, resize: resize, renderer: renderer, isAvailable: true };
 })();
