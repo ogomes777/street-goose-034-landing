@@ -836,6 +836,8 @@ export function mountAdminPage(root, _params, onClose) {
     if (p.isCustom) tags.push('<span class="admin-tag admin-tag--accent">Novo</span>');
     if (p.hidden) tags.push('<span class="admin-tag">Oculto</span>');
     if (p.soldOut) tags.push('<span class="admin-tag admin-tag--warn">Esgotado</span>');
+    if (p.category === "lupa" && state.prices[p.id] && state.prices[p.id].promo_lupa_eligible)
+      tags.push('<span class="admin-tag admin-tag--accent">2 por 290</span>');
     if (!p.isCustom && p.hasOverride) tags.push('<span class="admin-tag">Editado</span>');
     return '<article class="admin-prod' + (p.hidden ? " is-hidden" : "") + (open ? " is-open" : "") + '" data-prod-id="' + esc(p.id) + '">' +
       '<form class="admin-price admin-prod-row" data-form="product" data-id="' + esc(p.id) + '" novalidate>' +
@@ -847,6 +849,11 @@ export function mountAdminPage(root, _params, onClose) {
           (cents && !p.soldOut ? "" : '<small class="admin-price-site">No site: ' + esc(cents && p.soldOut ? "Esgotado" : siteLabelWithoutPrice(p)) + "</small>") +
         "</div>" +
         '<label class="admin-money"><span class="sr-only">Preço de ' + esc(p.name) + '</span><em>R$</em><input name="price" inputmode="decimal" value="' + money.centsToInput(cents) + '" placeholder="Sem preço" autocomplete="off"></label>' +
+        (p.category === "lupa"
+          ? '<label class="admin-check admin-promo-toggle"><input type="checkbox" name="promo_lupa_eligible"'
+            + (state.prices[p.id] && state.prices[p.id].promo_lupa_eligible ? ' checked' : '')
+            + (!cents ? ' disabled' : '') + '> 2 lupas por R$ 290 (modelo participante)</label>'
+          : '') +
         '<div class="admin-price-actions">' +
           '<button class="btn btn-ghost" type="submit">Salvar</button>' +
           '<button class="admin-text-btn" type="button" data-action="prod-toggle" data-id="' + esc(p.id) + '" aria-expanded="' + open + '" aria-controls="pd-' + esc(p.id) + '">' + (open ? "Fechar" : "Editar") + "</button>" +
@@ -956,7 +963,10 @@ export function mountAdminPage(root, _params, onClose) {
     var factory = window.SG.catalogFactory ? window.SG.catalogFactory(id) : null;
     var nameChanged = name !== p.name;
     var priceChanged = cents !== priceOf(id);
-    if (!nameChanged && !priceChanged) { toast("NADA PARA SALVAR"); return; }
+    var promoChanged = p.category === "lupa" && !!(state.prices[id] && state.prices[id].promo_lupa_eligible) !==
+      !!(field(form, "promo_lupa_eligible") && field(form, "promo_lupa_eligible").checked);
+    if (promoChanged && !cents) { setFormError(form, "Cadastre o preço da lupa antes de ativar a promoção."); return; }
+    if (!nameChanged && !priceChanged && !promoChanged) { toast("NADA PARA SALVAR"); return; }
 
     setBusy(form, true);
     var results = [];
@@ -965,6 +975,9 @@ export function mountAdminPage(root, _params, onClose) {
     }
     if (priceChanged) {
       results.push(cents ? await svc.setPrices([{ productId: id, priceCents: cents }]) : await svc.clearPrices([id]));
+    }
+    if (!results.some(function (r) { return !r.ok; }) && promoChanged) {
+      results.push(await svc.setLupaPromoEligible(id, !!field(form, "promo_lupa_eligible").checked));
     }
     if (destroyed) return;
     setBusy(form, false);
