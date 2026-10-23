@@ -1,0 +1,118 @@
+/* SG034 / Editorial category navigation. No carousel library, no forced animation. */
+.portal-rail-shell { position: relative; }
+.portal-rail-guide { display: none; }
+.portal-rail-edge { display: none; }
+@media (max-width: 640px) {
+  .category-portals .category-portals-eyebrow { margin-bottom: 12px; }
+  .category-portals .portal-rail-guide {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 49px;
+    gap: 12px;
+    padding-inline: 2px;
+    margin-bottom: 11px;
+  }
+  .portal-rail-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #c0ada1;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .17em;
+    line-height: 1.35;
+    transition: opacity 200ms ease;
+  }
+  .portal-rail-hint.is-discovered { opacity: .25; }
+  .portal-rail-hint span { color: #e8a978; font-size: 14px; }
+  .portal-rail-actions { display: inline-flex; align-items: center; gap: 9px; flex: none; }
+  .portal-rail-count {
+    color: #b8a59a;
+    font: 650 10px/1.2 "Manrope", sans-serif;
+    letter-spacing: .14em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .portal-rail-arrow {
+    display: inline-grid;
+    place-items: center;
+    width: 41px;
+    height: 41px;
+    border: 1px solid rgba(226, 162, 108, .52);
+    border-radius: 50%;
+    background: linear-gradient(145deg, #32221b, #171313 75%);
+    color: #f4bc8b;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: inset 0 1px rgba(255, 229, 201, .1);
+    transition: background 150ms ease, border-color 150ms ease;
+  }
+  .portal-rail-arrow[hidden] { display: none !important; }
+  .portal-rail-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .portal-rail-arrow:focus-visible { outline: 2px solid #edb287; outline-offset: 3px; }
+  .portal-rail-arrow:active { background: #533324; }
+  .portal-rail-arrow--next:not([hidden]) svg { animation: portal-nudge 2.5s ease-in-out infinite; }
+  @keyframes portal-nudge { 0%, 75%, 100% { transform: translateX(0); } 85% { transform: translateX(3px); } }
+  /* A visible slice of the next card is the primary affordance, not the hint. */
+  .category-portals .portal-grid {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 2px;
+    padding: 0 2px 5px;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    scrollbar-width: none;
+    perspective: none;
+  }
+  .category-portals .portal-grid::-webkit-scrollbar { display: none; }
+  .category-portals .portal-card {
+    flex: 0 0 82%;
+    width: 82%;
+    max-width: none;
+    aspect-ratio: 4/5;
+    scroll-snap-align: start;
+    scroll-snap-stop: normal;
+    transform-style: flat;
+    will-change: auto;
+    contain: paint;
+    transition: border-color 150ms ease;
+  }
+  /* Fade is purely decorative and must never intercept a swipe or tap. */
+  .portal-rail-edge {
+    display: block;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 5px;
+    width: 25px;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(4, 4, 4, .4));
+    opacity: .9;
+    transition: opacity 180ms ease;
+  }
+  .portal-rail-shell.is-at-end .portal-rail-edge { opacity: 0; }
+}
+/* Keep the navigation legible when the visitor selects the light theme. */
+@media (max-width: 640px) {
+  html[data-theme="light"] .portal-rail-hint,
+  html[data-theme="light"] .portal-rail-count { color: #6a4b3e; }
+  html[data-theme="light"] .portal-rail-arrow {
+    background: linear-gradient(145deg, #fbf2e9, #ead4c4);
+    color: #74452d;
+    border-color: rgba(124, 72, 42, .42);
+  }
+  html[data-theme="light"] .portal-rail-edge {
+    background: linear-gradient(90deg, transparent, rgba(245, 244, 241, .42));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .portal-rail-arrow--next:not([hidden]) svg { animation: none; }
+  .portal-rail-hint, .portal-rail-arrow, .portal-rail-edge { transition: none; }
+}
