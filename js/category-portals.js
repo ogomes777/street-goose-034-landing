@@ -228,7 +228,8 @@
   }
 
   /* ---------------- Entrada em stagger ---------------- */
-  if (window.SG.hasGSAP && !reducedMotion) {
+  // Mobile paint stays cheap: no clip-path animation across five large videos.
+  if (window.SG.hasGSAP && !reducedMotion && !mobileMq.matches && window.SG.perfTier !== "low") {
     window.gsap.set(cards, { opacity: 0, y: 26, clipPath: "inset(12% 0 12% 0)" });
     var revealIo = new IntersectionObserver(function (entries) {
       if (!entries.some(function (e) { return e.isIntersecting; })) return;
