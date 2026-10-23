@@ -4,6 +4,9 @@ import '../js/ranking-preview.css';
 import '../js/gem-crystals.css';
 import '../js/community-app.css';
 import '../js/perf-budget.css';
+// Theme must exist before GSAP, catalog, or 3D modules finish loading.
+// Safari/WebKit was reaching the home while boot-core had not yet run.
+import '../js/theme.js';
 
 type StreetGooseWindow = Window &
   typeof globalThis & {

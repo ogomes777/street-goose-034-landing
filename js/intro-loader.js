@@ -304,8 +304,11 @@
     music.resumeFromResync(video.currentTime - INTRO_MUSIC_CUE_SECONDS);
   }
   function onFirstPlaying() {
+    // WebKit may dispatch an old native "playing" event after a JS play()
+    // has rejected with NotAllowedError. It is not a real user gesture:
+    // never hide the only recovery CTA in that state.
+    if (waitingForGesture) return;
     clearTimeout(stallTimer);
-    waitingForGesture = false;
     recoveryInFlight = false;
     // Never hide a sound CTA unless the audio really is available.
     if (soundBtn && introAudio && !introAudio.paused && !introAudio.muted) {
@@ -347,12 +350,15 @@
     if (finished || video.error) { finish(); return; }
     waitingForGesture = true;
     clearTimeout(stallTimer);
+    // attachGlobalAudioUnlock may label the control "Ativar som".
+    // Mark the actual blocked-video state *after* attachment so Safari
+    // always presents a precise gesture-to-play action, not a mute toggle.
+    attachGlobalAudioUnlock();
     if (soundBtn) {
       soundBtn.hidden = false;
       soundBtn.textContent = "Tocar abertura e som";
       soundBtn.setAttribute("aria-label", "Tocar a abertura Street Goose e ativar som");
     }
-    attachGlobalAudioUnlock();
   }
 
   function fallbackToMuted() {
@@ -376,7 +382,8 @@
     // navegador, enquanto o MP3 separado fornece a trilha da abertura.
     video.muted = true;
     video.volume = 0;
-    var p = video.play();
+    var p;
+    try { p = video.play(); } catch (error) { needGestureToStartVideo(); return; }
     if (p && p.then) p.then(function () {
       clearTimeout(stallTimer);
       if (!introAudio) return;
@@ -388,7 +395,12 @@
         introAudio.muted = true;
         attachGlobalAudioUnlock();
       });
-    }, fallbackToMuted);
+    }, function (error) {
+      // The first attempt is already muted. Retrying muted autoplay
+      // immediately after NotAllowedError only stresses low-power Safari.
+      if (error && error.name === "NotAllowedError") needGestureToStartVideo();
+      else fallbackToMuted();
+    });
   }
 
   // Nenhum navegador libera áudio automático sem gesto do usuário (política
