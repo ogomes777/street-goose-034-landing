@@ -43,6 +43,7 @@
 
  <link rel="stylesheet" href="styles.css" />
  <link rel="stylesheet" href="/js/ga4-consent.css" />
+ <link rel="stylesheet" href="/js/portal-navigation.css" />
  <link rel="stylesheet" href="/js/identity-graffiti.css?v=20261018-film-clean" />
  <link rel="stylesheet" href="/js/drop-film.css" />
   <link rel="stylesheet" href="/js/drop-film-finale.css?v=20261015-lens-idle-2" />
@@ -415,7 +416,18 @@
     <!-- STREET GOOSE 034 — PORTAIS DE CATEGORIA (separado do palco acima) -->
     <section class="section category-portals" id="colecao" aria-label="Categorias Street Goose 034">
  <p class="category-portals-eyebrow">ESCOLHA SUA SEÇÃO</p>
- <div class="portal-grid" data-portal-grid></div>
+ <div class="portal-rail-guide" data-portal-guide>
+   <span class="portal-rail-hint" data-portal-hint>DESLIZE PARA EXPLORAR <span aria-hidden="true">↗</span></span>
+   <div class="portal-rail-actions" role="group" aria-label="Navegar pelas categorias">
+     <button type="button" class="portal-rail-arrow portal-rail-arrow--prev" data-portal-prev aria-label="Categoria anterior" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg></button>
+     <span class="portal-rail-count" data-portal-count aria-live="off">01 / 05</span>
+     <button type="button" class="portal-rail-arrow portal-rail-arrow--next" data-portal-next aria-label="Próxima categoria"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 5 7 7-7 7"/></svg></button>
+   </div>
+ </div>
+ <div class="portal-rail-shell">
+   <div class="portal-grid" data-portal-grid role="region" aria-label="Categorias: deslize horizontalmente ou use as setas" tabindex="0"></div>
+   <span class="portal-rail-edge" aria-hidden="true"></span>
+ </div>
  <div class="sg-seo-home-intro" aria-labelledby="sg-seo-home-heading">
   <p class="sg-seo-home-eyebrow">COLEÇÃO STREET GOOSE 034</p>
   <h2 id="sg-seo-home-heading">Lupas, óculos e moda streetwear</h2>
