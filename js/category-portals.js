@@ -15,7 +15,10 @@
   var limitedNetwork = !!(connection && (connection.saveData || /(^|-)2g$/.test(connection.effectiveType || "")));
   // Still images are the intentional fallback on very weak devices. This
   // avoids instantiating five hardware decoders for nonessential previews.
-  var previewAllowed = !reducedMotion && !limitedNetwork && window.SG.perfTier !== "low";
+  // A slow CPU should reduce simultaneous decoders, not make every catalog
+  // preview permanently static. Only explicit Data Saver / reduced-motion
+  // opts out. Low-tier phones keep one muted preview at a time.
+  var previewAllowed = !reducedMotion && !limitedNetwork;
   var cards = [];
   var intersecting = new WeakMap(); // card -> visibility, never a heavy scroll loop
 
@@ -154,8 +157,11 @@
      Only the most central, visible card now plays; the other four retain
      their crisp posters. Hidden cards never download an MP4. */
   var isPointerFine = window.SG.perfTier !== "low" && matchMedia("(hover:hover) and (pointer:fine)").matches;
-  var activePreview = null;
+  var activePreviews = [];
   var videoQueued = false;
+  var isMobileRail = window.matchMedia("(max-width: 640px)");
+  var maxConcurrent = (isMobileRail.matches || window.SG.perfTier === "low") ? 1 :
+    window.SG.perfTier === "high" && isPointerFine ? 5 : 2;
   function loadCard(card) {
     var video = card.querySelector(".portal-card-video");
     var source = video && video.querySelector("source[data-src]");
@@ -171,8 +177,10 @@
     loadCard(card);
     try {
       var promise = video.play();
-      if (promise && typeof promise.catch === "function") promise.catch(function () {});
-    } catch (_) {} // autoplay gesture restrictions: poster remains
+      if (promise && typeof promise.catch === "function") promise.catch(function () {
+        // Autoplay can be restricted. The poster remains and hover can retry.
+      });
+    } catch (_) {}
   }
   function pauseCard(card) {
     var video = card.querySelector(".portal-card-video");
@@ -181,24 +189,26 @@
   function reconcilePreviews() {
     videoQueued = false;
     if (!previewAllowed) return;
-    if (document.hidden) {
-      if (activePreview) pauseCard(activePreview);
-      activePreview = null;
+    if (document.hidden || document.body.classList.contains("category-page-open")) {
+      activePreviews.forEach(pauseCard);
+      activePreviews = [];
       return;
     }
-    var best = null;
-    var minimum = Infinity;
     var center = window.innerWidth / 2;
-    cards.forEach(function (card) {
-      if (!intersecting.get(card)) return;
-      var bounds = card.getBoundingClientRect();
-      var distance = Math.abs(bounds.left + bounds.width / 2 - center);
-      if (distance < minimum) { minimum = distance; best = card; }
+    var candidates = cards.filter(function (card) { return !!intersecting.get(card); });
+    candidates.sort(function (a, b) {
+      function dist(card) {
+        var rect = card.getBoundingClientRect();
+        return Math.abs(rect.left + rect.width / 2 - center);
+      }
+      return dist(a) - dist(b);
     });
-    if (best === activePreview) return;
-    if (activePreview) pauseCard(activePreview);
-    activePreview = best;
-    if (best) playCard(best);
+    // Desktop high can reproduce the five short muted previews just like the
+    // original experience; mobile/medium have a bounded decode budget.
+    var next = candidates.slice(0, maxConcurrent);
+    activePreviews.forEach(function (card) { if (next.indexOf(card) < 0) pauseCard(card); });
+    next.forEach(function (card) { if (activePreviews.indexOf(card) < 0) playCard(card); });
+    activePreviews = next;
   }
   function schedulePreviewReconcile() {
     if (videoQueued || !previewAllowed) return;
@@ -214,10 +224,15 @@
     }, { threshold: [0, 0.24, 0.5] });
     cards.forEach(function (card) { mediaIo.observe(card); });
     grid.addEventListener("scroll", schedulePreviewReconcile, { passive: true });
-    window.addEventListener("resize", schedulePreviewReconcile, { passive: true });
+    window.addEventListener("resize", function () {
+      maxConcurrent = (isMobileRail.matches || window.SG.perfTier === "low") ? 1 :
+        window.SG.perfTier === "high" && isPointerFine ? 5 : 2;
+      schedulePreviewReconcile();
+    }, { passive: true });
     document.addEventListener("visibilitychange", schedulePreviewReconcile);
+    window.addEventListener("sg:overlay", schedulePreviewReconcile);
   } else if (previewAllowed) {
-    // Older browsers: never start five competing decoders in the fallback.
+    // No IntersectionObserver: keep a single preview, avoid blanket autoplay.
     var firstVideo = cards.find(function (card) { return !!card.querySelector(".portal-card-video"); });
     if (firstVideo) playCard(firstVideo);
     document.addEventListener("visibilitychange", function () {
