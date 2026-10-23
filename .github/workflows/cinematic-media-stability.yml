@@ -1,0 +1,35 @@
+name: SG034 | Cinematic media reliability
+on:
+  pull_request:
+    paths:
+      - "js/category-portals.js"
+      - "js/product-universe.js"
+      - "js/scroll-film.js"
+      - "js/hero3d-film.js"
+      - "js/cinematic-stability.css"
+      - "index.html"
+      - "tests/launch/cinematic-media-stability.spec.ts"
+      - ".github/workflows/cinematic-media-stability.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  playback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build site
+        run: npm run build
+      - name: Install Chrome and WebKit
+        run: npx playwright install --with-deps chromium webkit
+      - name: Test media fallback, catalog videos and reverse scroll
+        run: npx playwright test tests/launch/cinematic-media-stability.spec.ts --config=playwright.optical.config.ts --project=desktop-chromium --project=iphone-webkit
