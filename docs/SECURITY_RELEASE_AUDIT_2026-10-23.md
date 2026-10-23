@@ -17,7 +17,7 @@
 - Últimas duas execuções verificadas em 21/10 e 22/10 com status `succeeded`.
 - Snapshots `sg_internal.commerce_snapshots` de 21/10 e 22/10: 25 tabelas, checksum SHA-256 conferido; `anon` e `authenticated` não têm SELECT na tabela de backup.
 - **Atenção**: `public.tenant_backups` trata de outro tenant (`lana-demo`), portanto não utilizar como evidência de backup da Street Goose.
-- Não houve comprovação de restauração isolada consistente nem de cópia externa. Também não há garantia de recuperação de senhas/usuários Supabase Auth e arquivos Storage nesses snapshots JSON. Essas etapas são pendências bloqueantes para plano completo de desastre.
+- Foi executado teste de carga do snapshot mais recente em tabela **temporária**: 25 coleções JSON / 125 linhas recuperadas, sem alterar dados reais; isso NÃO é restauração completa de banco, vínculos FK, Auth ou Storage. Não houve comprovação de restauração relacional integral nem de cópia externa. Também não há garantia de recuperação de senhas/usuários Supabase Auth e arquivos Storage nesses snapshots JSON. Essas etapas são pendências bloqueantes para plano completo de desastre.
 
 ## Alertas do Security Advisor
 - `extension_in_public`: `pg_net` instalado em `public`; avaliar dependências antes de mover (migração sem teste pode quebrar notificações).
@@ -53,7 +53,7 @@
 **Checklist adicional 19 itens:** env privada, validação backend/frontend, injeção, auth, IDOR, hashing, brute-force, lock de envio, CSRF, uploads, exposição de dados, dependências, tokens, rate limit, segredos, SSRF, cookies e CORS: exige testes direcionados de API/cliente. Adicionar CDN ou biblioteca não substitui esses controles.
 
 ## SEO e ferramentas dos prints
-- Existente: Search Console com propriedade verificada; sitemap/robots e SEO estático; GA4 com eventos; padrões de schema; CSS/JS focados em mobile. Estado de indexação e dados de campo ainda exigem verificação atual.
+- Existente: Search Console com propriedade conectada; sitemap/robots e SEO estático; GA4 com eventos; padrões de schema; CSS/JS focados em mobile. Consulta ao Search Console: 13 cliques e 27 impressões entre 19 e 21/10. Sitemap enviado 19/10 com 12 URLs submetidas, 0 erros e 0 avisos, último download 21/10. **Submetidas não significa indexadas**. Dados de campo mobile/CrUX ainda exigem verificação atual.
 - Ferramentas opcionais conforme necessidade: Keyword Planner, Google Trends, AnswerThePublic, Ubersuggest, Screaming Frog e PageSpeed Insights **não precisam ser instaladas todas**; são recursos de pesquisa/auditoria, não camadas de segurança.
 - O fluxo da loja finaliza por WhatsApp; Stripe não é uma dependência necessária até existir requisito de pagamento por cartão. Upstash Redis, Cloudflare R2, Trigger.dev, Sentry, PostHog e Zod só devem ser adicionados com caso de uso, custos, permissões e gestão de dados definidos. Resend, Supabase, Cloudflare e Vercel já constam na infraestrutura.
 - Testes amplos de SEO/mobile em GitHub Actions apresentaram falhas em GA4, intro/áudio e WebKit; não alegar zero bugs.
