@@ -26,6 +26,30 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
       video.poster = filmPoster;
     }
   }
+  // A blank decoder should not hide the whole chapter. Leave the optical
+  // poster visible below the film until frames are ready again.
+  if (video) {
+    var stalledTimer = 0;
+    var failedFilm = function () { section.classList.add("is-media-failed"); };
+    var recoveredFilm = function () {
+      window.clearTimeout(stalledTimer);
+      section.classList.remove("is-media-failed");
+    };
+    video.addEventListener("error", failedFilm);
+    video.addEventListener("loadeddata", recoveredFilm);
+    video.addEventListener("stalled", function () {
+      window.clearTimeout(stalledTimer);
+      stalledTimer = window.setTimeout(function () {
+        if (video.readyState < 2 && video.getAttribute("preload") === "auto") failedFilm();
+      }, 1800);
+    });
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted && video.readyState < 2) {
+        section.classList.add("is-media-failed");
+        if (video.getAttribute("preload") === "auto") video.load();
+      }
+    });
+  }
   var scrim = section.querySelector("[data-film-scrim]");
   var lensGlow = section.querySelector("[data-film-lens-glow]");
   var canvas = section.querySelector("[data-film-canvas]");
@@ -144,7 +168,7 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
   function applyProgress(p) {
     if (videoReady && p <= VIDEO_END) {
       var t = (p / VIDEO_END) * duration;
-      if (isFinite(t)) seekVideo(Math.max(0, Math.min(duration, t)));
+      if (isFinite(t)) seekVideo(Math.max(0, Math.min(Math.max(0, duration - 1 / 30), t)));
     }
 
     if (p <= VIDEO_END) {
