@@ -17,6 +17,7 @@ import mochilaImg from "../assets/universe-web/mochila-oakley.webp";
 import moletomImg from "../assets/universe-web/moletom-animacao.webp";
 import perfumeImg from "../assets/universe-web/perfume-animacao.webp";
 import quartzImg from "../assets/universe-web/quartz-oakley.webp";
+import quartzBackup from "../assets/quartz-oakley-png.png";
 
 (function () {
   "use strict";
@@ -31,7 +32,7 @@ import quartzImg from "../assets/universe-web/quartz-oakley.webp";
     { key: "mochila", label: "ACESSÓRIOS", name: "Mochila Oakley", image: mochilaImg, a: "#12327a", b: "#03060f", particle: "#a9c4ff" },
     { key: "moletom", label: "TRAJES", name: "Moletom Street Goose", image: moletomImg, a: "#c2410f", b: "#120500", particle: "#ff8c42", scale: 1.14 },
     { key: "perfume", label: "PERFUMES", name: "Perfume Maahir Legacy", image: perfumeImg, a: "#d4520f", b: "#150500", particle: "#ffc98f" },
-    { key: "quartz", label: "RELÓGIOS", name: "Relógio Quartz Oakley", image: quartzImg, a: "#3d6fb8", b: "#04101f", particle: "#cfe4ff" }
+    { key: "quartz", label: "RELÓGIOS", name: "Relógio Quartz Oakley", image: quartzImg, backup: quartzBackup, a: "#3d6fb8", b: "#04101f", particle: "#cfe4ff" }
   ];
 
   var sticky = section.querySelector(".universe-sticky");
@@ -67,9 +68,37 @@ import quartzImg from "../assets/universe-web/quartz-oakley.webp";
   var currentA = UNIVERSE_ITEMS[0].a, currentB = UNIVERSE_ITEMS[0].b, currentParticle = UNIVERSE_ITEMS[0].particle;
 
   function setSlot(el, item) {
-    el.src = item.image;
-    el.alt = item.name;
-    el.style.transform = "scale(" + (item.scale || 1) + ")";
+    // Atomic image replacement prevents a momentary blank slot when Chrome
+    // evicts a decoded texture during long scroll-heavy visits. Keep the
+    // previous product until the next one has actual pixels.
+    var nextSrc = item.image;
+    var token = (el._sgImageToken || 0) + 1;
+    el._sgImageToken = token;
+    var replacement = preloaded[UNIVERSE_ITEMS.indexOf(item)];
+    var commit = function (src) {
+      if (el._sgImageToken !== token) return;
+      if (el.getAttribute("src") !== src) el.src = src;
+      el.alt = item.name;
+      el.style.transform = "scale(" + (item.scale || 1) + ")";
+    };
+    if (replacement.complete && replacement.naturalWidth > 0) {
+      commit(nextSrc);
+    } else {
+      var done = function () {
+        if (replacement.naturalWidth > 0) commit(nextSrc);
+        else if (item.backup) commit(item.backup);
+      };
+      replacement.addEventListener("load", done, { once: true });
+      replacement.addEventListener("error", done, { once: true });
+      if (item.backup && replacement.complete && !replacement.naturalWidth) done();
+    }
+    // Quartz has a verified original PNG as a backup if a WebP fails later.
+    el.onerror = function () {
+      if (el._sgImageToken === token && item.backup && el.src.indexOf(item.backup) < 0) {
+        el.onerror = null;
+        commit(item.backup);
+      }
+    };
   }
 
   var motionOk = !window.SG.prefersReducedMotion();
