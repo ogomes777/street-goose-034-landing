@@ -222,11 +222,20 @@ import quartzBackup from "../assets/quartz-oakley-png.png";
     var resizeHandler = function () { resizeParticles(); };
     window.addEventListener("resize", resizeHandler);
 
-    window.addEventListener("pagehide", function teardownParticles() {
+    window.addEventListener("pagehide", function (event) {
+      // Safari back/forward cache keeps this document alive. Suspending the
+      // RAF is correct; permanently destroying its IO makes particles never
+      // restart when the user navigates back to the same page.
+      if (particleFrame) cancelAnimationFrame(particleFrame);
+      particleFrame = 0;
+      if (event.persisted) return;
       particlesDestroyed = true;
       particlesIo.disconnect();
       window.removeEventListener("resize", resizeHandler);
-      if (particleFrame) cancelAnimationFrame(particleFrame);
+    });
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted && particlesVisible && !particlesDestroyed && !particleFrame)
+        particleFrame = requestAnimationFrame(tickParticles);
     });
   }
 
