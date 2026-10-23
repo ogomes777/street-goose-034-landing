@@ -1,0 +1,33 @@
+name: SG034 | Portais mobile e orçamento de mídia
+on:
+  pull_request:
+    paths:
+      - "index.html"
+      - "js/category-portals.js"
+      - "js/portal-navigation.css"
+      - "styles.css"
+      - "tests/launch/category-portals-mobile.spec.ts"
+      - ".github/workflows/portal-ux.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  portal-ux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install
+        run: npm ci
+      - name: Production build and typecheck
+        run: npm run build
+      - name: Install browser engines
+        run: npx playwright install --with-deps webkit chromium
+      - name: Verify swipe, navigation and preview performance
+        run: npx playwright test tests/launch/category-portals-mobile.spec.ts --config=playwright.optical.config.ts --project=iphone-webkit --project=android-chromium --project=desktop-chromium
