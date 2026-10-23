@@ -99,6 +99,19 @@
   }
   .portal-rail-shell.is-at-end .portal-rail-edge { opacity: 0; }
 }
+/* Keep the navigation legible when the visitor selects the light theme. */
+@media (max-width: 640px) {
+  html[data-theme="light"] .portal-rail-hint,
+  html[data-theme="light"] .portal-rail-count { color: #6a4b3e; }
+  html[data-theme="light"] .portal-rail-arrow {
+    background: linear-gradient(145deg, #fbf2e9, #ead4c4);
+    color: #74452d;
+    border-color: rgba(124, 72, 42, .42);
+  }
+  html[data-theme="light"] .portal-rail-edge {
+    background: linear-gradient(90deg, transparent, rgba(245, 244, 241, .42));
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .portal-rail-arrow--next:not([hidden]) svg { animation: none; }
   .portal-rail-hint, .portal-rail-arrow, .portal-rail-edge { transition: none; }
