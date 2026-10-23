@@ -304,8 +304,11 @@
     music.resumeFromResync(video.currentTime - INTRO_MUSIC_CUE_SECONDS);
   }
   function onFirstPlaying() {
+    // WebKit may dispatch an old native "playing" event after a JS play()
+    // has rejected with NotAllowedError. It is not a real user gesture:
+    // never hide the only recovery CTA in that state.
+    if (waitingForGesture) return;
     clearTimeout(stallTimer);
-    waitingForGesture = false;
     recoveryInFlight = false;
     // Never hide a sound CTA unless the audio really is available.
     if (soundBtn && introAudio && !introAudio.paused && !introAudio.muted) {
