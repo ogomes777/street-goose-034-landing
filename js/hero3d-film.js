@@ -15,6 +15,29 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
 
   var video = section.querySelector("[data-hero3d-video]");
   preferLightSource(video);
+  // Keep a visible media poster if Safari/Chrome evicts the video buffer.
+  if (video) {
+    var stallTimer = 0;
+    video.addEventListener("error", function () { section.classList.add("is-media-failed"); });
+    video.addEventListener("loadeddata", function () {
+      clearTimeout(stallTimer);
+      section.classList.remove("is-media-failed");
+    });
+    video.addEventListener("stalled", function () {
+      clearTimeout(stallTimer);
+      stallTimer = setTimeout(function () {
+        if (video.readyState < 2 && video.getAttribute("preload") === "auto") {
+          section.classList.add("is-media-failed");
+        }
+      }, 1800);
+    });
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted && video.readyState < 2 && video.getAttribute("preload") === "auto") {
+        section.classList.add("is-media-failed");
+        video.load();
+      }
+    });
+  }
   var canvas = section.querySelector("[data-hero3d-canvas]");
   var glow = section.querySelector("[data-hero3d-glow]");
   var stage = section.querySelector("[data-hero3d-stage]");
@@ -102,7 +125,7 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
 
   function applyProgress(p) {
     if (videoReady && isFinite(duration) && duration > 0) {
-      seekVideo(Math.max(0, Math.min(duration, p * duration)));
+      seekVideo(Math.max(0, Math.min(Math.max(0, duration - 1 / 30), p * duration)));
     }
 
     // transição de entrada: a linha central colapsa enquanto o filme emerge do preto
@@ -153,7 +176,9 @@ import { createVideoScrubber, preferLightSource } from "./video-scrub.js";
       var outT = smoothstep(OUT_START, OUT_END, p);
       scrollScale = 1 - outT * 0.62;
       finaleY = -Math.min(window.innerHeight, 1200) * 0.25 * outT;
-      stage.style.opacity = String(1 - smoothstep(0.91, OUT_END, p));
+      // Previous ending made the stage entirely invisible before the sticky
+      // section exited, yielding a full black viewport when scroll paused.
+      stage.style.opacity = String(Math.max(0.24, 1 - smoothstep(0.91, OUT_END, p)));
     } else {
       scrollScale = 1;
       finaleY = 0;
