@@ -6,9 +6,13 @@
 (function () {
   "use strict";
 
+  // This module can run before intro-entry or the legacy core bundle.
+  // Initialize the namespace defensively so it never depends on another
+  // asynchronous script to define the theme API.
+  window.SG = window.SG || {};
   var STORAGE_KEY = "sgTheme";
   var root = document.documentElement;
-  var mq = matchMedia("(prefers-color-scheme: light)");
+  var mq = window.matchMedia("(prefers-color-scheme: light)");
   // A escolha vale durante esta abertura; recarregar sempre inicia no escuro.
   var sessionMode = "dark";
 
@@ -42,14 +46,20 @@
     document.dispatchEvent(new CustomEvent("sg:theme-change", { detail: { mode: mode, effective: effective() } }));
   }
 
-  mq.addEventListener("change", function () {
-    if (current() === "system") {
-      apply("system");
-      document.dispatchEvent(new CustomEvent("sg:theme-change", {
-        detail: { mode:"system",effective:effective() }
-      }));
-    }
-  });
+  function onColorPreferenceChange() {
+    if (current() !== "system") return;
+    apply("system");
+    document.dispatchEvent(new CustomEvent("sg:theme-change", {
+      detail: { mode: "system", effective: effective() }
+    }));
+  }
+  // Legacy Safari and some in-app WebKit builds support only addListener.
+  // Failing here prevented window.SG.theme from being registered at all.
+  if (typeof mq.addEventListener === "function") {
+    mq.addEventListener("change", onColorPreferenceChange);
+  } else if (typeof mq.addListener === "function") {
+    mq.addListener(onColorPreferenceChange);
+  }
 
   apply(current());
 
