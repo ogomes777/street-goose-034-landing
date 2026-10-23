@@ -72,7 +72,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
   }
 
   function formHtml() {
-    if (mode === "newPassword") return '<div class="auth-modal-panel"><button class="popup-close" type="button" data-auth-close aria-label="Fechar">×</button><h2>Nova senha</h2><p>Seu acesso foi confirmado. Escolha uma senha com pelo menos 8 caracteres, com letras e números.</p><form class="auth-form" data-new-password><label>Nova senha<input name="password" type="password" required minlength="8" autocomplete="new-password"></label><label>Confirmar senha<input name="confirm" type="password" required minlength="8" autocomplete="new-password"></label><p class="auth-error" data-auth-error role="status" hidden></p><button class="btn btn-primary" type="submit">Salvar nova senha</button></form></div>';
+    if (mode === "newPassword") return '<div class="auth-modal-panel"><button class="popup-close" type="button" data-auth-close aria-label="Fechar">×</button><h2>Nova senha</h2><p>Seu acesso foi confirmado. Escolha uma senha com pelo menos 12 caracteres, com letras e números.</p><form class="auth-form" data-new-password><label>Nova senha<input name="password" type="password" required minlength="12" autocomplete="new-password"></label><label>Confirmar senha<input name="confirm" type="password" required minlength="12" autocomplete="new-password"></label><p class="auth-error" data-auth-error role="status" hidden></p><button class="btn btn-primary" type="submit">Salvar nova senha</button></form></div>';
 
     if (mode === "emailCode") return '<div class="auth-modal-panel"><button class="popup-close" type="button" data-auth-close aria-label="Fechar">×</button><h2>' + (codeRecovery ? 'Recuperar senha' : 'Entrar por e-mail') + '</h2><p>' + (codeRecovery ? 'Confirme o código recebido no seu e-mail para escolher uma nova senha.' : 'Já tem conta? Receba um código por e-mail. No primeiro acesso, crie sua conta.') + '</p><form class="auth-form" data-code-form><label>E-mail<input name="email" type="email" required autocomplete="email" value="' + window.SG.esc(codeEmail) + '"></label><label>Código<input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" minlength="6" maxlength="8"></label><div data-auth-captcha></div><p class="auth-error" data-auth-error role="status" hidden></p><button class="btn btn-primary" type="button" data-send-code>Enviar código</button><button class="btn btn-primary" type="submit">Confirmar código</button></form><button class="text-link" data-code-signup type="button">Criar conta</button><button class="text-link" data-code-back type="button">Voltar ao login</button></div>';
     var isSignUp = mode === "signUp";
@@ -89,8 +89,8 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
         '<form class="auth-form" data-auth-form novalidate>' +
           (isSignUp ? '<label>' + i18nT("auth.name") + '<input type="text" name="name" required autocomplete="name"></label>' : "") +
           '<label>' + i18nT("auth.email") + '<input type="email" name="email" required autocomplete="email"></label>' +
-          '<label>' + i18nT("auth.password") + '<input type="password" name="password" required autocomplete="' + (isSignUp ? "new-password" : "current-password") + '" minlength="' + (isSignUp ? 8 : 6) + '"></label>' +
-          (isSignUp ? '<label>' + i18nT("auth.confirmPassword") + '<input type="password" name="confirmPassword" required autocomplete="new-password" minlength="8"></label>' : "") +
+          '<label>' + i18nT("auth.password") + '<input type="password" name="password" required autocomplete="' + (isSignUp ? "new-password" : "current-password") + '" minlength="' + (isSignUp ? 12 : 6) + '"></label>' +
+          (isSignUp ? '<label>' + i18nT("auth.confirmPassword") + '<input type="password" name="confirmPassword" required autocomplete="new-password" minlength="12"></label>' : "") +
           (isSignUp ? '<label class="auth-terms"><input type="checkbox" name="terms" required> <span>' + termsWithLinks(i18nT("auth.terms")) + "</span></label>" : "") +
           '<div class="auth-captcha" data-auth-captcha></div>' +
           '<p class="auth-error" data-auth-error hidden></p>' +
@@ -279,7 +279,7 @@ import { updateHeaderLevelSession } from './header-level-badge.js';
       overlay.querySelector("[data-auth-error]").hidden = true;
 
       if (mode === "signUp" && password.length < 8) {
-        showError("A senha precisa de pelo menos 8 caracteres.");
+        showError("A senha precisa de pelo menos 12 caracteres.");
         return;
       }
       if (mode === "signUp" && fd.get("password") !== fd.get("confirmPassword")) {

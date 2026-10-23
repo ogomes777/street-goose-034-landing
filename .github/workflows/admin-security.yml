@@ -13,6 +13,9 @@ on:
       - "scripts/check-security-baseline.mjs"
       - "vercel.json"
       - "src/lib/supabase.ts"
+      - "src/lib/password-check.ts"
+      - "src/lib/password-check.test.ts"
+      - "js/auth-modal.js"
   push:
     branches: [main]
   workflow_dispatch:
