@@ -29,10 +29,10 @@ assert.match(migration, /auth\.jwt\s*\(\)\s*->>\s*'aal'/i);
 assert.match(migration, /=\s*'aal2'/i, "Admin DB authorization must require AAL2");
 
 const sessionMigration = read("supabase/migrations/20261023213000_admin_active_session_enforcement.sql");
-assert.match(sessionMigration, /FROM\\s+auth\\.sessions/i, "Admin gate must check live Auth sessions");
-assert.match(sessionMigration, /s\\.id::text\\s*=\\s*\\(auth\\.jwt\\(\\)->>\\s*'session_id'\\)/, "Admin gate must match session ID");
-assert.match(sessionMigration, /s\\.aal::text\\s*=\\s*'aal2'/, "Session must itself be MFA verified");
-assert.match(sessionMigration, /s\\.not_after\\s+IS\\s+NULL\\s+OR\\s+s\\.not_after\\s*>\\s*now\\(\\)/i, "Expired sessions cannot authorize");
+assert.match(sessionMigration, /FROM\s+auth\.sessions/i, "Admin gate must check live Auth sessions");
+assert.match(sessionMigration, /s\.id::text\s*=\s*\(auth\.jwt\(\)->>\s*'session_id'\)/, "Admin gate must match session ID");
+assert.match(sessionMigration, /s\.aal::text\s*=\s*'aal2'/, "Session must itself be MFA verified");
+assert.match(sessionMigration, /s\.not_after\s+IS\s+NULL\s+OR\s+s\.not_after\s*>\s*now\(\)/i, "Expired sessions cannot authorize");
 
 const gate = read("js/admin-mfa-gate.js");
 assert.match(gate, /supabase\.auth\.mfa\.challenge\(/);
