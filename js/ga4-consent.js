@@ -8,7 +8,12 @@
   // A propriedade GA4 oficial deve receber apenas acessos ao domínio da loja.
   // Previews Vercel, localhost e homologação não contaminam os relatórios reais.
   const PRODUCTION_HOSTS = new Set(["www.streetgoose034.com.br", "streetgoose034.com.br"]);
-  const isProductionDomain = PRODUCTION_HOSTS.has(window.location.hostname.toLowerCase());
+  // The Playwright launch suite uses a separately flagged test BUILD on local
+  // loopback. Production/preview builds do not have this flag; real GA4 remains
+  // restricted to the official domain. E2E aborts the remote tag network request.
+  const testBridge = import.meta.env.VITE_SG034_GA4_E2E === "enabled"
+    && ["127.0.0.1", "localhost"].includes(window.location.hostname.toLowerCase());
+  const isProductionDomain = PRODUCTION_HOSTS.has(window.location.hostname.toLowerCase()) || testBridge;
   let loaded = false;
   let panel = null;
 
