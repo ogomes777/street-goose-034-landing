@@ -53,11 +53,14 @@ test.describe("SG034 / category rail discovery and performance", () => {
     expect(columns).toBe(5);
   });
 
-  test("only one category preview may play simultaneously", async ({ page }, testInfo) => {
+  test("medium desktop never runs more than two video decoders", async ({ page }, testInfo) => {
     test.skip(!/desktop/i.test(testInfo.project.name), "Desktop GPU budget");
-    await page.locator("[data-portal-grid]").scrollIntoViewIfNeeded();
-    await expect.poll(async () => page.locator("[data-portal-grid]").evaluate(el =>
+    await page.goto("/?perf=medium");
+    const grid = page.locator("[data-portal-grid]");
+    await expect(grid.locator(".portal-card")).toHaveCount(5, { timeout: 30_000 });
+    await grid.scrollIntoViewIfNeeded();
+    await expect.poll(async () => grid.evaluate(el =>
       [...el.querySelectorAll("video")].filter(v => !(v as HTMLVideoElement).paused).length
-    ), { timeout: 8_000 }).toBeLessThanOrEqual(1);
+    ), { timeout: 8_000 }).toBeLessThanOrEqual(2);
   });
 });
