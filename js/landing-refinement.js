@@ -4,6 +4,26 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
 // Recalcula medidas uma vez se a fonte chegar após as cenas existentes.
 document.fonts?.ready.then(() => window.ScrollTrigger?.refresh()).catch(() => {});
+// Safari BFCache and tab recovery preserve old JS objects but can change
+// viewport height / sticky offsets while the page is suspended. Resync once
+// after restoration; do not refresh on ordinary mobile address-bar resizing.
+let sgResumeFrame = 0;
+function syncCinematicTimelines() {
+  if (document.hidden || sgResumeFrame) return;
+  sgResumeFrame = requestAnimationFrame(() => {
+    sgResumeFrame = requestAnimationFrame(() => {
+      sgResumeFrame = 0;
+      if (!document.hidden) window.ScrollTrigger?.refresh();
+    });
+  });
+}
+window.addEventListener("pageshow", event => {
+  if (event.persisted) syncCinematicTimelines();
+});
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) syncCinematicTimelines();
+});
+
 function lift(target, active) {
   if (reduceMotion.matches || target.disabled || !window.gsap) return;
   window.gsap.to(target, {
