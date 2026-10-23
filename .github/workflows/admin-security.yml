@@ -10,8 +10,11 @@ on:
       - "src/services/AdminService.ts"
       - "supabase/migrations/*admin_mfa*"
       - ".github/workflows/admin-security.yml"
+      - "scripts/check-security-baseline.mjs"
+      - "vercel.json"
+      - "src/lib/supabase.ts"
   push:
-    branches: [feat/admin-mfa-hardening-20261022]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -38,3 +41,7 @@ jobs:
         run: npm run build
       - name: Unit tests
         run: npm test -- --run
+      - name: Verify security release invariants
+        run: node scripts/check-security-baseline.mjs
+      - name: Check production dependencies for high-risk advisories
+        run: npm audit --omit=dev --audit-level=high
