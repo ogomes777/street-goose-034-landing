@@ -17,6 +17,7 @@ test.describe("Street Goose / experiencia final de instalacao", () => {
     await page.goto("/", {waitUntil:"domcontentloaded"});
     const install = page.locator(".sg-install [data-install]");
     await expect(install).toBeVisible({timeout:20_000});
+    await expect(install).toBeEnabled({timeout:20_000});
     // Safari has long cinematic scroll sections: exercise the accessible button's
     // click handler independently of browser-automation scroll heuristics.
     await install.evaluate((node: HTMLButtonElement) => node.click());
@@ -60,6 +61,7 @@ test.describe("Street Goose / experiencia final de instalacao", () => {
     await page.goto("/", {waitUntil:"domcontentloaded"});
     const install = page.locator(".sg-install [data-install]");
     await expect(install).toBeVisible({timeout:20_000});
+    await expect(install).toBeEnabled({timeout:20_000});
     await install.evaluate((node: HTMLButtonElement) => node.click());
     const dialog = page.locator("dialog.sg-install-dialog");
     await expect(dialog).toBeVisible();
